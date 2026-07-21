@@ -1,0 +1,6 @@
+{
+  "name": "Stitch Jewellery ERP",
+  "description": "High-fidelity jewelry ERP suite tracking gold/silver standard rates, catalog SKU showcase items, old gold exchange calculators, 3% GST invoices, and Karigar artisan manufacturing gold balance ledgering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
