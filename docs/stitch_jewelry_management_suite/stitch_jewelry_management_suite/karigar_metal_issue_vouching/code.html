@@ -1,0 +1,462 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>JewelERP Pro - Metal Issue to Karigar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Playfair+Display:wght@600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Glassmorphism for focus states */
+        .focus-glass:focus-within {
+            box-shadow: 0 0 0 2px var(--tw-shadow-color), 0 8px 16px -4px rgba(0, 53, 39, 0.1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#d8dadc",
+                      "surface-tint": "#2b6954",
+                      "outline": "#707974",
+                      "primary-fixed-dim": "#95d3ba",
+                      "on-secondary-fixed-variant": "#574500",
+                      "on-surface-variant": "#404944",
+                      "on-error-container": "#93000a",
+                      "surface-container-highest": "#e0e3e5",
+                      "on-tertiary-fixed-variant": "#444173",
+                      "surface-variant": "#e0e3e5",
+                      "error": "#ba1a1a",
+                      "primary-fixed": "#b0f0d6",
+                      "on-tertiary-fixed": "#181445",
+                      "on-secondary-fixed": "#241a00",
+                      "status-in-stock": "#10B981",
+                      "error-container": "#ffdad6",
+                      "on-background": "#191c1e",
+                      "background": "#f7f9fb",
+                      "outline-variant": "#bfc9c3",
+                      "on-error": "#ffffff",
+                      "surface-container": "#eceef0",
+                      "on-surface": "#191c1e",
+                      "on-primary-container": "#80bea6",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed": "#e3dfff",
+                      "inverse-primary": "#95d3ba",
+                      "weight-numeric": "#0F172A",
+                      "tertiary": "#2b2858",
+                      "on-primary-fixed-variant": "#0b513d",
+                      "secondary-container": "#fed65b",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed-dim": "#e9c349",
+                      "on-secondary-container": "#745c00",
+                      "surface-container-low": "#f2f4f6",
+                      "primary": "#003527",
+                      "rate-ticker-bg": "#1E1B4B",
+                      "inverse-on-surface": "#eff1f3",
+                      "tertiary-container": "#413f70",
+                      "status-memo": "#F59E0B",
+                      "surface": "#f7f9fb",
+                      "surface-bright": "#f7f9fb",
+                      "secondary-fixed": "#ffe088",
+                      "surface-container-high": "#e6e8ea",
+                      "on-primary": "#ffffff",
+                      "status-sold": "#64748B",
+                      "on-tertiary-container": "#b0ace5",
+                      "inverse-surface": "#2d3133",
+                      "primary-container": "#064e3b",
+                      "tertiary-fixed-dim": "#c4c1fb",
+                      "status-error": "#EF4444",
+                      "secondary": "#735c00",
+                      "on-primary-fixed": "#002117",
+                      "surface-container-lowest": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "data-density-sm": "8px",
+                      "data-density-md": "16px",
+                      "margin-mobile": "16px",
+                      "margin-desktop": "32px",
+                      "gutter": "24px",
+                      "container-max": "1440px"
+              },
+              "fontFamily": {
+                      "label-mono": ["JetBrains Mono"],
+                      "headline-md": ["Playfair Display"],
+                      "headline-sm": ["Playfair Display"],
+                      "headline-lg": ["Playfair Display"],
+                      "body-lg": ["Plus Jakarta Sans"],
+                      "data-numeric-md": ["Plus Jakarta Sans"],
+                      "data-numeric-lg": ["Plus Jakarta Sans"],
+                      "body-md": ["Plus Jakarta Sans"]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden flex h-screen">
+<!-- Side Navigation Shell -->
+<aside class="flex flex-col h-full py-data-density-md bg-surface-container dark:bg-surface-container h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline-variant z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary dark:text-primary-fixed-dim">JewelERP Pro</h1>
+<p class="text-xs text-on-surface-variant tracking-widest uppercase opacity-70">Enterprise Edition</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-3 transition-colors hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-primary dark:border-primary-fixed-dim bg-primary-container/10" href="#">
+<span class="material-symbols-outlined mr-3">inventory_2</span>
+<span class="font-body-md text-body-md">Inventory &amp; Tagging</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-colors hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined mr-3">database</span>
+<span class="font-body-md text-body-md">Masters</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-colors hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined mr-3">receipt_long</span>
+<span class="font-body-md text-body-md">Sales &amp; Billing</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-colors hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined mr-3">swap_horiz</span>
+<span class="font-body-md text-body-md">Old Gold Exchange</span>
+</a>
+<a class="flex items-center px-6 py-3 transition-colors hover:bg-surface-container-high text-on-surface-variant" href="#">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="font-body-md text-body-md">Reports</span>
+</a>
+</nav>
+<div class="px-6 mt-auto space-y-1 pt-4 border-t border-outline-variant/30">
+<a class="flex items-center py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined mr-3 text-xl">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+<a class="flex items-center py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined mr-3 text-xl">contact_support</span>
+<span class="text-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen overflow-y-auto hide-scrollbar">
+<!-- Top Navigation Bar -->
+<header class="flex justify-between items-center px-margin-desktop sticky top-0 z-40 h-16 bg-surface dark:bg-surface border-b border-outline-variant dark:border-outline-variant">
+<div class="flex items-center space-x-6">
+<div class="flex items-center space-x-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-primary">location_on</span>
+<span class="font-label-mono text-label-mono">Branch: Mumbai Main</span>
+</div>
+<div class="flex items-center space-x-4 px-4 py-1.5 bg-rate-ticker-bg rounded-lg">
+<div class="flex flex-col">
+<span class="text-[10px] text-primary-fixed-dim/70 font-bold uppercase tracking-wider">Gold 24K</span>
+<span class="text-secondary-fixed text-sm font-bold font-label-mono">₹7,250.00</span>
+</div>
+<div class="w-px h-6 bg-white/10"></div>
+<div class="flex flex-col">
+<span class="text-[10px] text-primary-fixed-dim/70 font-bold uppercase tracking-wider">Gold 22K</span>
+<span class="text-secondary-fixed text-sm font-bold font-label-mono">₹6,645.00</span>
+</div>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center space-x-3 pl-4 border-l border-outline-variant">
+<div class="text-right">
+<p class="text-sm font-bold text-on-surface">Aditya Varma</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Inventory Manager</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center border border-primary/10">
+<span class="material-symbols-outlined text-primary">account_circle</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="p-margin-desktop space-y-6 max-w-container-max mx-auto w-full">
+<!-- Page Header -->
+<div class="flex justify-between items-end">
+<div>
+<nav class="flex text-xs text-on-surface-variant mb-2 space-x-2">
+<span class="hover:text-primary cursor-pointer">Job Work</span>
+<span>/</span>
+<span class="text-primary font-bold">Metal Issue to Karigar</span>
+</nav>
+<h2 class="font-headline-md text-headline-md text-primary">Issue Raw Metal</h2>
+</div>
+<div class="flex space-x-3">
+<button class="px-4 py-2 border border-outline text-on-surface font-bold rounded flex items-center hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined mr-2">history</span>
+                        View Audit Log
+                    </button>
+<button class="bg-primary text-white px-6 py-2 rounded font-bold flex items-center shadow-lg hover:shadow-primary/20 transition-all active:scale-95">
+<span class="material-symbols-outlined mr-2">send_and_archive</span>
+                        Issue Metal
+                    </button>
+</div>
+</div>
+<!-- Main Workflow Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Issue Form Section -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- Karigar & Basic Info Card -->
+<div class="bg-surface-container-lowest border border-outline-variant p-6 rounded-xl shadow-sm">
+<div class="flex items-center space-x-3 mb-6">
+<span class="w-8 h-8 rounded bg-primary-container/10 text-primary flex items-center justify-center font-bold">01</span>
+<h3 class="font-bold text-lg text-primary">Recipient Details</h3>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Karigar / Party Name</label>
+<div class="relative group">
+<input class="w-full bg-surface border-outline-variant focus:border-primary focus:ring-0 rounded p-3 pl-10 font-body-md transition-all" placeholder="Search by name or code..." type="text">
+<span class="material-symbols-outlined absolute left-3 top-3.5 text-on-surface-variant group-focus-within:text-primary transition-colors">person_search</span>
+</div>
+<!-- Selected Karigar Badge -->
+<div class="flex items-center justify-between mt-2 p-3 bg-primary-container/5 border border-primary/10 rounded">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">RJ</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Rajesh Jewel-Smiths</p>
+<p class="text-[10px] text-on-surface-variant uppercase">Code: KGR-402 • Zaveri Bazaar</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Outstanding Bal.</p>
+<p class="text-sm font-bold text-status-error">12.450 g (Fine)</p>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Metal Type</label>
+<select class="w-full bg-surface border-outline-variant focus:border-primary focus:ring-0 rounded p-3 font-body-md">
+<option>Gold (Yellow)</option>
+<option>Gold (White)</option>
+<option>Gold (Rose)</option>
+<option>Silver</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Purity/Touch</label>
+<div class="relative">
+<input class="w-full bg-surface border-outline-variant focus:border-primary focus:ring-0 rounded p-3 pr-10 font-label-mono font-bold" type="text" value="99.50">
+<span class="absolute right-3 top-3.5 text-on-surface-variant text-xs font-bold">%</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Expected Delivery Date</label>
+<div class="relative">
+<input class="w-full bg-surface border-outline-variant focus:border-primary focus:ring-0 rounded p-3 font-body-md" type="date">
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Weight Ledger Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+<div class="p-6 border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<span class="w-8 h-8 rounded bg-primary-container/10 text-primary flex items-center justify-center font-bold">02</span>
+<h3 class="font-bold text-lg text-primary">Weight Ledger &amp; Conversion</h3>
+</div>
+<button class="text-primary text-xs font-bold flex items-center hover:underline">
+<span class="material-symbols-outlined text-sm mr-1">scale</span>
+                                Connect Weighing Scale
+                            </button>
+</div>
+<div class="p-6 grid grid-cols-3 gap-8">
+<div class="space-y-3">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Gross Weight (g)</label>
+<div class="p-4 bg-surface rounded border-2 border-outline-variant focus-within:border-primary transition-all">
+<input class="w-full bg-transparent border-none p-0 text-3xl font-bold font-label-mono text-weight-numeric focus:ring-0 placeholder:opacity-20 text-right" placeholder="0.000" step="0.001" type="number">
+</div>
+<p class="text-[10px] text-on-surface-variant">Including melting loss allowance</p>
+</div>
+<div class="flex flex-col justify-center items-center">
+<div class="h-10 w-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">calculate</span>
+</div>
+<div class="w-px h-10 bg-outline-variant my-2"></div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">× Purity / 100</span>
+</div>
+<div class="space-y-3">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Converted Fine Weight (g)</label>
+<div class="p-4 bg-primary-container/10 rounded border-2 border-primary/20">
+<input class="w-full bg-transparent border-none p-0 text-3xl font-bold font-label-mono text-primary focus:ring-0 text-right" readonly="" step="0.001" type="number" value="0.000">
+</div>
+<p class="text-[10px] text-primary font-bold text-right uppercase">Standard 24K Equivalent</p>
+</div>
+</div>
+<!-- Job Card / Design Reference -->
+<div class="p-6 bg-surface-container-low/50 border-t border-outline-variant">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-4">Job Card &amp; Design Reference</label>
+<div class="grid grid-cols-3 gap-4">
+<div class="col-span-1 border-2 border-dashed border-outline-variant rounded-lg p-4 flex flex-col items-center justify-center hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface-variant">
+<span class="material-symbols-outlined text-3xl mb-2">add_photo_alternate</span>
+<p class="text-xs font-bold">Attach Design</p>
+</div>
+<div class="col-span-2 space-y-4">
+<div class="flex space-x-3">
+<input class="flex-1 bg-surface border-outline-variant rounded p-2 text-sm font-label-mono" placeholder="Job Card # (e.g. JB-2024-001)" type="text">
+<button class="bg-surface-container-highest px-3 py-2 rounded text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+</button>
+</div>
+<textarea class="w-full bg-surface border-outline-variant rounded p-2 text-sm h-16" placeholder="Specific instructions for Karigar (e.g. Diamond setting prep, hallmark position...)"></textarea>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary & Recent Activity -->
+<div class="col-span-12 lg:col-span-4 space-y-gutter">
+<!-- Quick Stats Cards -->
+<div class="grid grid-cols-1 gap-4">
+<div class="bg-primary text-white p-5 rounded-xl shadow-lg relative overflow-hidden">
+
+<div class="relative z-10">
+<p class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Vault Balance (24K)</p>
+<div class="flex justify-between items-end">
+<h4 class="text-2xl font-bold font-label-mono">2,450.320 <span class="text-xs font-normal">g</span></h4>
+<span class="bg-white/20 px-2 py-1 rounded text-[10px] font-bold">Live</span>
+</div>
+</div>
+</div>
+<div class="bg-secondary-container text-on-secondary-container p-5 rounded-xl border border-secondary-fixed shadow-sm">
+<p class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Total Outstanding (Karigars)</p>
+<div class="flex justify-between items-end">
+<h4 class="text-2xl font-bold font-label-mono">184.905 <span class="text-xs font-normal">g</span></h4>
+<span class="bg-on-secondary-container/10 px-2 py-1 rounded text-[10px] font-bold">Critical</span>
+</div>
+</div>
+</div>
+<!-- Recent Issues Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm h-full flex flex-col">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-bold text-sm text-primary uppercase">Recent Issues</h3>
+<button class="text-[10px] font-bold text-primary hover:underline">VIEW ALL</button>
+</div>
+<div class="overflow-y-auto max-h-[480px] hide-scrollbar">
+<table class="w-full text-left">
+<thead class="sticky top-0 bg-surface-container-low z-10 border-b border-outline-variant">
+<tr>
+<th class="p-3 text-[10px] font-bold text-on-surface-variant uppercase">Karigar</th>
+<th class="p-3 text-[10px] font-bold text-on-surface-variant uppercase text-right">Fine Wt.</th>
+<th class="p-3 text-[10px] font-bold text-on-surface-variant uppercase">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/50">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="p-3">
+<p class="text-xs font-bold text-on-surface">Amit Gold S.</p>
+<p class="text-[9px] text-on-surface-variant">Today, 11:30 AM</p>
+</td>
+<td class="p-3 text-right">
+<p class="text-xs font-bold font-label-mono text-weight-numeric">24.500 g</p>
+</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-status-memo/10 text-status-memo border border-status-memo/20">Pending</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="p-3">
+<p class="text-xs font-bold text-on-surface">Zaveri Arts</p>
+<p class="text-[9px] text-on-surface-variant">Yesterday</p>
+</td>
+<td class="p-3 text-right">
+<p class="text-xs font-bold font-label-mono text-weight-numeric">10.000 g</p>
+</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-status-in-stock/10 text-status-in-stock border border-status-in-stock/20">Received</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="p-3">
+<p class="text-xs font-bold text-on-surface">Modern Casting</p>
+<p class="text-[9px] text-on-surface-variant">22 Oct 2023</p>
+</td>
+<td class="p-3 text-right">
+<p class="text-xs font-bold font-label-mono text-weight-numeric">155.200 g</p>
+</td>
+<td class="p-3">
+<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-status-memo/10 text-status-memo border border-status-memo/20">Pending</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Visual Asset Placeholder -->
+<div class="rounded-xl overflow-hidden shadow-sm h-32 relative">
+<img class="w-full h-full object-cover" data-alt="A macro cinematic photography of liquid molten gold being poured into a precision graphite mold, dramatic high-contrast lighting with warm golden glows and deep emerald shadows, reflecting an atmosphere of high-end craftsmanship and industrial luxury." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXkGjq6GbHNLRwVnqkOi8FavYJ--e1cN5AKTT33-sgVoLKbCBMB-8HR2t6MF5hI-qCyta-rWyqzk62PRTbGsiR4pYh83ajXGBtaweKCSxxa4cxocxClPLb9KaC3w0BHeeZBALzKxF6j2NRzYJgmOwub3uo9O30jUtFF0eGKPSd-9PfKYZSHAi7IDqhcj6mrQCUxlqnWXbzF3UjZ5D1ujO_lCoGBd3d-VL1IWAI0b8P6cOylTnOcKj8">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-4">
+<p class="text-white text-[10px] font-bold leading-tight">PRECISION CRAFTSMANSHIP<br><span class="opacity-70 font-normal">Every milligram accounted for.</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer / Rate Indicator -->
+<footer class="mt-auto bg-surface-container-highest/30 border-t border-outline-variant px-margin-desktop py-4 flex justify-between items-center text-[10px] font-bold text-on-surface-variant">
+<div class="flex space-x-6 items-center">
+<span class="flex items-center"><span class="w-2 h-2 rounded-full bg-status-in-stock mr-2 animate-pulse"></span> SYSTEM ONLINE</span>
+<span class="flex items-center"><span class="material-symbols-outlined text-xs mr-1">security</span> AES-256 ENCRYPTED</span>
+<span class="flex items-center uppercase tracking-widest">HUID COMPLIANCE: VERIFIED</span>
+</div>
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span>LAST RATE SYNC: 2 MIN AGO</span>
+</div>
+</footer>
+</main>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Purity and Fine Weight Calculation Logic
+        const grossInput = document.querySelector('input[placeholder="0.000"]');
+        const purityInput = document.querySelector('input[value="99.50"]');
+        const fineInput = document.querySelector('input[readonly]');
+
+        function updateFineWeight() {
+            const gross = parseFloat(grossInput.value) || 0;
+            const purity = parseFloat(purityInput.value) || 0;
+            const fine = (gross * purity) / 100;
+            fineInput.value = fine.toFixed(3);
+            
+            // Visual feedback
+            if(fine > 0) {
+                fineInput.parentElement.classList.add('ring-2', 'ring-primary/20');
+            } else {
+                fineInput.parentElement.classList.remove('ring-2', 'ring-primary/20');
+            }
+        }
+
+        grossInput.addEventListener('input', updateFineWeight);
+        purityInput.addEventListener('input', updateFineWeight);
+
+        // Hover animations for the Recent Issues table rows
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.classList.add('translate-x-1');
+            });
+            row.addEventListener('mouseleave', () => {
+                row.classList.remove('translate-x-1');
+            });
+        });
+    </script>
+</body></html>

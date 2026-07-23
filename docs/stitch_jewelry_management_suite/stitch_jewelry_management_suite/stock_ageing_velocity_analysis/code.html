@@ -1,0 +1,529 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Stock Ageing &amp; Velocity Analysis | Aurelian Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#745c00",
+                        "primary": "#003527",
+                        "on-secondary-fixed": "#241a00",
+                        "secondary-fixed": "#ffe088",
+                        "inverse-primary": "#95d3ba",
+                        "secondary-fixed-dim": "#e9c349",
+                        "tertiary": "#2b2858",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary-fixed": "#181445",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-primary-fixed-variant": "#0b513d",
+                        "status-memo": "#F59E0B",
+                        "tertiary-fixed": "#e3dfff",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container": "#eceef0",
+                        "outline-variant": "#bfc9c3",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-surface": "#2d3133",
+                        "status-sold": "#64748B",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed-dim": "#95d3ba",
+                        "surface": "#f7f9fb",
+                        "secondary": "#735c00",
+                        "tertiary-fixed-dim": "#c4c1fb",
+                        "outline": "#707974",
+                        "rate-ticker-bg": "#1E1B4B",
+                        "on-surface-variant": "#404944",
+                        "surface-bright": "#f7f9fb",
+                        "status-in-stock": "#10B981",
+                        "secondary-container": "#fed65b",
+                        "primary-container": "#064e3b",
+                        "primary-fixed": "#b0f0d6",
+                        "background": "#f7f9fb",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "weight-numeric": "#0F172A",
+                        "on-primary-container": "#80bea6",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "data-density-sm": "8px",
+                        "data-density-md": "16px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Playfair Display"],
+                        "headline-md": ["Playfair Display"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "label-mono": ["JetBrains Mono"],
+                        "data-numeric-md": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Playfair Display"],
+                        "data-numeric-lg": ["Plus Jakarta Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md overflow-hidden">
+<!-- Global Rate Ticker -->
+<div class="h-10 bg-rate-ticker-bg text-secondary-fixed flex items-center px-margin-desktop space-x-8 overflow-hidden whitespace-nowrap border-b border-outline-variant">
+<div class="flex items-center space-x-2 animate-pulse">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-secondary-fixed-variant">XAU/INR 24K</span>
+<span class="font-label-mono text-label-mono">₹6,245.50</span>
+<span class="material-symbols-outlined text-status-in-stock text-sm">trending_up</span>
+</div>
+<div class="flex items-center space-x-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-secondary-fixed-variant">XAU/INR 22K</span>
+<span class="font-label-mono text-label-mono">₹5,725.10</span>
+<span class="material-symbols-outlined text-status-in-stock text-sm">trending_up</span>
+</div>
+<div class="flex items-center space-x-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-secondary-fixed-variant">AG/INR</span>
+<span class="font-label-mono text-label-mono">₹74,120.00</span>
+<span class="material-symbols-outlined text-error text-sm">trending_down</span>
+</div>
+<div class="ml-auto text-[11px] font-bold uppercase tracking-widest text-secondary-fixed-dim opacity-70">
+            Last Audit: 12:45 PM IST
+        </div>
+</div>
+<div class="flex h-[calc(100vh-40px)]">
+<!-- SideNavBar -->
+<aside class="bg-surface-container-low border-r border-outline-variant flex flex-col h-full w-64 transition-all duration-300">
+<div class="p-data-density-md border-b border-outline-variant">
+<div class="flex items-center space-x-3 mb-1">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg">diamond</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-primary">Aurelian ERP</span>
+</div>
+<p class="text-[10px] text-on-surface-variant font-bold tracking-widest uppercase ml-11">Reports Module</p>
+</div>
+<nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto hide-scrollbar">
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md">Scheme Overview</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">person_add</span>
+<span class="font-body-md">Enrollment</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md">Collections</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">event_available</span>
+<span class="font-body-md">Maturity</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 bg-secondary-container text-on-secondary-container font-bold rounded-lg shadow-sm" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-md">Reports</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="font-body-md">Compliance</span>
+</a>
+</nav>
+<div class="p-4 border-t border-outline-variant space-y-4">
+<button class="w-full bg-primary text-white py-2 rounded font-bold text-sm tracking-wide flex items-center justify-center space-x-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">download</span>
+<span>Export All Data</span>
+</button>
+<div class="space-y-1">
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg text-sm transition-all" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg text-sm transition-all" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden bg-background">
+<!-- TopAppBar -->
+<header class="h-16 flex justify-between items-center px-margin-desktop w-full border-b border-outline-variant bg-surface">
+<div class="flex items-center space-x-4">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Stock Ageing &amp; Velocity</h1>
+<div class="h-6 w-px bg-outline-variant"></div>
+<div class="flex items-center space-x-2 bg-surface-container px-3 py-1.5 rounded-full">
+<span class="material-symbols-outlined text-primary text-sm">store</span>
+<select class="bg-transparent border-none text-xs font-bold focus:ring-0 cursor-pointer text-on-surface-variant p-0">
+<option>Main Flagship - Mumbai</option>
+<option>Sub-Branch - Pune</option>
+<option>Warehouse - Bhiwandi</option>
+<option>All Branches Consolidated</option>
+</select>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<div class="relative">
+<input class="w-64 bg-surface-container border-none rounded-full px-4 py-2 text-sm focus:ring-1 focus:ring-primary" placeholder="Search Tag ID..." type="text">
+<span class="material-symbols-outlined absolute right-3 top-2 text-on-surface-variant">search</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-fixed overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a senior jewellery store manager in a sophisticated business environment, looking confident and approachable. The lighting is soft and studio-quality, emphasizing a premium and trustworthy brand persona within a luxury ERP interface context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDe0EJ9LGujKSZoO4UXigYq3ypqb7Z80IV72y8Hj8ruMeyC01rZChVtQ5WcY5RZPxJLUFTAwTO2e0js0dzIN2X_XULcMI_7eKEiYyQyLDyt30mmTOoA4MN6XRt5DjI46L6bMwcFLPw3cLqIugJXaMbNQTg6Li68PZsBiIORrzaJ7NKMAFQildU_WukPfHe4p0HhsSZXGmMmpxpzf2fplqCW9v9mHTDEiBj56uYOsYCWGrN-gS5fLt14">
+</div>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-margin-desktop space-y-gutter scroll-smooth">
+<!-- Top Row: Ageing Slabs & Insurance -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Ageing Slabs Bento -->
+<div class="col-span-8 grid grid-cols-4 gap-4">
+<!-- Slab 1 -->
+<div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between hover:border-primary transition-colors cursor-default">
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Fresh Stock</span>
+<span class="text-status-in-stock text-[10px] font-bold">0-90 Days</span>
+</div>
+<div class="mt-4">
+<p class="text-headline-sm font-headline-sm text-primary">₹ 4.82 Cr</p>
+<p class="text-xs text-on-surface-variant mt-1">42% of Portfolio</p>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 42%"></div>
+</div>
+</div>
+<!-- Slab 2 -->
+<div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between hover:border-primary transition-colors cursor-default">
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Standard Move</span>
+<span class="text-secondary text-[10px] font-bold">91-180 Days</span>
+</div>
+<div class="mt-4">
+<p class="text-headline-sm font-headline-sm text-primary">₹ 3.10 Cr</p>
+<p class="text-xs text-on-surface-variant mt-1">28% of Portfolio</p>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 28%"></div>
+</div>
+</div>
+<!-- Slab 3 -->
+<div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm flex flex-col justify-between hover:border-primary transition-colors cursor-default">
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Slow Moving</span>
+<span class="text-status-memo text-[10px] font-bold">181-365 Days</span>
+</div>
+<div class="mt-4">
+<p class="text-headline-sm font-headline-sm text-primary">₹ 2.15 Cr</p>
+<p class="text-xs text-on-surface-variant mt-1">19% of Portfolio</p>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-status-memo" style="width: 19%"></div>
+</div>
+</div>
+<!-- Slab 4 (Dead Stock) -->
+<div class="bg-primary text-white p-4 rounded-xl border border-primary shadow-lg flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-wider text-primary-fixed">Capital Trap</span>
+<span class="bg-error text-white text-[10px] font-bold px-1.5 py-0.5 rounded">365+ Days</span>
+</div>
+<div class="mt-4">
+<p class="text-headline-sm font-headline-sm text-primary-fixed">₹ 1.25 Cr</p>
+<p class="text-xs text-primary-fixed-dim mt-1">11% Dead Stock</p>
+</div>
+<div class="mt-4 h-1 w-full bg-primary-container rounded-full overflow-hidden">
+<div class="h-full bg-error" style="width: 11%"></div>
+</div>
+</div>
+</div>
+<!-- Insurance Widget -->
+<div class="col-span-4 bg-surface-container-high rounded-xl p-5 border border-outline-variant flex flex-col relative overflow-hidden">
+<div class="absolute -top-10 -right-10 w-40 h-40 bg-secondary-container opacity-20 rounded-full blur-3xl"></div>
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary">shield_with_heart</span>
+<h3 class="font-bold text-sm text-primary tracking-tight">Insurance Coverage</h3>
+</div>
+<span class="text-[10px] font-bold text-status-in-stock bg-white px-2 py-0.5 rounded-full border border-outline-variant">LOCKED</span>
+</div>
+<div class="space-y-4 relative z-10">
+<div>
+<p class="text-xs text-on-surface-variant font-medium">Current Market Valuation (All Stock)</p>
+<p class="text-data-numeric-lg font-data-numeric-lg text-primary">₹ 12.45 Cr</p>
+</div>
+<div class="p-3 bg-white/50 border border-outline-variant rounded-lg">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-on-surface-variant">Active Coverage</span>
+<span class="text-xs font-bold text-primary">₹ 13.00 Cr</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-status-in-stock" style="width: 95.7%"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-2 italic">Surplus Buffer: ₹ 55 Lacs</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Middle Row: Category Velocity & Details -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Category Velocity -->
+<div class="col-span-4 bg-white rounded-xl border border-outline-variant p-5 shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-sm text-headline-sm text-primary">Category Velocity</h3>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">more_vert</button>
+</div>
+<div class="space-y-5">
+<!-- Category Item -->
+<div class="group">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center space-x-2">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-sm font-bold text-on-surface-variant">Rings</span>
+</div>
+<span class="text-xs font-label-mono text-status-in-stock font-bold">Fast (+12%)</span>
+</div>
+<div class="flex items-center space-x-3">
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 85%"></div>
+</div>
+<span class="text-xs font-bold text-on-surface w-8 text-right">85%</span>
+</div>
+</div>
+<!-- Category Item -->
+<div class="group">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center space-x-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="text-sm font-bold text-on-surface-variant">Bangles</span>
+</div>
+<span class="text-xs font-label-mono text-on-surface-variant font-bold">Stable</span>
+</div>
+<div class="flex items-center space-x-3">
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 62%"></div>
+</div>
+<span class="text-xs font-bold text-on-surface w-8 text-right">62%</span>
+</div>
+</div>
+<!-- Category Item -->
+<div class="group">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center space-x-2">
+<div class="w-2 h-2 rounded-full bg-status-memo"></div>
+<span class="text-sm font-bold text-on-surface-variant">Necklaces</span>
+</div>
+<span class="text-xs font-label-mono text-error font-bold">Slow (-8%)</span>
+</div>
+<div class="flex items-center space-x-3">
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-status-memo" style="width: 34%"></div>
+</div>
+<span class="text-xs font-bold text-on-surface w-8 text-right">34%</span>
+</div>
+</div>
+<!-- Category Item -->
+<div class="group">
+<div class="flex justify-between items-center mb-2">
+<div class="flex items-center space-x-2">
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+<span class="text-sm font-bold text-on-surface-variant">Gold Coins</span>
+</div>
+<span class="text-xs font-label-mono text-status-in-stock font-bold">Viral (+45%)</span>
+</div>
+<div class="flex items-center space-x-3">
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 95%"></div>
+</div>
+<span class="text-xs font-bold text-on-surface w-8 text-right">95%</span>
+</div>
+</div>
+</div>
+<div class="mt-8 p-4 bg-surface-container-low rounded-lg border border-dashed border-outline text-center">
+<p class="text-xs text-on-surface-variant">System suggests <span class="font-bold text-primary">Melting &amp; Re-tagging</span> for Necklaces to free up ₹ 82.4L in capital.</p>
+</div>
+</div>
+<!-- Dead Stock Detail Ledger -->
+<div class="col-span-8 bg-white rounded-xl border border-outline-variant shadow-sm flex flex-col">
+<div class="p-5 flex justify-between items-center border-b border-outline-variant">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Dead Stock Ledger (365+ Days)</h3>
+<p class="text-xs text-on-surface-variant">High-priority liquidation list for the current quarter.</p>
+</div>
+<div class="flex space-x-2">
+<button class="px-3 py-1.5 border border-outline-variant rounded text-xs font-bold hover:bg-surface-container transition-colors flex items-center space-x-1">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+<span>Filter</span>
+</button>
+<button class="px-3 py-1.5 bg-primary text-white rounded text-xs font-bold hover:opacity-90 transition-opacity">Remelt Selected</button>
+</div>
+</div>
+<div class="flex-1 overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low sticky top-0">
+<tr>
+<th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-primary border-b border-outline-variant">Tag ID</th>
+<th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-primary border-b border-outline-variant">Category</th>
+<th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-primary border-b border-outline-variant">Purity</th>
+<th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-primary border-b border-outline-variant text-right">Weight (g)</th>
+<th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-primary border-b border-outline-variant text-right">Days</th>
+<th class="px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-primary border-b border-outline-variant text-center">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-5 py-3 font-label-mono text-sm">#TAG-22940</td>
+<td class="px-5 py-3 text-sm font-medium">Antique Choker</td>
+<td class="px-5 py-3"><span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded">22K / 916</span></td>
+<td class="px-5 py-3 text-sm font-label-mono text-right">48.240</td>
+<td class="px-5 py-3 text-right">
+<span class="text-error font-bold text-sm">412</span>
+</td>
+<td class="px-5 py-3 text-center">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">visibility</button>
+</td>
+</tr>
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="px-5 py-3 font-label-mono text-sm">#TAG-23051</td>
+<td class="px-5 py-3 text-sm font-medium">Diamond Studs</td>
+<td class="px-5 py-3"><span class="bg-primary-fixed text-on-primary-fixed text-[10px] font-bold px-2 py-0.5 rounded">18K / 750</span></td>
+<td class="px-5 py-3 text-sm font-label-mono text-right">4.120</td>
+<td class="px-5 py-3 text-right">
+<span class="text-error font-bold text-sm">398</span>
+</td>
+<td class="px-5 py-3 text-center">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-5 py-3 font-label-mono text-sm">#TAG-24102</td>
+<td class="px-5 py-3 text-sm font-medium">Gents Kada</td>
+<td class="px-5 py-3"><span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded">22K / 916</span></td>
+<td class="px-5 py-3 text-sm font-label-mono text-right">28.500</td>
+<td class="px-5 py-3 text-right">
+<span class="text-error font-bold text-sm">382</span>
+</td>
+<td class="px-5 py-3 text-center">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">visibility</button>
+</td>
+</tr>
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors">
+<td class="px-5 py-3 font-label-mono text-sm">#TAG-24883</td>
+<td class="px-5 py-3 text-sm font-medium">Bridal Set</td>
+<td class="px-5 py-3"><span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded">22K / 916</span></td>
+<td class="px-5 py-3 text-sm font-label-mono text-right">112.450</td>
+<td class="px-5 py-3 text-right">
+<span class="text-error font-bold text-sm">371</span>
+</td>
+<td class="px-5 py-3 text-center">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">visibility</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-5 py-3 font-label-mono text-sm">#TAG-25101</td>
+<td class="px-5 py-3 text-sm font-medium">Mangalsutra</td>
+<td class="px-5 py-3"><span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded">22K / 916</span></td>
+<td class="px-5 py-3 text-sm font-label-mono text-right">18.200</td>
+<td class="px-5 py-3 text-right">
+<span class="text-error font-bold text-sm">366</span>
+</td>
+<td class="px-5 py-3 text-center">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary">visibility</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-outline-variant flex justify-between items-center">
+<span class="text-xs text-on-surface-variant">Showing 5 of 142 Dead Stock items</span>
+<div class="flex space-x-1">
+<button class="w-8 h-8 rounded border border-outline-variant flex items-center justify-center hover:bg-surface-container"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<button class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center text-xs font-bold">1</button>
+<button class="w-8 h-8 rounded border border-outline-variant flex items-center justify-center hover:bg-surface-container text-xs font-bold">2</button>
+<button class="w-8 h-8 rounded border border-outline-variant flex items-center justify-center hover:bg-surface-container"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Summary: Branch Comparison & Export -->
+<div class="grid grid-cols-12 gap-gutter">
+<div class="col-span-12 glass-panel p-6 rounded-2xl flex items-center justify-between border-primary/20">
+<div class="flex space-x-12">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Total Stock Weight</p>
+<p class="text-data-numeric-lg font-data-numeric-lg text-primary">24,512.82 <span class="text-sm font-body-md">grams</span></p>
+</div>
+<div class="w-px h-10 bg-outline-variant my-auto"></div>
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Total Tags Count</p>
+<p class="text-data-numeric-lg font-data-numeric-lg text-primary">3,842 <span class="text-sm font-body-md">Items</span></p>
+</div>
+<div class="w-px h-10 bg-outline-variant my-auto"></div>
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Stock Turnover Ratio</p>
+<p class="text-data-numeric-lg font-data-numeric-lg text-status-in-stock">3.8x <span class="text-sm font-body-md text-on-surface-variant">/ Year</span></p>
+</div>
+</div>
+<div class="flex space-x-4">
+<button class="px-6 py-3 border border-primary text-primary rounded-xl font-bold flex items-center space-x-2 hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined">print</span>
+<span>Print Ledger</span>
+</button>
+<button class="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center space-x-2">
+<span class="material-symbols-outlined">mail</span>
+<span>Send Audit Report</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Background Decoration Overlay (Subtle Gradient) -->
+<div class="fixed inset-0 pointer-events-none -z-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-secondary-container/5 via-transparent to-primary/5"></div>
+<script>
+        // Simple micro-interaction for active state highlighting
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                document.querySelectorAll('nav a').forEach(l => {
+                    l.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'font-bold', 'shadow-sm');
+                    l.classList.add('text-on-surface-variant');
+                });
+                link.classList.add('bg-secondary-container', 'text-on-secondary-container', 'font-bold', 'shadow-sm');
+                link.classList.remove('text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,534 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>JewelERP Pro | Inventory Tagging &amp; Weigh-in</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#002117",
+                    "surface-container-high": "#e6e8ea",
+                    "on-surface-variant": "#404944",
+                    "on-secondary-fixed": "#241a00",
+                    "primary": "#003527",
+                    "primary-fixed-dim": "#95d3ba",
+                    "inverse-on-surface": "#eff1f3",
+                    "tertiary-container": "#413f70",
+                    "on-secondary-container": "#745c00",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#0b513d",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-tertiary-fixed": "#181445",
+                    "weight-numeric": "#0F172A",
+                    "outline-variant": "#bfc9c3",
+                    "outline": "#707974",
+                    "rate-ticker-bg": "#1E1B4B",
+                    "secondary": "#735c00",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#b0f0d6",
+                    "background": "#f7f9fb",
+                    "secondary-container": "#fed65b",
+                    "on-background": "#191c1e",
+                    "surface-variant": "#e0e3e5",
+                    "surface": "#f7f9fb",
+                    "surface-container": "#eceef0",
+                    "error": "#ba1a1a",
+                    "on-error": "#ffffff",
+                    "status-error": "#EF4444",
+                    "surface-bright": "#f7f9fb",
+                    "status-memo": "#F59E0B",
+                    "inverse-surface": "#2d3133",
+                    "on-tertiary-fixed-variant": "#444173",
+                    "surface-tint": "#2b6954",
+                    "on-tertiary-container": "#b0ace5",
+                    "on-surface": "#191c1e",
+                    "secondary-fixed-dim": "#e9c349",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#2b2858",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#ffe088",
+                    "on-secondary": "#ffffff",
+                    "status-in-stock": "#10B981",
+                    "status-sold": "#64748B",
+                    "surface-container-low": "#f2f4f6",
+                    "tertiary-fixed": "#e3dfff",
+                    "on-primary-container": "#80bea6",
+                    "inverse-primary": "#95d3ba",
+                    "primary-container": "#064e3b",
+                    "on-secondary-fixed-variant": "#574500",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed-dim": "#c4c1fb",
+                    "surface-dim": "#d8dadc"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "margin-desktop": "32px",
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "margin-mobile": "16px",
+                    "data-density-sm": "8px",
+                    "data-density-md": "16px"
+            },
+            "fontFamily": {
+                    "label-mono": ["JetBrains Mono"],
+                    "headline-md": ["Playfair Display"],
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-sm": ["Playfair Display"],
+                    "data-numeric-md": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Playfair Display"],
+                    "data-numeric-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Playfair Display"],
+                    "body-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "label-mono": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-md": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-sm": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "data-numeric-md": ["16px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "headline-lg": ["40px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "data-numeric-lg": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .active-tab {
+            font-variation-settings: 'FILL' 1;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        @keyframes subtle-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .live-indicator {
+            animation: subtle-pulse 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Sidebar Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container border-r border-outline-variant flex flex-col py-data-density-md z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">JewelERP Pro</h1>
+<p class="text-xs font-label-mono text-on-surface-variant tracking-widest opacity-70">ENTERPRISE EDITION</p>
+</div>
+<nav class="flex-grow space-y-1">
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">database</span>
+<span class="font-body-md">Masters</span>
+</a>
+<!-- Active Tab: Inventory & Tagging -->
+<a class="flex items-center px-6 py-3 text-primary font-bold border-r-4 border-primary bg-primary-container/10" href="#">
+<span class="material-symbols-outlined mr-3" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-body-md">Inventory &amp; Tagging</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">receipt_long</span>
+<span class="font-body-md">Sales &amp; Billing</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">swap_horiz</span>
+<span class="font-body-md">Old Gold Exchange</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="font-body-md">Reports</span>
+</a>
+</nav>
+<div class="mt-auto px-6 space-y-4">
+<button class="w-full bg-primary text-on-primary py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-all active:scale-95">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-body-md font-bold">Quick Bill</span>
+</button>
+<div class="border-t border-outline-variant pt-4 space-y-1">
+<a class="flex items-center py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-body-md">Settings</span>
+</a>
+<a class="flex items-center py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">contact_support</span>
+<span class="font-body-md">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Bar Shell -->
+<header class="fixed top-0 right-0 h-16 bg-surface border-b border-outline-variant flex items-center px-margin-desktop z-40 w-[calc(100%-16rem)]">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-low rounded-lg">
+<span class="material-symbols-outlined text-primary text-sm">location_on</span>
+<span class="text-label-mono font-label-mono text-on-surface">Branch: Mumbai Main</span>
+</div>
+<div class="flex items-center gap-4 border-l border-outline-variant pl-6">
+<div class="flex flex-col">
+<span class="text-[10px] text-on-surface-variant font-bold">24K RATE</span>
+<span class="text-label-mono font-label-mono text-primary font-bold">₹7,250</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] text-on-surface-variant font-bold">22K RATE</span>
+<span class="text-label-mono font-label-mono text-secondary font-bold">₹6,645</span>
+</div>
+</div>
+</div>
+<div class="ml-auto flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container transition-all rounded-full cursor-pointer">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border border-surface"></span>
+</div>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant cursor-pointer group">
+<div class="text-right">
+<p class="text-sm font-bold text-on-surface leading-none">Rajesh Mehta</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter">Inventory Manager</p>
+</div>
+<img class="w-10 h-10 rounded-full border-2 border-primary/20 group-hover:border-primary transition-all" data-alt="A professional studio portrait of a senior Indian jewelry store manager wearing a charcoal grey Nehru jacket, set against a blurred background of a high-end luxury jewelry boutique with soft warm lighting and gold accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuChMceOUxPNkztB9B7qcu9DwD3tX7DYhLY_7uwl0TtfFPO9aUpRTwhwijl6Ip_5FmLpu7Y5QZsyy5yT8NAYJkp9akiN1D4FwBaOn__EPZcafa2I7eWWtpBHyS2eneLO9clpBJ1DlW13IImR75DAHkr3MS1ijfDPD8j6ZVlVojOggJ3Z37d3N5NAge4CeGUu_-xv9lITzo2Ly6Eb8CuaeLci8J1rzRMCyVB8tlHmm0GzU4FlgBV-EN3F">
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-64 mt-16 p-gutter min-h-[calc(100vh-4rem)]">
+<!-- Screen Header -->
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary">Inventory Weigh-in &amp; Tagging</h2>
+<p class="text-on-surface-variant font-body-md">Define item attributes, capture precise weight, and generate secure HUID tags.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2 border border-outline text-on-surface font-bold rounded hover:bg-surface-container transition-all">Discard Session</button>
+<button class="px-6 py-2 bg-primary text-on-primary font-bold rounded shadow-sm hover:shadow-md transition-all">Bulk Upload (CSV)</button>
+</div>
+</div>
+<!-- Three-Panel Layout -->
+<div class="grid grid-cols-12 gap-gutter items-start">
+<!-- Left Panel: Design & Purity Selection -->
+<section class="col-span-3 space-y-6">
+<div class="bg-surface-container-low p-data-density-md rounded-xl border border-outline-variant">
+<h3 class="font-bold text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">category</span>
+                        Item Master Selection
+                    </h3>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Product Category</label>
+<select class="w-full bg-surface border-outline-variant rounded p-2 focus:ring-primary focus:border-primary">
+<option>Gold Jewellery</option>
+<option>Diamond Jewellery</option>
+<option>Silverware</option>
+<option>Platinum</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Design Code / Name</label>
+<div class="relative">
+<input class="w-full bg-surface border-outline-variant rounded p-2 pl-9" placeholder="Search Design..." type="text">
+<span class="material-symbols-outlined absolute left-2 top-2 text-on-surface-variant">search</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<div class="border border-primary bg-primary/5 p-2 rounded cursor-pointer transition-all hover:bg-primary/10">
+<img class="w-full h-24 object-cover rounded mb-2" data-alt="A macro photography shot of a traditional 22k gold bangle with intricate filigree work, showcasing detailed craftsmanship against a soft velvet background. The lighting is focused and warm, emphasizing the rich yellow gold texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0sCTrJKyfm0lZCtzxt5t9PIB89q31K_azXwk6bL_oD81eowCZ7YaITsK24AqS7OTTEJc2CNoZhlNQgSx4etACxIyg8p3Wg5BYw4_wFcxgPPVEb0s1bDUKPTCnF2OQjJ_0xBMiA0ED4deV13QYZjm2gXPFLkQqhL8_7E-d_jL1npU5fDxvLyfVWKwRTpYrKX-RB-rCNlj9KvGijeEmXHwU2dGBO1NgobJ9-eLWJui-Ryw5GmAC-Co0">
+<p class="text-[10px] font-bold text-center text-primary">Antique Bangle (BNG-042)</p>
+</div>
+<div class="border border-outline-variant p-2 rounded cursor-pointer transition-all hover:bg-surface-container-high">
+<img class="w-full h-24 object-cover rounded mb-2 grayscale opacity-60" data-alt="A top-down view of a modern 18k gold necklace with minimalist geometric patterns, shot on a clean white marble surface with sharp editorial lighting and high contrast shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRQcNre85dm-ipYZS6W9YLqyfGB64_cH1ZduJYpvhkhCw5jK1fai11mxO3hqhkeKAnXvP531umdq9lrCLBhqp1NcCFmsiU8uQprySwujn9QGKY7x2e8JtlK8RASUPKWK7Pv6A5GWX3FLSI9nJ4NlYDEDc4g_4fJ5JoNDWTW0fmPqPHcM4pBh7n4T1JfUapODUbSKzQJGY9cwWfyyZai9AgSFbqYgzt5pOUjwsWMOc4xjAIw5yrW1nl">
+<p class="text-[10px] font-bold text-center text-on-surface-variant">Modern Chain (CHN-108)</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-data-density-md rounded-xl border border-outline-variant">
+<h3 class="font-bold text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">verified</span>
+                        Purity &amp; Ownership
+                    </h3>
+<div class="space-y-4">
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1 bg-primary text-on-primary rounded-full text-sm font-bold">22K (916)</button>
+<button class="px-3 py-1 border border-outline-variant text-on-surface-variant rounded-full text-sm font-medium hover:border-primary transition-all">24K (999)</button>
+<button class="px-3 py-1 border border-outline-variant text-on-surface-variant rounded-full text-sm font-medium hover:border-primary transition-all">18K (750)</button>
+</div>
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-2 uppercase tracking-wider">Ownership Type</label>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 p-3 rounded-lg border border-primary bg-primary/5 cursor-pointer">
+<input checked="" class="text-primary focus:ring-primary" name="ownership" type="radio">
+<span class="text-sm font-bold text-primary">In-house Owned Stock</span>
+</label>
+<label class="flex items-center gap-2 p-3 rounded-lg border border-outline-variant hover:bg-surface-container-high transition-all cursor-pointer">
+<input class="text-primary focus:ring-primary" name="ownership" type="radio">
+<span class="text-sm font-medium text-on-surface">Gold Metal Loan (GML)</span>
+</label>
+<label class="flex items-center gap-2 p-3 rounded-lg border border-outline-variant hover:bg-surface-container-high transition-all cursor-pointer">
+<input class="text-primary focus:ring-primary" name="ownership" type="radio">
+<span class="text-sm font-medium text-on-surface">Consignment / Karigar</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Center Panel: Atomic Weigh-in -->
+<section class="col-span-6 space-y-gutter">
+<div class="glass-panel p-8 rounded-2xl shadow-xl border-t-4 border-t-primary relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<div class="flex items-center gap-2 text-status-in-stock bg-status-in-stock/10 px-3 py-1 rounded-full live-indicator">
+<span class="w-2 h-2 bg-status-in-stock rounded-full"></span>
+<span class="text-xs font-bold uppercase tracking-widest">Scale Integrated</span>
+</div>
+</div>
+<div class="flex justify-between items-end mb-10">
+<h3 class="font-headline-sm text-headline-sm text-primary">Atomic Unit Entry</h3>
+<div class="text-right">
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Active Batch</p>
+<p class="font-label-mono text-lg font-bold">BTCH-2024-001</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-x-8 gap-y-10">
+<!-- Weights Section -->
+<div class="col-span-2 grid grid-cols-3 gap-6">
+<div class="space-y-2">
+<label class="block text-sm font-bold text-on-surface-variant uppercase tracking-wider">Gross Weight (g)</label>
+<div class="relative">
+<input class="w-full text-4xl font-bold font-data-numeric-lg text-weight-numeric bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-4 text-right focus:border-primary focus:ring-0 transition-all" id="gross-weight" step="0.001" type="number" value="45.240">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline">scale</span>
+</div>
+<p class="text-[10px] text-on-surface-variant italic">Captured from Precisa Series-X</p>
+</div>
+<div class="space-y-2">
+<label class="block text-sm font-bold text-on-surface-variant uppercase tracking-wider">Stone Wt (g)</label>
+<div class="relative">
+<input class="w-full text-4xl font-bold font-data-numeric-lg text-secondary bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-4 text-right focus:border-secondary focus:ring-0 transition-all" id="stone-weight" step="0.001" type="number" value="2.150">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline">diamond</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="block text-sm font-bold text-primary uppercase tracking-wider">Net Weight (g)</label>
+<div class="relative">
+<input class="w-full text-4xl font-bold font-data-numeric-lg text-on-primary bg-primary border-2 border-primary rounded-xl p-4 text-right" id="net-weight" readonly="" type="number" value="43.090">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-primary-container">calculate</span>
+</div>
+<p class="text-[10px] text-primary font-bold text-right uppercase">Calculated Value</p>
+</div>
+</div>
+<!-- HUID and ID Section -->
+<div class="col-span-1 space-y-2">
+<label class="block text-sm font-bold text-on-surface-variant uppercase tracking-wider">HUID Code</label>
+<div class="relative">
+<input class="w-full text-2xl font-label-mono font-bold tracking-[0.5em] text-on-surface bg-surface-container-highest border-2 border-outline rounded-xl p-4 focus:ring-primary focus:border-primary uppercase" maxlength="6" type="text" value="AB1234">
+<div class="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1">
+<span class="material-symbols-outlined text-status-in-stock" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<p class="text-[10px] text-on-surface-variant">BIS Hallmarking Standard (6 Characters)</p>
+</div>
+<div class="col-span-1 space-y-2">
+<label class="block text-sm font-bold text-on-surface-variant uppercase tracking-wider">Internal Tag ID</label>
+<div class="relative">
+<input class="w-full text-2xl font-label-mono text-on-surface-variant bg-surface-container border border-outline-variant rounded-xl p-4" readonly="" type="text" value="GLD-BNG-45240">
+</div>
+<p class="text-[10px] text-on-surface-variant italic">System Auto-generated</p>
+</div>
+</div>
+<div class="mt-12 flex gap-4">
+<button class="flex-grow bg-primary text-on-primary py-5 rounded-xl font-bold text-xl flex items-center justify-center gap-3 shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 transition-all active:scale-95" id="add-to-ledger">
+<span class="material-symbols-outlined text-3xl">save</span>
+                            Commit &amp; Next Unit
+                        </button>
+<button class="bg-surface-container-high text-on-surface-variant p-5 rounded-xl hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined">refresh</span>
+</button>
+</div>
+</div>
+<!-- Live Audit List -->
+<div class="bg-surface-container-low rounded-xl border border-outline-variant overflow-hidden">
+<div class="bg-primary-container/10 p-4 border-b border-outline-variant flex justify-between items-center">
+<h4 class="font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined">list_alt</span>
+                            Recent Tag Entries (This Session)
+                        </h4>
+<span class="text-xs font-label-mono font-bold text-on-surface-variant">Count: 14 Units | Total Net: 642.180g</span>
+</div>
+<table class="w-full text-sm text-left">
+<thead class="bg-surface text-on-surface-variant border-b border-outline-variant">
+<tr>
+<th class="px-4 py-3 font-bold uppercase text-[10px]">Tag ID</th>
+<th class="px-4 py-3 font-bold uppercase text-[10px]">HUID</th>
+<th class="px-4 py-3 font-bold uppercase text-[10px] text-right">Gross (g)</th>
+<th class="px-4 py-3 font-bold uppercase text-[10px] text-right">Net (g)</th>
+<th class="px-4 py-3 font-bold uppercase text-[10px] text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-4 py-3 font-label-mono">GLD-BNG-1022</td>
+<td class="px-4 py-3 font-label-mono">ZK9211</td>
+<td class="px-4 py-3 text-right font-data-numeric-md">12.450</td>
+<td class="px-4 py-3 text-right font-data-numeric-md font-bold">11.800</td>
+<td class="px-4 py-3 text-center">
+<span class="bg-status-in-stock/10 text-status-in-stock px-2 py-0.5 rounded text-[10px] font-bold">VERIFIED</span>
+</td>
+</tr>
+<tr class="bg-surface-container-lowest/50">
+<td class="px-4 py-3 font-label-mono">GLD-BNG-1021</td>
+<td class="px-4 py-3 font-label-mono">PJ3340</td>
+<td class="px-4 py-3 text-right font-data-numeric-md">24.100</td>
+<td class="px-4 py-3 text-right font-data-numeric-md font-bold">23.500</td>
+<td class="px-4 py-3 text-center">
+<span class="bg-status-in-stock/10 text-status-in-stock px-2 py-0.5 rounded text-[10px] font-bold">VERIFIED</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Right Panel: Label Preview & Print -->
+<section class="col-span-3 space-y-6">
+<div class="bg-surface-container-high p-data-density-md rounded-xl border border-outline-variant">
+<h3 class="font-bold text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">print</span>
+                        Label Preview
+                    </h3>
+<div class="bg-white p-6 shadow-sm border border-dashed border-outline-variant rounded flex flex-col items-center">
+<!-- Jewellery Tag Mockup -->
+<div class="w-full space-y-4 font-label-mono text-[10px] text-black">
+<div class="flex justify-between items-start">
+<div class="space-y-1">
+<p class="font-bold text-xs">JEWELERP PRO</p>
+<p>BNG-042 | 22K (916)</p>
+</div>
+<div class="text-right">
+<p class="font-bold">₹ AUTO-CALC</p>
+</div>
+</div>
+<!-- Barcode Placeholder -->
+<div class="h-10 w-full bg-black flex items-center justify-center">
+<div class="w-[90%] h-[80%] bg-white flex overflow-hidden">
+<div class="flex-grow flex gap-[1px]">
+<div class="w-[1px] h-full bg-black"></div>
+<div class="w-[2px] h-full bg-black"></div>
+<div class="w-[1px] h-full bg-black"></div>
+<div class="w-[3px] h-full bg-black"></div>
+<div class="w-[1px] h-full bg-black"></div>
+<div class="w-[2px] h-full bg-black"></div>
+<div class="w-[1px] h-full bg-black"></div>
+<div class="w-[1px] h-full bg-black"></div>
+<div class="w-[4px] h-full bg-black"></div>
+<div class="w-[1px] h-full bg-black"></div>
+<div class="w-[2px] h-full bg-black"></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 border-t border-black pt-2">
+<div>
+<p>GROSS: <span class="font-bold">45.240g</span></p>
+<p>NET: <span class="font-bold">43.090g</span></p>
+</div>
+<div class="text-right">
+<p>HUID: <span class="font-bold">AB1234</span></p>
+<p>MADE: IND</p>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-6 space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold text-on-surface-variant uppercase">Printer Status</span>
+<span class="flex items-center gap-1 text-status-in-stock text-[10px] font-bold">
+<span class="w-1.5 h-1.5 bg-status-in-stock rounded-full"></span>
+                                READY: ZEBRA ZD421
+                            </span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold text-on-surface-variant uppercase">Auto-Print</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer border-outline-variant checked:right-0 checked:border-primary" id="toggle" name="toggle" type="checkbox">
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-outline-variant cursor-pointer" for="toggle"></label>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-tertiary text-on-tertiary p-data-density-md rounded-xl shadow-lg">
+<h4 class="font-bold flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-on-tertiary-container">info</span>
+                        Market Context
+                    </h4>
+<p class="text-xs leading-relaxed text-on-tertiary-container">
+                        The current Gold Rate (22K) for Mumbai is <span class="font-bold text-secondary-fixed">₹6,645/g</span>. Tagged items will be priced dynamically based on this live benchmark unless fixed price is selected.
+                    </p>
+<div class="mt-4 pt-4 border-t border-tertiary-container flex items-center justify-between">
+<span class="text-[10px] uppercase font-bold tracking-widest opacity-60">Last Updated</span>
+<span class="text-[10px] font-label-mono">14:22:10 IST</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<script>
+        // Micro-interaction for Weight Calculation
+        const grossInput = document.getElementById('gross-weight');
+        const stoneInput = document.getElementById('stone-weight');
+        const netInput = document.getElementById('net-weight');
+
+        function updateNetWeight() {
+            const gross = parseFloat(grossInput.value) || 0;
+            const stone = parseFloat(stoneInput.value) || 0;
+            const net = (gross - stone).toFixed(3);
+            netInput.value = net;
+        }
+
+        grossInput.addEventListener('input', updateNetWeight);
+        stoneInput.addEventListener('input', updateNetWeight);
+
+        // Commit Animation
+        const commitBtn = document.getElementById('add-to-ledger');
+        commitBtn.addEventListener('click', function() {
+            this.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Committing...';
+            this.classList.add('opacity-80');
+            
+            setTimeout(() => {
+                this.innerHTML = '<span class="material-symbols-outlined text-3xl">save</span> Commit & Next Unit';
+                this.classList.remove('opacity-80');
+                
+                // Visual feedback of clearing
+                const container = this.closest('section');
+                container.style.transition = 'opacity 0.2s ease';
+                container.style.opacity = '0.5';
+                setTimeout(() => container.style.opacity = '1', 200);
+            }, 800);
+        });
+
+        // Dark mode simulation toggle (if needed)
+        // document.documentElement.classList.add('dark');
+    </script>
+</body></html>

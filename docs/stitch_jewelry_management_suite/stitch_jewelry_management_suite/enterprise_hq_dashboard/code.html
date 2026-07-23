@@ -1,0 +1,611 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Enterprise Configuration | AurumERP Retail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-background": "#191c1e",
+                    "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#404944",
+                    "on-secondary-fixed-variant": "#574500",
+                    "surface-container-highest": "#e0e3e5",
+                    "primary-fixed-dim": "#95d3ba",
+                    "primary": "#003527",
+                    "on-tertiary-fixed": "#181445",
+                    "primary-fixed": "#b0f0d6",
+                    "surface": "#f7f9fb",
+                    "surface-dim": "#d8dadc",
+                    "secondary-fixed": "#ffe088",
+                    "weight-numeric": "#0F172A",
+                    "surface-tint": "#2b6954",
+                    "on-tertiary": "#ffffff",
+                    "primary-container": "#064e3b",
+                    "surface-container": "#eceef0",
+                    "tertiary-fixed": "#e3dfff",
+                    "on-tertiary-fixed-variant": "#444173",
+                    "inverse-on-surface": "#eff1f3",
+                    "status-sold": "#64748B",
+                    "inverse-primary": "#95d3ba",
+                    "status-in-stock": "#10B981",
+                    "on-error": "#ffffff",
+                    "on-primary-container": "#80bea6",
+                    "surface-variant": "#e0e3e5",
+                    "inverse-surface": "#2d3133",
+                    "status-memo": "#F59E0B",
+                    "tertiary": "#2b2858",
+                    "surface-bright": "#f7f9fb",
+                    "tertiary-fixed-dim": "#c4c1fb",
+                    "on-tertiary-container": "#b0ace5",
+                    "secondary-container": "#fed65b",
+                    "secondary-fixed-dim": "#e9c349",
+                    "on-secondary-container": "#745c00",
+                    "on-primary": "#ffffff",
+                    "secondary": "#735c00",
+                    "on-primary-fixed": "#002117",
+                    "outline": "#707974",
+                    "background": "#f7f9fb",
+                    "error-container": "#ffdad6",
+                    "surface-container-low": "#f2f4f6",
+                    "on-error-container": "#93000a",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed": "#241a00",
+                    "on-secondary": "#ffffff",
+                    "status-error": "#EF4444",
+                    "surface-container-high": "#e6e8ea",
+                    "on-surface": "#191c1e",
+                    "tertiary-container": "#413f70",
+                    "rate-ticker-bg": "#1E1B4B",
+                    "outline-variant": "#bfc9c3",
+                    "on-primary-fixed-variant": "#0b513d"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "data-density-md": "16px",
+                    "margin-desktop": "32px",
+                    "gutter": "24px",
+                    "data-density-sm": "8px",
+                    "margin-mobile": "16px",
+                    "container-max": "1440px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Playfair Display"],
+                    "data-numeric-md": ["Plus Jakarta Sans"],
+                    "headline-md": ["Playfair Display"],
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Playfair Display"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "headline-sm": ["Playfair Display"],
+                    "data-numeric-lg": ["Plus Jakarta Sans"],
+                    "label-mono": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "data-numeric-md": ["16px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "headline-md": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-lg": ["40px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "headline-sm": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "data-numeric-lg": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "label-mono": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .audit-overlay {
+            backdrop-filter: blur(8px);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #003527;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-secondary-container selection:text-on-secondary-container">
+<!-- Global Rate Ticker / Health Banner -->
+<div class="h-10 w-full bg-rate-ticker-bg text-secondary-fixed flex items-center justify-between px-gutter z-[60] fixed top-0">
+<div class="flex items-center gap-4">
+<span class="font-label-mono text-label-mono uppercase tracking-widest text-secondary-container">System Status: All Nodes Operational</span>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-status-in-stock animate-pulse"></div>
+<span class="font-label-mono text-label-mono">Multi-Tenant Health: 99.98%</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="font-label-mono text-label-mono">XAU/INR: </span>
+<span class="font-data-numeric-md text-data-numeric-md text-secondary-fixed">₹6,245.50</span>
+<span class="material-symbols-outlined text-status-in-stock text-sm">trending_up</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-mono text-label-mono">AG/INR: </span>
+<span class="font-data-numeric-md text-data-numeric-md text-secondary-fixed">₹74.20</span>
+<span class="material-symbols-outlined text-status-error text-sm">trending_down</span>
+</div>
+</div>
+</div>
+<!-- TopNavBar -->
+<nav class="fixed top-10 w-full z-50 flex justify-between items-center px-gutter h-16 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md font-bold text-primary">AurumERP Retail</span>
+<div class="hidden md:flex gap-6 items-center">
+<a class="font-headline-sm text-headline-sm text-primary border-b-2 border-primary pb-1 transition-colors cursor-pointer active:opacity-70" href="#">Configuration</a>
+<a class="font-headline-sm text-headline-sm text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-70" href="#">Global Inventory</a>
+<a class="font-headline-sm text-headline-sm text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-70" href="#">Audit Logs</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">notifications</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">account_balance_wallet</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">settings</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border border-outline ml-2">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate store manager in a tailored suit, set against a blurred background of a high-end luxury jewellery boutique with warm golden lighting. The aesthetic is clean, professional, and authoritative, matching a premium ERP interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDc9xc3U6npeZXiqMvBGkXefcayOUcWWBjX5s6ydOr8wobiCg_vdggrMcqSjZm3TxUOjzI6aK8COCDdsg55c4qIiY7KTCzWBHeOtWq1-8OApi9PH36-MG4BkKF3IyCyBf7a0o4QPzLjGLxSlP3PgxtafTkbtwn_tH-_PmzL3QhsrQCNC8XLdzZc0A3ZRy99c65zUrHotBhDhCp_l6js4kGj1-xT83yesZNebTjatJmkO-DSx3TEELvS">
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-full w-64 fixed left-0 top-0 pt-28 pb-4 px-4 bg-surface-container-low border-r border-outline-variant z-40">
+<div class="mb-8 px-2">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-10 h-10 bg-primary rounded flex items-center justify-center text-secondary-fixed">
+<span class="material-symbols-outlined">diamond</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary leading-tight">Main Branch</h2>
+<p class="font-body-md text-sm text-on-surface-variant">Terminal 01 - Active</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">currency_exchange</span>
+<span class="font-body-md">Old Gold Exchange</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">mop</span>
+<span class="font-body-md">Melting Lots</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">verified_user</span>
+<span class="font-body-md">KYC Verifier</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">precision_manufacturing</span>
+<span class="font-body-md">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-on-primary-container font-bold rounded-lg group" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md">Reports</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1 pt-4 border-t border-outline-variant">
+<button class="w-full bg-secondary-container text-on-secondary-container py-3 rounded-xl font-bold flex items-center justify-center gap-2 mb-4 hover:shadow-md transition-shadow active:scale-95">
+<span class="material-symbols-outlined">shopping_cart</span>
+                Quick Buyback
+            </button>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pt-32 pb-24 md:pb-12 px-gutter min-h-screen">
+<!-- Header & Summary Row -->
+<header class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary">Enterprise Configuration</h1>
+<p class="text-on-surface-variant font-body-lg">Manage organizational hierarchy, branch compliance, and legal entities.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2.5 border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all active:scale-95">
+                    Download Audit Report
+                </button>
+<button class="px-6 py-2.5 bg-primary text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> Add New Branch
+                </button>
+</div>
+</header>
+<!-- Summary Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-3 mb-4">
+<div class="p-2 bg-primary-fixed rounded">
+<span class="material-symbols-outlined text-primary">account_tree</span>
+</div>
+<span class="font-label-mono text-on-surface-variant">Active Branches</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-primary">12</span>
+<span class="text-status-in-stock text-sm font-bold flex items-center">
+<span class="material-symbols-outlined text-sm">arrow_upward</span> 2 new
+                    </span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-3 mb-4">
+<div class="p-2 bg-secondary-fixed rounded">
+<span class="material-symbols-outlined text-secondary">description</span>
+</div>
+<span class="font-label-mono text-on-surface-variant">Total GSTINs</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-primary">18</span>
+<span class="text-on-surface-variant text-sm">Registered Entities</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-3 mb-4">
+<div class="p-2 bg-tertiary-fixed rounded">
+<span class="material-symbols-outlined text-tertiary">security</span>
+</div>
+<span class="font-label-mono text-on-surface-variant">Compliance Health</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-primary">98%</span>
+<span class="text-status-in-stock text-sm font-bold">Excellent</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center gap-3 mb-4">
+<div class="p-2 bg-error-container rounded">
+<span class="material-symbols-outlined text-error">warning</span>
+</div>
+<span class="font-label-mono text-on-surface-variant">Alerts Pending</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-error">03</span>
+<span class="text-error text-sm font-bold">Action Required</span>
+</div>
+</div>
+</div>
+<!-- Main Layout: Tenant Profile and Branch Directory -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Tenant Profile Section -->
+<section class="lg:col-span-4 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+<div class="bg-primary text-white px-6 py-4 flex items-center justify-between">
+<h3 class="font-headline-sm">Tenant Profile</h3>
+<span class="material-symbols-outlined cursor-pointer hover:rotate-45 transition-transform">edit</span>
+</div>
+<div class="p-6 space-y-4">
+<div class="relative h-32 w-full rounded-lg overflow-hidden mb-6">
+<img class="w-full h-full object-cover" data-alt="A macro close-up of a high-quality gold bar with a refined hammered texture, reflecting warm studio lights. The image conveys a sense of extreme value and craftsmanship, serving as the backdrop for corporate identity. Elegant, high-end, and minimalist aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDamnT8T9ifN3dK9e5cOnVisn3vyEtZSVZrMdUf4hS98DLT1Bs4yqEOuG3yfxhhQDlp1-jsgLcD06WxcJpO5b4xTBSQ2NMEhbfquladYeM06JE8rWzEnOtbvuXjdHDMayiENcFuf0TXit3yT7hKbdNa9xXRmVZH3a52_w45XHVDhp0meLG_WAsWjB6j-lFgK2vGGQSCzr1ThSOaoBB39UbWvEKqGAmj1-RAFdQW3kTD-ebQsZIW_ozu">
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+<span class="text-white font-headline-md">Aurelian Ledger Ltd.</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-label-mono text-on-surface-variant uppercase mb-1">Company PAN</label>
+<p class="font-data-numeric-md text-primary">AAAAA1234A</p>
+</div>
+<div>
+<label class="block text-xs font-label-mono text-on-surface-variant uppercase mb-1">Entity Type</label>
+<p class="font-body-md text-primary">Public Limited</p>
+</div>
+<div class="col-span-2">
+<label class="block text-xs font-label-mono text-on-surface-variant uppercase mb-1">Registered Address</label>
+<p class="font-body-md text-on-surface-variant text-sm">402, Jewel Tower, BKC, Mumbai, MH - 400051</p>
+</div>
+<div>
+<label class="block text-xs font-label-mono text-on-surface-variant uppercase mb-1">Authorized Person</label>
+<p class="font-body-md text-primary">Vikram Singhania</p>
+</div>
+<div>
+<label class="block text-xs font-label-mono text-on-surface-variant uppercase mb-1">Subscription Plan</label>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Enterprise Elite</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container border-t border-outline-variant p-4">
+<div class="flex items-center justify-between">
+<span class="text-sm font-label-mono">Last Audit: 12 Oct 2023</span>
+<span class="text-status-in-stock text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">verified</span> Verified
+                            </span>
+</div>
+</div>
+</div>
+<!-- Live Tenant Health Micro-Card -->
+<div class="bg-rate-ticker-bg rounded-xl p-6 text-white overflow-hidden relative">
+
+<div class="relative z-10">
+<h4 class="font-headline-sm mb-4">Multi-Tenant Traffic</h4>
+<div class="flex items-center gap-6">
+<div class="flex-1">
+<div class="flex justify-between text-xs font-label-mono mb-2">
+<span>Cloud Performance</span>
+<span>92%</span>
+</div>
+<div class="w-full bg-white/10 h-1 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full w-[92%]"></div>
+</div>
+</div>
+<div class="text-right">
+<span class="block font-data-numeric-lg text-secondary-fixed">14.2ms</span>
+<span class="text-[10px] font-label-mono opacity-60">AVG LATENCY</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Branch Directory Section -->
+<section class="lg:col-span-8">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col h-full">
+<div class="px-6 py-4 border-b border-outline-variant flex flex-col md:flex-row md:items-center justify-between gap-4">
+<h3 class="font-headline-sm text-primary">Branch Directory</h3>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-2 border border-outline-variant rounded-lg bg-surface text-sm focus:ring-2 focus:ring-primary outline-none w-full md:w-64" placeholder="Search by GSTIN or Name..." type="text">
+</div>
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-surface transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-6 py-4 font-label-mono text-xs uppercase text-primary">Branch Identity</th>
+<th class="px-6 py-4 font-label-mono text-xs uppercase text-primary">GSTIN</th>
+<th class="px-6 py-4 font-label-mono text-xs uppercase text-primary">Location</th>
+<th class="px-6 py-4 font-label-mono text-xs uppercase text-primary">Status</th>
+<th class="px-6 py-4 font-label-mono text-xs uppercase text-primary text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary-fixed flex items-center justify-center font-bold text-primary">HQ</div>
+<div>
+<div class="font-body-md font-bold text-primary">Corporate HQ - Mumbai</div>
+<div class="text-[10px] font-label-mono text-on-surface-variant">ID: BR-001</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-label-mono text-sm">27AAAAA0000A1Z5</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm">Mumbai, Maharashtra</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-status-in-stock/10 text-status-in-stock border border-status-in-stock/30 uppercase tracking-tighter">Active</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+<tr class="bg-surface-container-low/30 hover:bg-surface transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center font-bold text-on-surface-variant">DL</div>
+<div>
+<div class="font-body-md font-bold text-primary">Chandni Chowk Retail</div>
+<div class="text-[10px] font-label-mono text-on-surface-variant">ID: BR-004</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-label-mono text-sm">07BBBBB1111B1Z2</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm">New Delhi, NCR</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-status-in-stock/10 text-status-in-stock border border-status-in-stock/30 uppercase tracking-tighter">Active</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+<tr class="hover:bg-surface transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center font-bold text-on-surface-variant">KA</div>
+<div>
+<div class="font-body-md font-bold text-primary">Jayanagar Flagship</div>
+<div class="text-[10px] font-label-mono text-on-surface-variant">ID: BR-007</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-label-mono text-sm">29CCCCC2222C1Z9</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm">Bangalore, Karnataka</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-status-error/10 text-status-error border border-status-error/30 uppercase tracking-tighter">Maintenance</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+<tr class="bg-surface-container-low/30 hover:bg-surface transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center font-bold text-on-surface-variant">WB</div>
+<div>
+<div class="font-body-md font-bold text-primary">Bowbazar Hub</div>
+<div class="text-[10px] font-label-mono text-on-surface-variant">ID: BR-012</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-label-mono text-sm">19DDDDD3333D1Z0</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm">Kolkata, West Bengal</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-status-memo/10 text-status-memo border border-status-memo/30 uppercase tracking-tighter">Inactive</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+<tr class="hover:bg-surface transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center font-bold text-on-surface-variant">TN</div>
+<div>
+<div class="font-body-md font-bold text-primary">T. Nagar Showroom</div>
+<div class="text-[10px] font-label-mono text-on-surface-variant">ID: BR-015</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="font-label-mono text-sm">33EEEEE4444E1Z4</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm">Chennai, Tamil Nadu</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-status-in-stock/10 text-status-in-stock border border-status-in-stock/30 uppercase tracking-tighter">Active</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-surface-container border-t border-outline-variant flex items-center justify-between">
+<span class="text-xs font-label-mono text-on-surface-variant">Showing 1-5 of 12 branches</span>
+<div class="flex items-center gap-2">
+<button class="p-1 hover:bg-surface rounded transition-colors text-on-surface-variant"><span class="material-symbols-outlined">chevron_left</span></button>
+<span class="text-xs font-bold px-2">1</span>
+<button class="p-1 hover:bg-surface rounded transition-colors text-on-surface-variant"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Compliance & HUID Section -->
+<section class="mt-8">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6">
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+<div>
+<h3 class="font-headline-sm text-primary">HUID Verification Gates</h3>
+<p class="text-sm text-on-surface-variant">Global rules for Hallmark Unique Identification verification across branches.</p>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-label-mono text-xs uppercase tracking-widest text-on-surface-variant">Enforcement Level:</span>
+<div class="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
+<button class="px-4 py-1 text-xs font-bold rounded bg-primary text-white">Strict</button>
+<button class="px-4 py-1 text-xs font-bold rounded text-on-surface-variant hover:bg-surface transition-colors">Moderate</button>
+<button class="px-4 py-1 text-xs font-bold rounded text-on-surface-variant hover:bg-surface transition-colors">Manual</button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-4 rounded-lg bg-surface border border-outline-variant">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-status-in-stock">task_alt</span>
+<span class="font-bold text-primary">Auto-Verification</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Integrated API check with BIS portal during stock entry. Automatically flags non-compliant HUIDs.</p>
+</div>
+<div class="p-4 rounded-lg bg-surface border border-outline-variant">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-status-memo">lock_open</span>
+<span class="font-bold text-primary">Rate Lock Exceptions</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Allows 5% margin for local branch managers to override global gold rates for premium customers.</p>
+</div>
+<div class="p-4 rounded-lg bg-surface border border-outline-variant">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-status-error">security</span>
+<span class="font-bold text-primary">Audit Persistence</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">Daily immutable ledger entries for all inter-branch transfers. Compliant with SEBI gold guidelines.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant shadow-lg">
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined" data-icon="point_of_sale">point_of_sale</span>
+<span class="font-label-mono text-[10px]">Counter</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined" data-icon="sync_alt">sync_alt</span>
+<span class="font-label-mono text-[10px]">Exchange</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl p-2">
+<span class="material-symbols-outlined" data-icon="fire_hydrant">fire_hydrant</span>
+<span class="font-label-mono text-[10px]">Melting</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined" data-icon="assignment_ind">assignment_ind</span>
+<span class="font-label-mono text-[10px]">KYC</span>
+</div>
+</nav>
+<!-- Floating Action Button (Contextual) -->
+<button class="fixed bottom-28 md:bottom-8 right-8 w-14 h-14 bg-primary text-secondary-fixed rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+</button>
+<script>
+        // Micro-interaction: Update health indicator color based on some random logic
+        setInterval(() => {
+            const healthDisplay = document.querySelector('.animate-pulse');
+            if (healthDisplay) {
+                const colors = ['bg-status-in-stock', 'bg-secondary-container'];
+                healthDisplay.classList.remove(...colors);
+                healthDisplay.classList.add(colors[Math.floor(Math.random() * colors.length)]);
+            }
+        }, 3000);
+
+        // Simple Search Filter Simulation
+        const searchInput = document.querySelector('input[type="text"]');
+        if(searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(term) ? '' : 'none';
+                });
+            });
+        }
+    </script>
+</body></html>

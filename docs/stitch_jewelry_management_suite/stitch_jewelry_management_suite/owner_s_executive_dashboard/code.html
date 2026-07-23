@@ -1,0 +1,604 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>AurumERP | Owner's Live Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Playfair+Display:wght@600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#002117",
+                    "surface-container-high": "#e6e8ea",
+                    "on-surface-variant": "#404944",
+                    "on-secondary-fixed": "#241a00",
+                    "primary": "#003527",
+                    "primary-fixed-dim": "#95d3ba",
+                    "inverse-on-surface": "#eff1f3",
+                    "tertiary-container": "#413f70",
+                    "on-secondary-container": "#745c00",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#0b513d",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-tertiary-fixed": "#181445",
+                    "weight-numeric": "#0F172A",
+                    "outline-variant": "#bfc9c3",
+                    "outline": "#707974",
+                    "rate-ticker-bg": "#1E1B4B",
+                    "secondary": "#735c00",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#b0f0d6",
+                    "background": "#f7f9fb",
+                    "secondary-container": "#fed65b",
+                    "on-background": "#191c1e",
+                    "surface-variant": "#e0e3e5",
+                    "surface": "#f7f9fb",
+                    "surface-container": "#eceef0",
+                    "error": "#ba1a1a",
+                    "on-error": "#ffffff",
+                    "status-error": "#EF4444",
+                    "surface-bright": "#f7f9fb",
+                    "status-memo": "#F59E0B",
+                    "inverse-surface": "#2d3133",
+                    "on-tertiary-fixed-variant": "#444173",
+                    "surface-tint": "#2b6954",
+                    "on-tertiary-container": "#b0ace5",
+                    "on-surface": "#191c1e",
+                    "secondary-fixed-dim": "#e9c349",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#2b2858",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#ffe088",
+                    "on-secondary": "#ffffff",
+                    "status-in-stock": "#10B981",
+                    "status-sold": "#64748B",
+                    "surface-container-low": "#f2f4f6",
+                    "tertiary-fixed": "#e3dfff",
+                    "on-primary-container": "#80bea6",
+                    "inverse-primary": "#95d3ba",
+                    "primary-container": "#064e3b",
+                    "on-secondary-fixed-variant": "#574500",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed-dim": "#c4c1fb",
+                    "surface-dim": "#d8dadc"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "margin-desktop": "32px",
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "margin-mobile": "16px",
+                    "data-density-sm": "8px",
+                    "data-density-md": "16px"
+            },
+            "fontFamily": {
+                    "label-mono": ["JetBrains Mono"],
+                    "headline-md": ["Playfair Display"],
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "headline-sm": ["Playfair Display"],
+                    "data-numeric-md": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Playfair Display"],
+                    "data-numeric-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Playfair Display"],
+                    "body-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "label-mono": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-md": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-sm": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "data-numeric-md": ["16px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "headline-lg": ["40px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "data-numeric-lg": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .rate-flash-up { animation: flash-red 0.5s ease-out; }
+        .rate-flash-down { animation: flash-green 0.5s ease-out; }
+        @keyframes flash-red { 0% { background-color: rgba(186, 26, 26, 0.2); } 100% { background-color: transparent; } }
+        @keyframes flash-green { 0% { background-color: rgba(16, 185, 129, 0.2); } 100% { background-color: transparent; } }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #003527; border-radius: 10px; }
+        
+        .bento-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bento-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px -5px rgba(0, 53, 39, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Global Rate Banner (Staleness Indicator) -->
+<div class="h-10 bg-rate-ticker-bg text-secondary-fixed flex items-center justify-center px-margin-desktop sticky top-0 z-[60] font-label-mono text-label-mono">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">error</span>
+            LIVE MARKET RATES UPDATED 2 MINS AGO
+        </span>
+<div class="ml-auto flex gap-6">
+<span>24K: ₹7,250.00</span>
+<span>22K: ₹6,645.00</span>
+<span>Silver: ₹92.40</span>
+</div>
+</div>
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container border-r border-outline-variant flex flex-col py-data-density-md z-50">
+<div class="px-6 mb-8 flex flex-col items-start">
+<img alt="AurumERP Logo" class="h-12 w-auto mb-2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnuyqJQvpXhqhPktC1oa593o__WYbJ46T7mphUaVPgCuXBREsx-o1rD1mv4f3sr3r4A-kIpi6B90Ma-8mm8rvxoouA95t5tpmcDCK1_XuNyaySOmsTIhJ6CYdduM2sqs4A-ZqT-W0477uJfYMQnZDmACw3ZPslyzWAPSUytwR8XKC2r0WDZcrJjsOzfAReZv9sFHPWGsURBvLyfR2NAjikWD-a8Eu4oA0oBAoYnVBf1sBHftobjfIv">
+<span class="font-headline-sm text-headline-sm font-bold text-primary">JewelERP Pro</span>
+<span class="text-on-surface-variant text-xs tracking-widest opacity-70">ENTERPRISE EDITION</span>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Dashboard Active -->
+<a class="flex items-center gap-3 px-6 py-3 text-primary font-bold border-r-4 border-primary bg-primary-container/10 transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">database</span>
+<span>Masters</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Inventory &amp; Tagging</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Sales &amp; Billing</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">swap_horiz</span>
+<span>Old Gold Exchange</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>Reports</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-outline-variant/30 space-y-1">
+<button class="mx-6 mb-4 bg-primary text-on-primary w-[calc(100%-48px)] py-3 rounded-lg flex items-center justify-center gap-2 font-bold active:scale-95 transition-all">
+<span class="material-symbols-outlined">add_circle</span>
+                Quick Bill
+            </button>
+<a class="flex items-center gap-3 px-6 py-3 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+<span>Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen pb-20">
+<!-- Top Navigation Bar -->
+<header class="h-16 bg-surface border-b border-outline-variant flex justify-between items-center px-margin-desktop sticky top-10 z-40">
+<div class="flex items-center gap-8">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg w-80 focus:ring-1 focus:ring-primary text-sm" placeholder="Search Tag, Customer, or Invoice..." type="text">
+</div>
+<div class="flex gap-4 font-label-mono text-label-mono text-on-surface-variant">
+<span class="bg-surface-container-high px-3 py-1 rounded">Branch: Mumbai Main</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex flex-col items-end mr-4">
+<span class="text-[10px] text-on-surface-variant font-bold tracking-widest">METAL EXPOSURE (GML)</span>
+<span class="text-error font-data-numeric-md text-data-numeric-md">14.250 kg Short</span>
+</div>
+<button class="relative p-2 hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
+<div class="text-right">
+<p class="text-sm font-bold text-primary">Rajesh Mehta</p>
+<p class="text-[10px] text-on-surface-variant uppercase">Owner</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold border-2 border-white shadow-sm">
+                        RM
+                    </div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content Container -->
+<div class="px-margin-desktop py-8 max-w-[1600px] mx-auto space-y-gutter">
+<!-- Summary Stats Grid -->
+<section class="grid grid-cols-1 md:grid-cols-4 gap-gutter">
+<!-- Total Stock Value -->
+<div class="bento-card bg-surface-container-lowest p-6 rounded-xl border border-outline-variant flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-medium text-sm">Total Stock Value</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg">account_balance_wallet</span>
+</div>
+<div class="mt-4">
+<h3 class="text-headline-sm font-headline-sm text-primary">₹42.84 Cr</h3>
+<p class="text-on-surface-variant text-xs mt-1">Market Valuation</p>
+</div>
+</div>
+<!-- Gold Weight Summary -->
+<div class="bento-card bg-surface-container-lowest p-6 rounded-xl border border-outline-variant flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-medium text-sm">Gold Inventory</span>
+<span class="material-symbols-outlined text-secondary bg-secondary-fixed p-2 rounded-lg">payments</span>
+</div>
+<div class="mt-4">
+<h3 class="text-headline-sm font-headline-sm text-primary">64.285 kg</h3>
+<p class="text-on-surface-variant text-xs mt-1">Avg. Purity: 21.8K</p>
+</div>
+</div>
+<!-- Today's Sales -->
+<div class="bento-card bg-primary text-on-primary p-6 rounded-xl border border-primary flex flex-col justify-between shadow-xl">
+<div class="flex justify-between items-start">
+<span class="text-on-primary-container font-medium text-sm">Today's Sales</span>
+<span class="material-symbols-outlined text-on-primary p-2 rounded-lg bg-primary-container">trending_up</span>
+</div>
+<div class="mt-4">
+<h3 class="font-headline-sm text-headline-sm">₹1.18 Cr</h3>
+<div class="flex justify-between items-center mt-2">
+<span class="text-primary-fixed-dim text-xs">1.842 kg Gold sold</span>
+<span class="text-status-in-stock text-xs font-bold">+12% vs LW</span>
+</div>
+</div>
+</div>
+<!-- Silver Weight Summary -->
+<div class="bento-card bg-surface-container-lowest p-6 rounded-xl border border-outline-variant flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-medium text-sm">Silver Inventory</span>
+<span class="material-symbols-outlined text-slate-500 bg-slate-100 p-2 rounded-lg">blur_on</span>
+</div>
+<div class="mt-4">
+<h3 class="text-headline-sm font-headline-sm text-primary">142.900 kg</h3>
+<p class="text-on-surface-variant text-xs mt-1">92.5 Fine Sterling</p>
+</div>
+</div>
+</section>
+<!-- Main Content: Purity Breakdown & Performance Chart -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Purity Breakdown (2 columns wide) -->
+<section class="lg:col-span-2 space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-primary">Live Purity Breakdown</h2>
+<button class="text-primary text-sm font-bold flex items-center gap-1">
+                            Full Inventory <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- 24K Card -->
+<div class="bento-card bg-white p-6 rounded-xl border border-outline-variant">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<span class="font-bold text-sm tracking-widest">24K PURE GOLD</span>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<span class="text-on-surface-variant text-xs">Bullion &amp; Coins</span>
+<span class="font-data-numeric-md text-data-numeric-md text-primary">12.450 kg</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 45%;"></div>
+</div>
+<div class="pt-4 border-t border-outline-variant/30 flex justify-between">
+<span class="text-xs text-on-surface-variant">Valuation</span>
+<span class="text-sm font-bold">₹9.02 Cr</span>
+</div>
+</div>
+</div>
+<!-- 22K Card -->
+<div class="bento-card bg-white p-6 rounded-xl border border-outline-variant">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-3 h-3 rounded-full bg-secondary-fixed-dim"></div>
+<span class="font-bold text-sm tracking-widest">22K ORNAMENTS</span>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<span class="text-on-surface-variant text-xs">Retail Inventory</span>
+<span class="font-data-numeric-md text-data-numeric-md text-primary">48.210 kg</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full">
+<div class="bg-secondary-fixed-dim h-1.5 rounded-full" style="width: 82%;"></div>
+</div>
+<div class="pt-4 border-t border-outline-variant/30 flex justify-between">
+<span class="text-xs text-on-surface-variant">Valuation</span>
+<span class="text-sm font-bold">₹32.03 Cr</span>
+</div>
+</div>
+</div>
+<!-- 18K Card -->
+<div class="bento-card bg-white p-6 rounded-xl border border-outline-variant">
+<div class="flex items-center gap-2 mb-4">
+<div class="w-3 h-3 rounded-full bg-tertiary"></div>
+<span class="font-bold text-sm tracking-widest">18K DIAMOND STUD</span>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<span class="text-on-surface-variant text-xs">Stone Studded</span>
+<span class="font-data-numeric-md text-data-numeric-md text-primary">3.625 kg</span>
+</div>
+<div class="w-full bg-surface-container-low h-1.5 rounded-full">
+<div class="bg-tertiary h-1.5 rounded-full" style="width: 20%;"></div>
+</div>
+<div class="pt-4 border-t border-outline-variant/30 flex justify-between">
+<span class="text-xs text-on-surface-variant">Valuation</span>
+<span class="text-sm font-bold">₹1.79 Cr</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Chart Section: Performance -->
+<div class="bg-white p-8 rounded-xl border border-outline-variant">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Sales vs Rate Volatility</h3>
+<p class="text-on-surface-variant text-sm">Last 7 Days Performance Ledger</p>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2 text-xs font-bold">
+<span class="w-3 h-3 rounded-full bg-primary"></span> SALES
+                                </div>
+<div class="flex items-center gap-2 text-xs font-bold">
+<span class="w-3 h-3 rounded-full bg-secondary"></span> GOLD RATE
+                                </div>
+</div>
+</div>
+<!-- Pseudo-chart using CSS Grid and divs -->
+<div class="h-64 flex items-end justify-between gap-4 px-4 border-b border-l border-outline-variant/30 relative">
+<!-- Background Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+<div class="border-t border-outline"></div>
+<div class="border-t border-outline"></div>
+<div class="border-t border-outline"></div>
+<div class="border-t border-outline"></div>
+</div>
+<!-- Day columns -->
+<div class="flex-1 group relative flex items-end justify-center gap-1 h-full">
+<div class="w-4 bg-primary rounded-t-sm h-[40%] transition-all group-hover:opacity-80"></div>
+<div class="w-2 bg-secondary rounded-t-sm h-[60%] opacity-40"></div>
+<span class="absolute -bottom-8 text-[10px] font-bold text-on-surface-variant">MON</span>
+</div>
+<div class="flex-1 group relative flex items-end justify-center gap-1 h-full">
+<div class="w-4 bg-primary rounded-t-sm h-[55%]"></div>
+<div class="w-2 bg-secondary rounded-t-sm h-[62%] opacity-40"></div>
+<span class="absolute -bottom-8 text-[10px] font-bold text-on-surface-variant">TUE</span>
+</div>
+<div class="flex-1 group relative flex items-end justify-center gap-1 h-full">
+<div class="w-4 bg-primary rounded-t-sm h-[85%]"></div>
+<div class="w-2 bg-secondary rounded-t-sm h-[68%] opacity-40"></div>
+<span class="absolute -bottom-8 text-[10px] font-bold text-on-surface-variant">WED</span>
+</div>
+<div class="flex-1 group relative flex items-end justify-center gap-1 h-full">
+<div class="w-4 bg-primary rounded-t-sm h-[45%]"></div>
+<div class="w-2 bg-secondary rounded-t-sm h-[70%] opacity-40"></div>
+<span class="absolute -bottom-8 text-[10px] font-bold text-on-surface-variant">THU</span>
+</div>
+<div class="flex-1 group relative flex items-end justify-center gap-1 h-full">
+<div class="w-4 bg-primary rounded-t-sm h-[70%]"></div>
+<div class="w-2 bg-secondary rounded-t-sm h-[75%] opacity-40"></div>
+<span class="absolute -bottom-8 text-[10px] font-bold text-on-surface-variant">FRI</span>
+</div>
+<div class="flex-1 group relative flex items-end justify-center gap-1 h-full">
+<div class="w-4 bg-primary rounded-t-sm h-[95%]"></div>
+<div class="w-2 bg-secondary rounded-t-sm h-[72%] opacity-40"></div>
+<span class="absolute -bottom-8 text-[10px] font-bold text-on-surface-variant">SAT</span>
+</div>
+<div class="flex-1 group relative flex items-end justify-center gap-1 h-full">
+<div class="w-4 bg-primary rounded-t-sm h-[30%]"></div>
+<div class="w-2 bg-secondary rounded-t-sm h-[71%] opacity-40"></div>
+<span class="absolute -bottom-8 text-[10px] font-bold text-on-surface-variant">SUN</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Sidebar: Recent Activity -->
+<aside class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-primary">Recent Activity</h2>
+<button class="p-2 hover:bg-surface-container rounded-full">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+<div class="bg-white rounded-xl border border-outline-variant overflow-hidden">
+<div class="divide-y divide-outline-variant">
+<!-- Activity Item 1: High Value Sale -->
+<div class="p-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-emerald-600 text-sm" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-primary">High-Value Sale</p>
+<span class="text-[10px] text-on-surface-variant">12:45 PM</span>
+</div>
+<p class="text-sm mt-1">Bridal Necklace (22K) - 142.450g</p>
+<p class="text-sm font-bold text-primary mt-1">₹10,42,850.00</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">INV-9042</span>
+<span class="text-[10px] text-on-surface-variant">Cash + NEFT</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Activity Item 2: New Tags -->
+<div class="p-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-blue-600 text-sm" style="font-variation-settings: 'FILL' 1;">sell</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-primary">New Tags Created</p>
+<span class="text-[10px] text-on-surface-variant">11:20 AM</span>
+</div>
+<p class="text-sm mt-1">24 Bangles tagged for 'Bangalore'</p>
+<p class="text-xs text-on-surface-variant mt-1">Total Weight: 480.000g</p>
+<div class="mt-2">
+<span class="text-[10px] border border-outline-variant px-2 py-0.5 rounded font-mono">HUID: AZ90214...</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Activity Item 3: Inter-branch Transfer -->
+<div class="p-4 hover:bg-surface-container-low transition-colors group">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-amber-600 text-sm" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-primary">Inter-Branch Transfer</p>
+<span class="text-[10px] text-on-surface-variant">09:15 AM</span>
+</div>
+<p class="text-sm mt-1">Mumbai Main → Pune Outlet</p>
+<p class="text-xs text-on-surface-variant mt-1">Loose Diamonds (12.50 Carats)</p>
+<div class="mt-2 flex items-center gap-1 text-status-memo text-[10px] font-bold">
+<span class="material-symbols-outlined text-xs">pending</span> IN TRANSIT
+                                        </div>
+</div>
+</div>
+</div>
+<!-- Activity Item 4: Rate Override -->
+<div class="p-4 bg-error-container/20 border-l-4 border-error">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-error text-sm" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-xs font-bold text-error">Rate Override Alert</p>
+<span class="text-[10px] text-error">08:45 AM</span>
+</div>
+<p class="text-sm mt-1">Manager 'Suresh' approved a 2% discount on MC.</p>
+<p class="text-xs opacity-70 mt-1">Invoice: INV-8922 | Customer: Anil K.</p>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full py-4 bg-surface-container-low text-primary font-bold text-xs hover:bg-surface-container transition-colors">
+                            VIEW ALL AUDIT LOGS
+                        </button>
+</div>
+<!-- Market Insights Card -->
+<div class="relative overflow-hidden rounded-xl h-48 group">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" data-alt="A macro photograph of high-end gold jewellery pieces like detailed rings and heavy necklaces, with dramatic, low-key lighting that emphasizes the rich yellow gold texture. The background is a soft, dark velvet, and the lighting is a warm amber glow. The aesthetic is extremely premium, professional, and consistent with a high-stakes financial and jewellery management environment." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAJl-SoAaN1V-FdtkhdCA6ZJhx7bXf_onm2vUZraUJEssk5x5Qzl4bWShk3TstwYBzmfheq2yF1tA3wiY6wghOHCy6-XgBIK_XWafv2Cvtn7l3SQLXr91U3Pj50sgjmgQjcrGBTaUkwEIXjpg3KQBqoYleCzKPMUsqMZr3nYjivlNzTe5w5zjqHag8s61LwHcUK5s6GACwXJ7rAYmyABDnwRCB1_AXnpzyzZ5jzc6iypKfyka5qoNpv')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 to-transparent flex flex-col justify-end p-6">
+<h4 class="text-white font-bold text-lg">Market Insight</h4>
+<p class="text-primary-fixed-dim text-xs mt-1">Gold prices predicted to stabilize at +1.2% over the next quarter based on global indices.</p>
+</div>
+</div>
+</aside>
+</div>
+<!-- Ledger Quick View -->
+<section class="bg-white rounded-xl border border-outline-variant overflow-hidden">
+<div class="px-8 py-6 border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-primary">Branch-wise Live Stock</h3>
+<div class="flex gap-2">
+<button class="px-4 py-2 text-xs font-bold border border-outline-variant rounded hover:bg-surface-container-low transition-colors">EXPORT LEDGER</button>
+<button class="px-4 py-2 text-xs font-bold bg-primary text-on-primary rounded active:scale-95 transition-all">AUDIT ALL</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-primary text-xs font-bold tracking-widest uppercase">
+<th class="px-8 py-4">Branch Name</th>
+<th class="px-8 py-4 text-right">Gold (g)</th>
+<th class="px-8 py-4 text-right">Silver (g)</th>
+<th class="px-8 py-4 text-right">Stones (ct)</th>
+<th class="px-8 py-4 text-right">Current Valuation</th>
+<th class="px-8 py-4 text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-8 py-4 font-bold text-primary">Mumbai Main - Zaveri Bazar</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">42,850.450</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">112,400.000</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">452.80</td>
+<td class="px-8 py-4 text-right font-bold">₹28.42 Cr</td>
+<td class="px-8 py-4 text-center">
+<span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold">
+<span class="w-1.5 h-1.5 bg-emerald-700 rounded-full"></span> OPEN
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors bg-surface-container-low/30">
+<td class="px-8 py-4 font-bold text-primary">Pune Outlet - Koregaon Park</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">12,405.120</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">18,250.000</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">120.45</td>
+<td class="px-8 py-4 text-right font-bold">₹8.14 Cr</td>
+<td class="px-8 py-4 text-center">
+<span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold">
+<span class="w-1.5 h-1.5 bg-emerald-700 rounded-full"></span> OPEN
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-8 py-4 font-bold text-primary">Bangalore - Indiranagar</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">9,029.430</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">12,250.000</td>
+<td class="px-8 py-4 text-right font-data-numeric-md">284.10</td>
+<td class="px-8 py-4 text-right font-bold">₹6.28 Cr</td>
+<td class="px-8 py-4 text-center">
+<span class="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold">
+<span class="w-1.5 h-1.5 bg-slate-700 rounded-full"></span> CLOSED
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+<!-- Floating Action for Metal Purchase (Common in ERP) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-secondary text-on-secondary rounded-full shadow-2xl flex items-center justify-center group hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-3xl">scale</span>
+<span class="absolute right-full mr-4 bg-primary text-on-primary px-3 py-1 rounded text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Purchase Bullion</span>
+</button>
+<script>
+        // Micro-interaction: Randomly simulate rate "flashes"
+        setInterval(() => {
+            const ticker = document.querySelector('.sticky.top-0');
+            const shouldFlash = Math.random() > 0.8;
+            if (shouldFlash) {
+                const isUp = Math.random() > 0.5;
+                ticker.classList.add(isUp ? 'rate-flash-up' : 'rate-flash-down');
+                setTimeout(() => {
+                    ticker.classList.remove('rate-flash-up', 'rate-flash-down');
+                }, 500);
+            }
+        }, 5000);
+
+        // Micro-interaction: Hover effects for bento cards
+        document.querySelectorAll('.bento-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                // Potential for adding particle effects or glow
+            });
+        });
+    </script>
+</body></html>

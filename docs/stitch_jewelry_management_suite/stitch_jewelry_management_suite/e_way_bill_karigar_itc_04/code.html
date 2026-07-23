@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AurumERP | E-Way Bill & Karigar Compliance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..900&family=Playfair+Display:wght@100..900&family=Plus+Jakarta+Sans:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E2E8F0;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #bfc9c3;
+            border-radius: 10px;
+        }
+        @keyframes pulse-emerald {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .status-active-pulse {
+            animation: pulse-emerald 2s infinite;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-container": "#745c00",
+                      "primary-fixed": "#b0f0d6",
+                      "on-primary-fixed": "#002117",
+                      "surface": "#f7f9fb",
+                      "on-background": "#191c1e",
+                      "status-in-stock": "#10B981",
+                      "on-tertiary-container": "#b0ace5",
+                      "inverse-surface": "#2d3133",
+                      "on-tertiary-fixed": "#181445",
+                      "on-primary-fixed-variant": "#0b513d",
+                      "on-surface-variant": "#404944",
+                      "on-tertiary": "#ffffff",
+                      "outline": "#707974",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e6e8ea",
+                      "secondary-fixed-dim": "#e9c349",
+                      "rate-ticker-bg": "#1E1B4B",
+                      "primary-fixed-dim": "#95d3ba",
+                      "on-primary-container": "#80bea6",
+                      "surface-dim": "#d8dadc",
+                      "surface-bright": "#f7f9fb",
+                      "tertiary-fixed": "#e3dfff",
+                      "tertiary-fixed-dim": "#c4c1fb",
+                      "error": "#ba1a1a",
+                      "primary-container": "#064e3b",
+                      "primary": "#003527",
+                      "surface-variant": "#e0e3e5",
+                      "status-sold": "#64748B",
+                      "surface-container-highest": "#e0e3e5",
+                      "weight-numeric": "#0F172A",
+                      "secondary-fixed": "#ffe088",
+                      "tertiary-container": "#413f70",
+                      "on-primary": "#ffffff",
+                      "inverse-on-surface": "#eff1f3",
+                      "on-secondary-fixed-variant": "#574500",
+                      "background": "#f7f9fb",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary": "#2b2858",
+                      "surface-tint": "#2b6954",
+                      "inverse-primary": "#95d3ba",
+                      "secondary-container": "#fed65b",
+                      "status-memo": "#F59E0B",
+                      "error-container": "#ffdad6",
+                      "outline-variant": "#bfc9c3",
+                      "status-error": "#EF4444",
+                      "on-error-container": "#93000a",
+                      "surface-container": "#eceef0",
+                      "secondary": "#735c00",
+                      "on-secondary-fixed": "#241a00",
+                      "on-surface": "#191c1e",
+                      "surface-container-low": "#f2f4f6",
+                      "on-tertiary-fixed-variant": "#444173",
+                      "on-error": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "data-density-sm": "8px",
+                      "data-density-md": "16px",
+                      "margin-desktop": "32px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "container-max": "1440px"
+              },
+              "fontFamily": {
+                      "label-mono": ["JetBrains Mono"],
+                      "body-md": ["Plus Jakarta Sans"],
+                      "headline-sm": ["Playfair Display"],
+                      "body-lg": ["Plus Jakarta Sans"],
+                      "data-numeric-lg": ["Plus Jakarta Sans"],
+                      "data-numeric-md": ["Plus Jakarta Sans"],
+                      "headline-md": ["Playfair Display"],
+                      "headline-lg": ["Playfair Display"]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-surface font-body-md text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-surface border-b border-outline-variant h-16">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-container-max mx-auto h-full">
+<div class="flex items-center gap-6">
+<img alt="AurumERP" class="h-10 w-10 object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLvS4sBdbsV6JMftGcwwOAVEnIBVeQbOUSlcY22cqxVf_qzB0iBsNfloXs4BCasLgRvtZinx8mTf9DeQGxab3TCcFEqWWKwDWpolVAT6BDPaMJ4s9ys14RG9zEG9ZhvWaAdj0wnsp-yEhbk9O50I-CHmE9R6_jFwTk9pLQZpY8jPsZXeWR6Qie9Nx1ih2rSbuF2NY5COKrOZCdipLOKK7LC-Qz0dqGtsmrnhZfzGPgGUUvIirkkqyHUeilc"/>
+<span class="font-headline-md text-headline-md font-bold text-primary">Aurelian Ledger</span>
+<nav class="hidden md:flex items-center gap-8 ml-8">
+<a class="text-on-surface-variant hover:bg-surface-container transition-colors px-2 py-1" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:bg-surface-container transition-colors px-2 py-1" href="#">Tax Ledger</a>
+<a class="text-on-surface-variant hover:bg-surface-container transition-colors px-2 py-1" href="#">GST Reports</a>
+<a class="text-on-surface-variant hover:bg-surface-container transition-colors px-2 py-1" href="#">Audit Log</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer p-2 hover:bg-surface-container rounded-full">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer p-2 hover:bg-surface-container rounded-full">settings</span>
+<button class="bg-primary text-on-primary px-6 py-2 font-label-mono text-label-mono rounded-lg hover:opacity-90 active:opacity-80 transition-all uppercase tracking-widest">
+                    File Return
+                </button>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-72 bg-surface-container-low border-r border-outline-variant flex flex-col z-40">
+<div class="p-6">
+<div class="flex items-center gap-4 mb-2">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined">verified_user</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary">Compliance Module</h2>
+<p class="text-xs font-label-mono text-on-surface-variant uppercase tracking-tighter">FY 2023-24</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:translate-x-1 transition-transform duration-200 hover:bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">GST Dashboard</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:translate-x-1 transition-transform duration-200 hover:bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-body-md text-body-md">Sales Ledger (GSTR-1)</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:translate-x-1 transition-transform duration-200 hover:bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-body-md text-body-md">Purchase Ledger (GSTR-3B)</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer bg-secondary-container text-on-secondary-container rounded-lg font-bold">
+<span class="material-symbols-outlined">rebase_edit</span>
+<span class="font-body-md text-body-md">E-Way Bill & ITC Reco</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:translate-x-1 transition-transform duration-200 hover:bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="font-body-md text-body-md">E-Way Bill</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:translate-x-1 transition-transform duration-200 hover:bg-surface-variant rounded-lg">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="font-body-md text-body-md">Compliance Vault</span>
+</div>
+</nav>
+<div class="p-4 border-t border-outline-variant space-y-4">
+<button class="w-full py-3 bg-primary text-on-primary rounded-lg font-label-mono text-label-mono hover:bg-primary/90 transition-colors">
+                Run Audit Check
+            </button>
+<div class="space-y-1">
+<div class="flex items-center gap-4 px-4 py-2 cursor-pointer text-on-surface-variant hover:bg-surface-variant rounded-lg text-sm">
+<span class="material-symbols-outlined text-sm">help</span>
+<span>Support</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-2 cursor-pointer text-on-surface-variant hover:bg-surface-variant rounded-lg text-sm">
+<span class="material-symbols-outlined text-sm">health_and_safety</span>
+<span>System Health</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="pl-72 pt-16 min-h-screen">
+<div class="p-margin-desktop max-w-container-max mx-auto space-y-8">
+<!-- Header Section -->
+<div class="flex justify-between items-end">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary">Karigar & E-Way Compliance</h1>
+<p class="text-on-surface-variant mt-1">Inter-branch transfers and Job-work (ITC-04) movement monitoring.</p>
+</div>
+<div class="flex gap-4">
+<button class="flex items-center gap-2 border border-outline px-4 py-2 rounded text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">download</span>
+<span class="font-label-mono text-xs uppercase">Download Challan</span>
+</button>
+<button class="flex items-center gap-2 bg-secondary text-on-secondary px-6 py-2 rounded-lg font-label-mono text-sm uppercase tracking-wider shadow-sm hover:opacity-90">
+<span class="material-symbols-outlined">local_shipping</span>
+                        Generate Part-A
+                    </button>
+</div>
+</div>
+<!-- Dashboard Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter">
+<div class="glass-card p-6 rounded-xl flex flex-col justify-between">
+<span class="text-on-surface-variant text-sm font-label-mono uppercase">Ready for E-Way</span>
+<div class="mt-4">
+<span class="font-data-numeric-lg text-data-numeric-lg text-primary">12</span>
+<p class="text-xs text-on-surface-variant">Threshold > ₹50,000</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl border-l-4 border-l-status-memo">
+<span class="text-on-surface-variant text-sm font-label-mono uppercase">ITC-04 Outstanding</span>
+<div class="mt-4">
+<span class="font-data-numeric-lg text-data-numeric-lg text-status-memo">4.28 kg</span>
+<p class="text-xs text-on-surface-variant">Pure Gold with Karigars</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl border-l-4 border-l-status-error">
+<span class="text-on-surface-variant text-sm font-label-mono uppercase">Deemed Sale Risk</span>
+<div class="mt-4 flex items-center gap-3">
+<span class="font-data-numeric-lg text-data-numeric-lg text-error">02</span>
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-1">Held > 365 Days</p>
+</div>
+<div class="bg-primary p-6 rounded-xl text-on-primary">
+<span class="text-on-primary/70 text-sm font-label-mono uppercase">Portal Connectivity</span>
+<div class="mt-4 flex items-center gap-2">
+<div class="w-3 h-3 bg-status-in-stock rounded-full status-active-pulse"></div>
+<span class="font-data-numeric-md text-data-numeric-md">Live (NIC-API)</span>
+</div>
+<p class="text-xs text-on-primary/60 mt-1">Last Sync: 2 mins ago</p>
+</div>
+</div>
+<!-- Main Interactive Area: Bento Layout -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Ready for E-Way Bill Table (8 Columns) -->
+<div class="col-span-12 lg:col-span-8 glass-card rounded-xl overflow-hidden">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-primary">Ready for E-Way Bill</h3>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">filter_list</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">search</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+<thead class="bg-surface-container-low text-on-surface-variant">
+<tr>
+<th class="px-6 py-4 text-left font-label-mono uppercase tracking-wider">Reference No.</th>
+<th class="px-6 py-4 text-left font-label-mono uppercase tracking-wider">Movement Type</th>
+<th class="px-6 py-4 text-left font-label-mono uppercase tracking-wider">Weight (Gms)</th>
+<th class="px-6 py-4 text-right font-label-mono uppercase tracking-wider">Value (₹)</th>
+<th class="px-6 py-4 text-center font-label-mono uppercase tracking-wider">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="font-bold">TRF/24/0981</div>
+<div class="text-xs text-on-surface-variant">Branch: Zaveri Bazar</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-1 bg-surface-container-highest text-xs font-bold rounded">INTER-BRANCH</span>
+</td>
+<td class="px-6 py-4 font-label-mono">1,240.500</td>
+<td class="px-6 py-4 text-right font-data-numeric-md">₹ 7,85,420</td>
+<td class="px-6 py-4 text-center">
+<button class="text-primary font-bold hover:underline">Select</button>
+</td>
+</tr>
+<tr class="bg-surface-container-lowest/50 hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="font-bold">JW/KAR-882</div>
+<div class="text-xs text-on-surface-variant">Karigar: Hemant Arts</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-1 bg-secondary-container text-on-secondary-container text-xs font-bold rounded">PRINCIPAL OUT</span>
+</td>
+<td class="px-6 py-4 font-label-mono">450.000</td>
+<td class="px-6 py-4 text-right font-data-numeric-md">₹ 2,92,500</td>
+<td class="px-6 py-4 text-center">
+<button class="text-primary font-bold hover:underline">Select</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="font-bold">JW/RET-112</div>
+<div class="text-xs text-on-surface-variant">Return from Karigar</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-1 bg-tertiary-fixed text-on-tertiary-fixed text-xs font-bold rounded">JOBWORK RET</span>
+</td>
+<td class="px-6 py-4 font-label-mono">12.500</td>
+<td class="px-6 py-4 text-right font-data-numeric-md text-error">₹ 82,100</td>
+<td class="px-6 py-4 text-center">
+<button class="text-primary font-bold hover:underline">Select</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- ITC-04 Karigar Compliance (4 Columns) -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="glass-card rounded-xl p-6 relative overflow-hidden">
+<div class="flex justify-between items-start mb-6">
+<h3 class="font-headline-sm text-headline-sm text-primary">ITC-04 Status</h3>
+<span class="text-xs font-label-mono bg-status-memo/20 text-status-memo px-2 py-1 rounded">ALERT</span>
+</div>
+<div class="space-y-4">
+<div class="p-4 bg-surface-container rounded-lg">
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm font-semibold">Metal with Karigars</span>
+<span class="font-label-mono text-sm">4.28 kg</span>
+</div>
+<div class="w-full bg-outline-variant h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 75%"></div>
+</div>
+<div class="flex justify-between mt-1">
+<span class="text-[10px] text-on-surface-variant">Within 1 Year Limit</span>
+<span class="text-[10px] text-on-surface-variant">75% of limit</span>
+</div>
+</div>
+<div class="p-4 bg-error-container/30 border border-error/20 rounded-lg">
+<div class="flex gap-3 items-start">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">timer_off</span>
+<div>
+<p class="font-bold text-sm text-on-error-container">Aging Warning</p>
+<p class="text-xs text-on-surface-variant">2 Challans (CH/23/041, CH/23/055) exceed 1 year. Risk of GST Deemed Sale.</p>
+</div>
+</div>
+<button class="mt-4 w-full py-2 bg-error text-white text-xs font-label-mono uppercase tracking-widest rounded">Review Challans</button>
+</div>
+</div>
+</div>
+<!-- Quick Update Vehicle -->
+<div class="bg-surface-container-high rounded-xl p-6">
+<h4 class="font-headline-sm text-[18px] text-primary mb-4">Vehicle Update</h4>
+<div class="space-y-4">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] font-label-mono text-on-surface-variant uppercase">E-Way Bill Number</label>
+<input class="bg-surface-container-lowest border-outline-variant rounded p-2 text-sm focus:ring-1 focus:ring-primary outline-none" placeholder="12 Digit No." type="text"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] font-label-mono text-on-surface-variant uppercase">New Vehicle No.</label>
+<input class="bg-surface-container-lowest border-outline-variant rounded p-2 text-sm focus:ring-1 focus:ring-primary outline-none" placeholder="MH 01 AB 1234" type="text"/>
+</div>
+<button class="w-full py-3 bg-primary text-on-primary rounded font-label-mono text-xs uppercase hover:bg-primary/90 transition-colors">Update Vehicle</button>
+</div>
+</div>
+</div>
+<!-- Recent e-Way Bills (Full Width) -->
+<div class="col-span-12 glass-card rounded-xl overflow-hidden">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Recent e-Way Bills</h3>
+<p class="text-xs text-on-surface-variant">Real-time status synced with NIC Portal</p>
+</div>
+<button class="flex items-center gap-2 text-primary font-bold text-sm">
+<span class="material-symbols-outlined text-sm">sync</span>
+                            Refresh All Status
+                        </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full">
+<thead>
+<tr class="bg-surface-container text-on-surface-variant text-xs font-label-mono uppercase">
+<th class="px-6 py-4 text-left">EWB Number</th>
+<th class="px-6 py-4 text-left">Generation Date</th>
+<th class="px-6 py-4 text-left">Destination</th>
+<th class="px-6 py-4 text-left">Vehicle No.</th>
+<th class="px-6 py-4 text-left">Status</th>
+<th class="px-6 py-4 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-outline-variant/30">
+<td class="px-6 py-4 font-bold">4112 9088 1233</td>
+<td class="px-6 py-4">24 Oct 2024, 11:30 AM</td>
+<td class="px-6 py-4">Surat Branch (42AA...)</td>
+<td class="px-6 py-4">GJ 05 BC 9912</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-status-in-stock/10 text-status-in-stock font-bold text-xs">
+<span class="w-1.5 h-1.5 bg-status-in-stock rounded-full"></span>
+                                            ACTIVE
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right space-x-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">visibility</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">print</span>
+<span class="material-symbols-outlined text-error cursor-pointer">cancel</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/30 bg-surface-container-low/30">
+<td class="px-6 py-4 font-bold">4112 9088 0042</td>
+<td class="px-6 py-4">23 Oct 2024, 02:15 PM</td>
+<td class="px-6 py-4">Rajat Karigar (Mumbai)</td>
+<td class="px-6 py-4">MH 46 X 4200</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-status-sold/10 text-status-sold font-bold text-xs">
+<span class="w-1.5 h-1.5 bg-status-sold rounded-full"></span>
+                                            EXPIRED
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right space-x-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">visibility</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">print</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/30">
+<td class="px-6 py-4 font-bold">4112 9087 5510</td>
+<td class="px-6 py-4">22 Oct 2024, 10:05 AM</td>
+<td class="px-6 py-4">Ahmedabad Warehouse</td>
+<td class="px-6 py-4">GJ 01 AS 1122</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error/10 text-error font-bold text-xs">
+<span class="w-1.5 h-1.5 bg-error rounded-full"></span>
+                                            CANCELLED
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right space-x-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">history</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">print</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="pl-72 w-full">
+<div class="bg-primary text-on-primary py-4 px-margin-desktop flex justify-between items-center">
+<div class="flex items-center gap-8">
+<span class="font-label-mono text-label-mono font-bold text-secondary-fixed">AurumERP v4.2.1</span>
+<span class="font-label-mono text-label-mono opacity-80">© 2024 Aurelian Ledger ERP • Secure GST Compliance Module</span>
+</div>
+<div class="flex gap-6 font-label-mono text-label-mono">
+<a class="text-on-primary/80 hover:text-secondary-fixed transition-colors" href="#">Data Privacy</a>
+<a class="text-on-primary/80 hover:text-secondary-fixed transition-colors" href="#">Audit Protocol</a>
+<a class="text-on-primary/80 hover:text-secondary-fixed transition-colors" href="#">Legal Disclaimer</a>
+</div>
+</div>
+</footer>
+<!-- Micro-interaction script -->
+<script>
+        document.querySelectorAll('.material-symbols-outlined').forEach(icon => {
+            icon.addEventListener('click', function() {
+                this.classList.add('scale-90');
+                setTimeout(() => this.classList.remove('scale-90'), 150);
+            });
+        });
+    </script>
+</body></html>

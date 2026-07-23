@@ -1,0 +1,517 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>JewelERP Pro | Karigar Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d8dadc",
+                        "surface-tint": "#2b6954",
+                        "outline": "#707974",
+                        "primary-fixed-dim": "#95d3ba",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-surface-variant": "#404944",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#444173",
+                        "surface-variant": "#e0e3e5",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#b0f0d6",
+                        "on-tertiary-fixed": "#181445",
+                        "on-secondary-fixed": "#241a00",
+                        "status-in-stock": "#10B981",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "background": "#f7f9fb",
+                        "outline-variant": "#bfc9c3",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eceef0",
+                        "on-surface": "#191c1e",
+                        "on-primary-container": "#80bea6",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#e3dfff",
+                        "inverse-primary": "#95d3ba",
+                        "weight-numeric": "#0F172A",
+                        "tertiary": "#2b2858",
+                        "on-primary-fixed-variant": "#0b513d",
+                        "secondary-container": "#fed65b",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#e9c349",
+                        "on-secondary-container": "#745c00",
+                        "surface-container-low": "#f2f4f6",
+                        "primary": "#003527",
+                        "rate-ticker-bg": "#1E1B4B",
+                        "inverse-on-surface": "#eff1f3",
+                        "tertiary-container": "#413f70",
+                        "status-memo": "#F59E0B",
+                        "surface": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-fixed": "#ffe088",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "status-sold": "#64748B",
+                        "on-tertiary-container": "#b0ace5",
+                        "inverse-surface": "#2d3133",
+                        "primary-container": "#064e3b",
+                        "tertiary-fixed-dim": "#c4c1fb",
+                        "status-error": "#EF4444",
+                        "secondary": "#735c00",
+                        "on-primary-fixed": "#002117",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "data-density-sm": "8px",
+                        "data-density-md": "16px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "gutter": "24px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "label-mono": ["JetBrains Mono"],
+                        "headline-md": ["Playfair Display"],
+                        "headline-sm": ["Playfair Display"],
+                        "headline-lg": ["Playfair Display"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "data-numeric-md": ["Plus Jakarta Sans"],
+                        "data-numeric-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #bfc9c3; border-radius: 10px; }
+        .ledger-row:hover { background-color: rgba(6, 78, 59, 0.04); }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-white">
+<!-- Sidebar Navigation -->
+<aside class="flex flex-col h-full py-data-density-md bg-surface-container border-r border-outline-variant h-screen w-64 fixed left-0 top-0 z-40">
+<div class="px-6 mb-8">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">JewelERP Pro</h1>
+<p class="font-label-mono text-[11px] uppercase tracking-widest text-on-surface-variant opacity-70">Enterprise Edition</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 text-primary font-bold border-r-4 border-primary bg-primary-container/10 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">database</span>
+<span class="font-body-md">Masters</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">inventory_2</span>
+<span class="font-body-md">Inventory &amp; Tagging</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">receipt_long</span>
+<span class="font-body-md">Sales &amp; Billing</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">swap_horiz</span>
+<span class="font-body-md">Old Gold Exchange</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="font-body-md">Reports</span>
+</a>
+</nav>
+<div class="mt-auto px-4">
+<button class="w-full py-3 bg-primary text-white font-bold rounded-lg mb-6 flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95">
+<span class="material-symbols-outlined">add_circle</span>
+                Quick Bill
+            </button>
+<div class="space-y-1 border-t border-outline-variant pt-4">
+<a class="flex items-center px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+<a class="flex items-center px-4 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">contact_support</span>
+<span class="text-sm">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Bar Navigation -->
+<header class="flex justify-between items-center px-margin-desktop sticky top-0 z-30 bg-surface h-16 w-[calc(100%-16rem)] ml-64 border-b border-outline-variant">
+<div class="flex items-center gap-8">
+<div class="flex items-center bg-surface-container-low px-4 py-2 rounded-lg border border-outline-variant w-96">
+<span class="material-symbols-outlined text-outline">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-on-surface-variant/50" placeholder="Search Karigars, Orders or HUID..." type="text">
+</div>
+<div class="flex items-center gap-6 font-label-mono text-label-mono text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+<span>Mumbai Main</span>
+</div>
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="w-2 h-2 rounded-full bg-status-in-stock animate-pulse"></span>
+<span>24K: ₹7,250</span>
+</div>
+<div class="flex items-center gap-2">
+<span>22K: ₹6,645</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
+<div class="text-right">
+<p class="text-xs font-bold text-on-surface">Admin User</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Store Manager</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional studio headshot of a corporate jewelry store manager in a tailored dark suit. The lighting is sophisticated and directional, creating a premium executive feel. The background is a blurred high-end jewelry showroom with golden accents and crystal displays, maintaining a clean and modern professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBG-O8eBQqsUEMRdPN1LZTm2_UEUuL24nwZkX9HQSY016VQxmKaSJtLZS84NOygu15H92XGMKwoBZO4JeGn4G7EbMHAZXbGdPz7Na7pMZOls3QBbeF-fDpoQFmj_tT8-79Co8s2piklKlmNRVhGBcYCGDjsfBOqorrbIZg183R81n8GZiz0BdSKf6JTqhRjY0d-oVDS9o-nWokg3d8MTk-gMZ-ommHfH-PWGzsAbHkGz47gVQ3IgXRK">
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-64 p-margin-desktop min-h-screen">
+<!-- Page Header & Stats -->
+<div class="mb-8 flex justify-between items-end">
+<div>
+<nav class="flex items-center gap-2 text-[12px] font-label-mono text-on-surface-variant mb-2">
+<span>MASTERS</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-bold">KARIGAR LEDGER</span>
+</nav>
+<h2 class="font-headline-lg text-headline-lg text-primary">Executive Karigar Ledger</h2>
+<p class="text-on-surface-variant">Real-time monitoring of metal balances and labor liabilities across 14 active workshops.</p>
+</div>
+<div class="flex gap-4">
+<button class="flex items-center gap-2 px-4 py-2 border border-outline-variant bg-white rounded hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+<span>Advanced Filters</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:opacity-90 transition-all shadow-sm">
+<span class="material-symbols-outlined">file_download</span>
+<span>Export Report</span>
+</button>
+</div>
+</div>
+<!-- High-level Metrics -->
+<div class="grid grid-cols-4 gap-gutter mb-8">
+<div class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Total Metal with Karigars</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-headline-sm font-headline-sm text-primary">1,420.550</h3>
+<span class="text-sm font-label-mono text-on-surface-variant">gms (24K Eqv)</span>
+</div>
+<div class="mt-4 flex items-center text-status-error text-xs font-bold">
+<span class="material-symbols-outlined text-sm mr-1">trending_up</span>
+<span>+12.4g from yesterday</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Total Making Payable</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-headline-sm font-headline-sm text-primary">₹8,42,190</h3>
+</div>
+<div class="mt-4 flex items-center text-status-in-stock text-xs font-bold">
+<span class="material-symbols-outlined text-sm mr-1">check_circle</span>
+<span>All settlements up to date</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Overdue Jobs</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-headline-sm font-headline-sm text-status-error">12</h3>
+<span class="text-sm font-label-mono text-on-surface-variant">Active Orders</span>
+</div>
+<div class="mt-4 flex items-center text-status-error text-xs font-bold">
+<span class="material-symbols-outlined text-sm mr-1">timer</span>
+<span>Avg. Delay: 2.4 Days</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Karigar Efficiency</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-headline-sm font-headline-sm text-primary">94.2%</h3>
+</div>
+<div class="mt-4 w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-status-in-stock h-full w-[94.2%]"></div>
+</div>
+</div>
+</div>
+<!-- Ledger Table Section -->
+<div class="bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden mb-12">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+<div class="flex gap-4">
+<select class="bg-transparent border-outline-variant rounded text-sm focus:ring-primary focus:border-primary">
+<option>All Branches</option>
+<option>Mumbai Main</option>
+<option>Zaveri Bazaar Hub</option>
+</select>
+<select class="bg-transparent border-outline-variant rounded text-sm focus:ring-primary focus:border-primary">
+<option>All Metal Types</option>
+<option>Yellow Gold 22K</option>
+<option>Rose Gold 18K</option>
+<option>Platinum</option>
+</select>
+</div>
+<p class="text-xs text-on-surface-variant italic">Last updated: Today, 10:45 AM</p>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-primary font-bold border-b border-outline-variant">
+<tr>
+<th class="px-6 py-4 text-xs uppercase tracking-wider">Karigar Details</th>
+<th class="px-6 py-4 text-xs uppercase tracking-wider text-right">Pure Gold Balance (g)</th>
+<th class="px-6 py-4 text-xs uppercase tracking-wider text-right">Labor Charge Due</th>
+<th class="px-6 py-4 text-xs uppercase tracking-wider text-center">Active Jobs</th>
+<th class="px-6 py-4 text-xs uppercase tracking-wider text-center">Aging Status</th>
+<th class="px-6 py-4 text-xs uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="ledger-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-tertiary-container flex items-center justify-center text-tertiary-fixed font-bold">RB</div>
+<div>
+<p class="font-bold text-on-surface">Ramesh Bengalaru</p>
+<p class="text-xs text-on-surface-variant">Specialty: Hand-carved Temple Jewellery</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-numeric-md text-status-error font-bold">+450.250</p>
+<p class="text-[10px] text-on-surface-variant font-label-mono">DEBIT BAL (WITH HIM)</p>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-numeric-md text-primary font-bold">₹1,12,000</p>
+<p class="text-[10px] text-on-surface-variant font-label-mono">PAYABLE</p>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-surface-container px-2 py-1 rounded text-xs font-bold border border-outline-variant">08</span>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex flex-col items-center gap-1">
+<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-error-container text-on-error-container uppercase">3 Overdue</span>
+<span class="text-[10px] text-on-surface-variant">Avg: 14 Days Pending</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-2 text-primary hover:bg-primary-container/10 rounded transition-colors" title="Settle Money Account">
+<span class="material-symbols-outlined">payments</span>
+</button>
+<button class="p-2 text-status-error hover:bg-error-container/20 rounded transition-colors" title="Recall Metal">
+<span class="material-symbols-outlined">keyboard_return</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="ledger-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold">SM</div>
+<div>
+<p class="font-bold text-on-surface">Suraj Mumbai</p>
+<p class="text-xs text-on-surface-variant">Specialty: Casting &amp; Machine Chains</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-numeric-md text-status-in-stock font-bold">-12.150</p>
+<p class="text-[10px] text-on-surface-variant font-label-mono">CREDIT BAL (OWED TO HIM)</p>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-numeric-md text-primary font-bold">₹42,500</p>
+<p class="text-[10px] text-on-surface-variant font-label-mono">PAYABLE</p>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-surface-container px-2 py-1 rounded text-xs font-bold border border-outline-variant">04</span>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex flex-col items-center gap-1">
+<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-primary-container text-on-primary-container uppercase">On-Time</span>
+<span class="text-[10px] text-on-surface-variant">Fast Delivery Track</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-2 text-primary hover:bg-primary-container/10 rounded transition-colors">
+<span class="material-symbols-outlined">payments</span>
+</button>
+<button class="p-2 text-status-error hover:bg-error-container/20 rounded transition-colors">
+<span class="material-symbols-outlined">keyboard_return</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="ledger-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center text-primary font-bold">PK</div>
+<div>
+<p class="font-bold text-on-surface">Pankaj Kolkata</p>
+<p class="text-xs text-on-surface-variant">Specialty: Filigree &amp; Polki Settings</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-numeric-md text-status-error font-bold">+890.000</p>
+<p class="text-[10px] text-on-surface-variant font-label-mono">DEBIT BAL (BULK ALLOCATION)</p>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-numeric-md text-primary font-bold">₹2,84,000</p>
+<p class="text-[10px] text-on-surface-variant font-label-mono">PAYABLE</p>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-surface-container px-2 py-1 rounded text-xs font-bold border border-outline-variant">15</span>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="flex flex-col items-center gap-1">
+<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container uppercase">9 Due Today</span>
+<span class="text-[10px] text-on-surface-variant">High Volume</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-2 text-primary hover:bg-primary-container/10 rounded transition-colors">
+<span class="material-symbols-outlined">payments</span>
+</button>
+<button class="p-2 text-status-error hover:bg-error-container/20 rounded transition-colors">
+<span class="material-symbols-outlined">keyboard_return</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low">
+<p class="text-xs text-on-surface-variant">Showing 1 to 10 of 42 active Karigars</p>
+<div class="flex gap-2">
+<button class="p-1 border border-outline-variant rounded hover:bg-white disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="px-3 py-1 bg-primary text-white rounded text-xs font-bold">1</button>
+<button class="px-3 py-1 border border-outline-variant rounded text-xs hover:bg-white">2</button>
+<button class="px-3 py-1 border border-outline-variant rounded text-xs hover:bg-white">3</button>
+<button class="p-1 border border-outline-variant rounded hover:bg-white">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Compliance & Alerts Area -->
+<div class="grid grid-cols-3 gap-gutter mb-12">
+<div class="col-span-2 bg-rate-ticker-bg text-white p-8 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+<!-- Abstract Pattern background via CSS -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#ffffff 0.5px, transparent 0.5px); background-size: 10px 10px;"></div>
+<div>
+<span class="bg-secondary text-on-secondary px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Audit Alert</span>
+<h3 class="font-headline-md text-headline-md mt-4 text-secondary-fixed">Metal Purity Discrepancy Found</h3>
+<p class="mt-2 text-secondary-fixed-dim max-w-xl">A return from Karigar 'Kishore Jhaberi' shows a 0.2% purity variance beyond the allowed threshold. Manual audit required for Batch #POLK-204.</p>
+</div>
+<div class="mt-8 flex gap-4">
+<button class="px-6 py-3 bg-secondary text-on-secondary-container font-bold rounded-lg hover:brightness-110 transition-all">Start Audit</button>
+<button class="px-6 py-3 bg-white/10 border border-white/20 text-white font-bold rounded-lg hover:bg-white/20 transition-all">Dismiss Notification</button>
+</div>
+</div>
+<div class="bg-white border border-outline-variant rounded-xl p-6 flex flex-col justify-between">
+<div>
+<h4 class="font-bold text-primary flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined">analytics</span>
+                        Pending Aging Distribution
+                    </h4>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span>On-Time</span>
+<span class="font-bold">65%</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-status-in-stock h-full w-[65%] rounded-full"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span>1-3 Days Delayed</span>
+<span class="font-bold">25%</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-status-memo h-full w-[25%] rounded-full"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span>3+ Days Critical</span>
+<span class="font-bold">10%</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-status-error h-full w-[10%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-6 border-t border-outline-variant mt-6">
+<a class="text-sm font-bold text-primary flex items-center justify-center gap-2 hover:underline" href="#">
+                        View Detailed Aging Report
+                        <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</a>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interaction for table rows
+        document.querySelectorAll('.ledger-row').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (!e.target.closest('button')) {
+                    // Logic for row expansion or detailed navigation
+                    console.log('Opening karigar details...');
+                }
+            });
+        });
+
+        // Flash effect simulator for metal rates (Atmospheric)
+        setInterval(() => {
+            const tickers = document.querySelectorAll('.animate-pulse');
+            tickers.forEach(t => {
+                t.classList.remove('animate-pulse');
+                void t.offsetWidth; // Trigger reflow
+                t.classList.add('animate-pulse');
+            });
+        }, 5000);
+    </script>
+</body></html>

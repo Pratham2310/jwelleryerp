@@ -1,0 +1,506 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Aurelian Ledger | GSTR-1 Preparation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Playfair+Display:wght@600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ledger-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .ledger-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .ledger-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .ledger-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+<!-- Tailwind Config Injection -->
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-container": "#745c00",
+                      "primary-fixed": "#b0f0d6",
+                      "on-primary-fixed": "#002117",
+                      "surface": "#f7f9fb",
+                      "on-background": "#191c1e",
+                      "status-in-stock": "#10B981",
+                      "on-tertiary-container": "#b0ace5",
+                      "inverse-surface": "#2d3133",
+                      "on-tertiary-fixed": "#181445",
+                      "on-primary-fixed-variant": "#0b513d",
+                      "on-surface-variant": "#404944",
+                      "on-tertiary": "#ffffff",
+                      "outline": "#707974",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e6e8ea",
+                      "secondary-fixed-dim": "#e9c349",
+                      "rate-ticker-bg": "#1E1B4B",
+                      "primary-fixed-dim": "#95d3ba",
+                      "on-primary-container": "#80bea6",
+                      "surface-dim": "#d8dadc",
+                      "surface-bright": "#f7f9fb",
+                      "tertiary-fixed": "#e3dfff",
+                      "tertiary-fixed-dim": "#c4c1fb",
+                      "error": "#ba1a1a",
+                      "primary-container": "#064e3b",
+                      "primary": "#003527",
+                      "surface-variant": "#e0e3e5",
+                      "status-sold": "#64748B",
+                      "surface-container-highest": "#e0e3e5",
+                      "weight-numeric": "#0F172A",
+                      "secondary-fixed": "#ffe088",
+                      "tertiary-container": "#413f70",
+                      "on-primary": "#ffffff",
+                      "inverse-on-surface": "#eff1f3",
+                      "on-secondary-fixed-variant": "#574500",
+                      "background": "#f7f9fb",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary": "#2b2858",
+                      "surface-tint": "#2b6954",
+                      "inverse-primary": "#95d3ba",
+                      "secondary-container": "#fed65b",
+                      "status-memo": "#F59E0B",
+                      "error-container": "#ffdad6",
+                      "outline-variant": "#bfc9c3",
+                      "status-error": "#EF4444",
+                      "on-error-container": "#93000a",
+                      "surface-container": "#eceef0",
+                      "secondary": "#735c00",
+                      "on-secondary-fixed": "#241a00",
+                      "on-surface": "#191c1e",
+                      "surface-container-low": "#f2f4f6",
+                      "on-tertiary-fixed-variant": "#444173",
+                      "on-error": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "data-density-sm": "8px",
+                      "data-density-md": "16px",
+                      "margin-desktop": "32px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "container-max": "1440px"
+              },
+              "fontFamily": {
+                      "label-mono": ["JetBrains Mono"],
+                      "body-md": ["Plus Jakarta Sans"],
+                      "headline-sm": ["Playfair Display"],
+                      "body-lg": ["Plus Jakarta Sans"],
+                      "data-numeric-lg": ["Plus Jakarta Sans"],
+                      "data-numeric-md": ["Plus Jakarta Sans"],
+                      "headline-md": ["Playfair Display"],
+                      "headline-lg": ["Playfair Display"],
+                      "headline-lg-mobile": ["Playfair Display"]
+              },
+              "fontSize": {
+                      "label-mono": ["13px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                      "headline-sm": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "data-numeric-lg": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "data-numeric-md": ["16px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                      "headline-md": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                      "headline-lg": ["40px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar (Fixed Header) -->
+<header class="bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline fixed top-0 w-full z-50 h-16">
+<div class="flex justify-between items-center w-full px-margin-desktop max-w-container-max mx-auto h-full">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Aurelian Ledger</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors px-2 py-1 rounded" href="#">Dashboard</a>
+<a class="text-primary dark:text-primary-fixed font-bold border-b-2 border-primary dark:border-primary-fixed pb-1" href="#">Tax Ledger</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors px-2 py-1 rounded" href="#">GST Reports</a>
+<a class="text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors px-2 py-1 rounded" href="#">Audit Log</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary text-on-primary px-4 py-2 rounded font-label-mono text-label-mono hover:bg-primary-container transition-colors">File Return</button>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer" data-icon="settings">settings</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Corporate headshot of a financial officer in a professional setting, well-lit with soft natural lighting, conveying authority and precision in a modern luxury office environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC63LgRNzonJKcQssR3qB5UnxJaRrncR_s7jhKJUqel8S4nQvrz_Uh-g5-1MlHYh-57FG74B3dmqxozcYr87eIazIniGW1lGPv8v2uOIwXvAQmhsYJpUlOXkEs4xSCb7kXQTCuTopH4KdBB6oBBrRetNO_4KRuqVmFyWRFa_7dx0kTiv0R6NZYeK_swydYsSfnBfVM8msyhp4FHRG2hMQ5PTJStAP4ADwsfwv6KfyyD4M5yutfSal3u">
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-72 bg-surface-container-low dark:bg-surface-container-highest border-r border-outline-variant dark:border-outline flex flex-col z-40 hidden md:flex">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-1">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="security">security</span>
+<span class="font-headline-sm text-headline-sm text-primary dark:text-primary-fixed">Compliance</span>
+</div>
+<p class="text-xs text-on-surface-variant font-label-mono uppercase tracking-wider">FY 2023-24 • Active Period</p>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-variant transition-transform duration-200 hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">GST Dashboard</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer bg-secondary-container text-on-secondary-container rounded-lg font-bold">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-body-md text-body-md">Sales Ledger (GSTR-1)</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-variant transition-transform duration-200 hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-body-md text-body-md">Purchase Ledger</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-variant transition-transform duration-200 hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="rebase_edit">rebase_edit</span>
+<span class="font-body-md text-body-md">ITC Reco</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-variant transition-transform duration-200 hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+<span class="font-body-md text-body-md">E-Way Bill</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-variant transition-transform duration-200 hover:translate-x-1">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+<span class="font-body-md text-body-md">Compliance Vault</span>
+</div>
+</nav>
+<div class="p-4 border-t border-outline-variant">
+<button class="w-full bg-primary-container text-on-primary-container py-3 rounded flex items-center justify-center gap-2 font-bold hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+                Run Audit Check
+            </button>
+</div>
+<div class="p-4 space-y-1">
+<div class="flex items-center gap-4 px-4 py-2 cursor-pointer text-on-surface-variant text-sm">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span>
+<span>Support</span>
+</div>
+<div class="flex items-center gap-4 px-4 py-2 cursor-pointer text-on-surface-variant text-sm">
+<span class="material-symbols-outlined text-sm" data-icon="health_and_safety">health_and_safety</span>
+<span>System Health</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-0 md:ml-72 mt-16 flex-1 flex flex-col p-6 bg-surface">
+<!-- Filter Header Section -->
+<section class="mb-6 grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+<div class="lg:col-span-3">
+<h1 class="font-headline-md text-headline-md text-primary mb-1">GSTR-1 Preparation</h1>
+<p class="text-on-surface-variant font-label-mono text-xs">GSTIN: 27AAAAA0000A1Z5 | Maharashtra</p>
+</div>
+<div class="lg:col-span-9 grid grid-cols-2 md:grid-cols-4 gap-3">
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-tighter">Financial Year</label>
+<select class="bg-surface-container border-outline-variant rounded px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+<option>2023-24</option>
+<option>2022-23</option>
+</select>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-tighter">Tax Period</label>
+<select class="bg-surface-container border-outline-variant rounded px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+<option>October 2023</option>
+<option>September 2023</option>
+</select>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-tighter">Invoice Type</label>
+<select class="bg-surface-container border-outline-variant rounded px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+<option>B2B Invoices</option>
+<option>B2C Large</option>
+<option>B2C Small</option>
+<option>Exports</option>
+</select>
+</div>
+<div class="flex items-end">
+<button class="w-full border border-outline text-primary font-bold py-2 rounded flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors text-sm">
+<span class="material-symbols-outlined text-lg" data-icon="filter_list">filter_list</span>
+                        More Filters
+                    </button>
+</div>
+</div>
+</section>
+<!-- Main Workspace: Table + Discrepancy Side Panel -->
+<div class="flex-1 grid grid-cols-1 xl:grid-cols-4 gap-6 min-h-0">
+<!-- Ledger Table Container -->
+<div class="xl:col-span-3 flex flex-col bg-surface-container-lowest border border-outline-variant rounded overflow-hidden shadow-sm">
+<!-- Table Action Bar -->
+<div class="p-4 border-b border-outline-variant flex flex-wrap justify-between items-center gap-4 bg-surface-container-low">
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface border-outline-variant rounded text-sm w-64 focus:ring-primary focus:border-primary" placeholder="Search Invoice/Customer..." type="text">
+</div>
+<div class="h-6 w-[1px] bg-outline-variant"></div>
+<span class="font-label-mono text-xs text-on-surface-variant font-bold">Total: 142 Invoices | ₹1.42 Cr Taxable</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary text-on-primary px-4 py-2 rounded text-xs font-bold flex items-center gap-2 hover:opacity-90">
+<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+                            Download JSON
+                        </button>
+<button class="bg-secondary-container text-on-secondary-container px-4 py-2 rounded text-xs font-bold flex items-center gap-2 hover:opacity-90">
+<span class="material-symbols-outlined text-sm" data-icon="bolt">bolt</span>
+                            E-Invoice
+                        </button>
+<button class="border border-primary text-primary px-4 py-2 rounded text-xs font-bold flex items-center gap-2 hover:bg-primary/5">
+<span class="material-symbols-outlined text-sm" data-icon="verified">verified</span>
+                            Validate GSTN
+                        </button>
+</div>
+</div>
+<!-- Ledger Table -->
+<div class="flex-1 overflow-auto ledger-scrollbar">
+<table class="w-full border-collapse text-left">
+<thead class="sticky top-0 z-20 bg-primary text-on-primary">
+<tr>
+<th class="p-3 text-[11px] font-bold uppercase tracking-wider border-r border-on-primary/10">Invoice No.</th>
+<th class="p-3 text-[11px] font-bold uppercase tracking-wider border-r border-on-primary/10">Date</th>
+<th class="p-3 text-[11px] font-bold uppercase tracking-wider border-r border-on-primary/10">Customer / GSTIN</th>
+<th class="p-3 text-[11px] font-bold uppercase tracking-wider border-r border-on-primary/10">HSN</th>
+<th class="p-3 text-[11px] font-bold uppercase tracking-wider text-right border-r border-on-primary/10">Taxable Val</th>
+<th class="p-3 text-[11px] font-bold uppercase tracking-wider text-center border-r border-on-primary/10">GST Rates</th>
+<th class="p-3 text-[11px] font-bold uppercase tracking-wider text-right">Tax Amount</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1: Gold Jewellery -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="p-3 font-label-mono text-sm border-r border-outline-variant">INV-2023-10042</td>
+<td class="p-3 text-sm border-r border-outline-variant">12 Oct 2023</td>
+<td class="p-3 border-r border-outline-variant">
+<div class="flex flex-col">
+<span class="font-bold text-sm">Aditya Gems &amp; Jewellers</span>
+<span class="text-[10px] text-on-surface-variant font-label-mono">27ABCFG1234H1Z1</span>
+</div>
+</td>
+<td class="p-3 text-sm font-label-mono border-r border-outline-variant">711319</td>
+<td class="p-3 text-right font-data-numeric-md text-sm border-r border-outline-variant">8,42,000.00</td>
+<td class="p-3 border-r border-outline-variant">
+<div class="flex justify-center gap-1">
+<span class="px-2 py-0.5 bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold rounded">3%</span>
+</div>
+</td>
+<td class="p-3 text-right font-data-numeric-md text-sm">
+<div class="flex flex-col items-end">
+<span>25,260.00</span>
+<span class="text-[10px] text-on-surface-variant">CGST+SGST</span>
+</div>
+</td>
+</tr>
+<!-- Row 2: Diamond Studded -->
+<tr class="bg-surface-container-low/50 hover:bg-surface-container-high transition-colors">
+<td class="p-3 font-label-mono text-sm border-r border-outline-variant">INV-2023-10043</td>
+<td class="p-3 text-sm border-r border-outline-variant">12 Oct 2023</td>
+<td class="p-3 border-r border-outline-variant">
+<div class="flex flex-col">
+<span class="font-bold text-sm">Varanasi Diamonds Pvt Ltd</span>
+<span class="text-[10px] text-on-surface-variant font-label-mono">09DDDFG5678J2Z3</span>
+</div>
+</td>
+<td class="p-3 text-sm font-label-mono border-r border-outline-variant">710239</td>
+<td class="p-3 text-right font-data-numeric-md text-sm border-r border-outline-variant">12,15,500.00</td>
+<td class="p-3 border-r border-outline-variant">
+<div class="flex justify-center gap-1">
+<span class="px-2 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-bold rounded">0.25%</span>
+</div>
+</td>
+<td class="p-3 text-right font-data-numeric-md text-sm">
+<div class="flex flex-col items-end">
+<span>3,038.75</span>
+<span class="text-[10px] text-status-error font-bold italic">IGST (Interstate)</span>
+</div>
+</td>
+</tr>
+<!-- Row 3: Service/Making Charge -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="p-3 font-label-mono text-sm border-r border-outline-variant">INV-2023-10044</td>
+<td class="p-3 text-sm border-r border-outline-variant">13 Oct 2023</td>
+<td class="p-3 border-r border-outline-variant">
+<div class="flex flex-col">
+<span class="font-bold text-sm">Malabar Retail Outlets</span>
+<span class="text-[10px] text-on-surface-variant font-label-mono">27MMAAA9999K1Z0</span>
+</div>
+</td>
+<td class="p-3 text-sm font-label-mono border-r border-outline-variant">998891</td>
+<td class="p-3 text-right font-data-numeric-md text-sm border-r border-outline-variant">45,000.00</td>
+<td class="p-3 border-r border-outline-variant">
+<div class="flex justify-center gap-1">
+<span class="px-2 py-0.5 bg-primary-fixed text-on-primary-fixed text-[10px] font-bold rounded">18%</span>
+</div>
+</td>
+<td class="p-3 text-right font-data-numeric-md text-sm">
+<div class="flex flex-col items-end">
+<span>8,100.00</span>
+<span class="text-[10px] text-on-surface-variant">Job Work</span>
+</div>
+</td>
+</tr>
+<!-- Repeat Mock Rows for Density -->
+<tr class="bg-surface-container-low/50">
+<td class="p-3 font-label-mono text-sm border-r border-outline-variant">INV-2023-10045</td>
+<td class="p-3 text-sm border-r border-outline-variant">14 Oct 2023</td>
+<td class="p-3 border-r border-outline-variant"><span class="font-bold text-sm">Kalyan Jewellers Ltd</span></td>
+<td class="p-3 text-sm border-r border-outline-variant">711319</td>
+<td class="p-3 text-right text-sm border-r border-outline-variant">52,30,000.00</td>
+<td class="p-3 border-r border-outline-variant"><div class="flex justify-center"><span class="px-2 py-0.5 bg-secondary-fixed text-[10px] rounded">3%</span></div></td>
+<td class="p-3 text-right text-sm font-data-numeric-md">1,56,900.00</td>
+</tr>
+<tr>
+<td class="p-3 font-label-mono text-sm border-r border-outline-variant">INV-2023-10046</td>
+<td class="p-3 text-sm border-r border-outline-variant">15 Oct 2023</td>
+<td class="p-3 border-r border-outline-variant"><span class="font-bold text-sm">Joyalukkas India</span></td>
+<td class="p-3 text-sm border-r border-outline-variant">711319</td>
+<td class="p-3 text-right text-sm border-r border-outline-variant">18,20,000.00</td>
+<td class="p-3 border-r border-outline-variant"><div class="flex justify-center"><span class="px-2 py-0.5 bg-secondary-fixed text-[10px] rounded">3%</span></div></td>
+<td class="p-3 text-right text-sm font-data-numeric-md">54,600.00</td>
+</tr>
+<tr class="bg-surface-container-low/50">
+<td class="p-3 font-label-mono text-sm border-r border-outline-variant">INV-2023-10047</td>
+<td class="p-3 text-sm border-r border-outline-variant">15 Oct 2023</td>
+<td class="p-3 border-r border-outline-variant"><span class="font-bold text-sm">Senco Gold Ltd</span></td>
+<td class="p-3 text-sm border-r border-outline-variant">711319</td>
+<td class="p-3 text-right text-sm border-r border-outline-variant">29,10,000.00</td>
+<td class="p-3 border-r border-outline-variant"><div class="flex justify-center"><span class="px-2 py-0.5 bg-secondary-fixed text-[10px] rounded">3%</span></div></td>
+<td class="p-3 text-right text-sm font-data-numeric-md">87,300.00</td>
+</tr>
+</tbody>
+<tfoot class="sticky bottom-0 z-20 bg-surface-container-highest border-t-2 border-outline-variant">
+<tr>
+<td class="p-3 text-right font-bold text-sm" colspan="4">Total Current Page:</td>
+<td class="p-3 text-right font-data-numeric-md font-bold text-sm border-r border-outline-variant">1,21,12,500.00</td>
+<td class="p-3 border-r border-outline-variant"></td>
+<td class="p-3 text-right font-data-numeric-md font-bold text-sm text-primary">3,30,198.75</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+<!-- Discrepancy Side Panel -->
+<aside class="flex flex-col gap-4">
+<div class="bg-surface-container-highest border border-status-error/30 rounded p-4 flex-1">
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-bold text-sm flex items-center gap-2 text-error">
+<span class="material-symbols-outlined text-lg" data-icon="report">report</span>
+                            Potential Discrepancies
+                        </h2>
+<span class="bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded-full">3 Critical</span>
+</div>
+<div class="space-y-3">
+<!-- Discrepancy Card 1 -->
+<div class="bg-surface-container-lowest p-3 rounded border-l-4 border-error shadow-sm">
+<p class="text-xs font-bold mb-1">Customer GSTIN Inactive</p>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">Aditya Gems (27ABCFG...) appears suspended on GSTN portal as of Oct 10th.</p>
+<div class="mt-2 flex gap-2">
+<button class="text-[10px] font-bold text-primary underline">Verify Live</button>
+<button class="text-[10px] font-bold text-on-surface-variant underline">Exclude Invoice</button>
+</div>
+</div>
+<!-- Discrepancy Card 2 -->
+<div class="bg-surface-container-lowest p-3 rounded border-l-4 border-status-memo shadow-sm">
+<p class="text-xs font-bold mb-1">State Mismatch (IGST)</p>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">INV-10043 uses Place of Supply (POS) as UP (09) but GSTIN is registered in MH (27).</p>
+<div class="mt-2 flex gap-2">
+<button class="text-[10px] font-bold text-primary underline">Auto-Fix</button>
+</div>
+</div>
+<!-- Discrepancy Card 3 -->
+<div class="bg-surface-container-lowest p-3 rounded border-l-4 border-error shadow-sm">
+<p class="text-xs font-bold mb-1">Missing HSN Summary</p>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">HSN 711319 is missing Weight data in primary ledger. Mandatory for GSTR-1.</p>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-outline-variant">
+<h3 class="text-[11px] font-bold text-on-surface-variant uppercase mb-3">Filing Progress</h3>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-status-in-stock h-full w-[85%]"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-2">85% of records validated. 15 remaining.</p>
+</div>
+</div>
+<!-- Summary Card -->
+<div class="bg-primary text-on-primary p-4 rounded shadow-lg">
+<h3 class="text-xs font-bold mb-3 opacity-80 uppercase tracking-widest">Liability Summary</h3>
+<div class="space-y-2">
+<div class="flex justify-between text-sm">
+<span class="opacity-70">B2B Taxable</span>
+<span class="font-data-numeric-md">₹1,21,12,500</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="opacity-70">Total GST</span>
+<span class="font-data-numeric-md">₹3,30,198</span>
+</div>
+<div class="pt-2 mt-2 border-t border-on-primary/20 flex justify-between font-bold">
+<span>Final Payable</span>
+<span class="text-lg">₹3,30,198</span>
+</div>
+</div>
+<button class="w-full mt-4 bg-secondary-fixed text-on-secondary-fixed py-2 rounded text-xs font-bold hover:opacity-90">
+                        Proceed to Filing
+                    </button>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-primary dark:bg-on-primary-fixed w-full py-4 px-margin-desktop flex flex-wrap justify-between items-center z-50">
+<div class="text-on-primary dark:text-primary-fixed flex items-center gap-4">
+<span class="font-label-mono text-label-mono font-bold text-secondary-fixed">Aurelian Ledger ERP</span>
+<span class="font-label-mono text-label-mono opacity-60 hidden md:inline">© 2024 Secure GST Compliance Module • V4.2.1</span>
+</div>
+<div class="flex gap-6">
+<a class="font-label-mono text-label-mono text-on-primary/80 hover:text-secondary-fixed transition-colors" href="#">Data Privacy</a>
+<a class="font-label-mono text-label-mono text-on-primary/80 hover:text-secondary-fixed transition-colors" href="#">Audit Protocol</a>
+<a class="font-label-mono text-label-mono text-on-primary/80 hover:text-secondary-fixed transition-colors" href="#">Legal Disclaimer</a>
+</div>
+</footer>
+<!-- Interactive Layer: Simple Tooltip Logic -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Row highlighting effect logic
+            const tableRows = document.querySelectorAll('tbody tr');
+            tableRows.forEach(row => {
+                row.addEventListener('click', () => {
+                    tableRows.forEach(r => r.classList.remove('bg-primary-fixed/20'));
+                    row.classList.add('bg-primary-fixed/20');
+                });
+            });
+
+            // Simulation of validation check
+            const validateBtn = document.querySelector('[data-icon="verified"]').closest('button');
+            validateBtn.addEventListener('click', () => {
+                validateBtn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin" data-icon="sync">sync</span> Validating...';
+                setTimeout(() => {
+                    validateBtn.innerHTML = '<span class="material-symbols-outlined text-sm" data-icon="done_all">done_all</span> Validated';
+                    validateBtn.classList.remove('text-primary', 'border-primary');
+                    validateBtn.classList.add('bg-status-in-stock', 'text-white', 'border-transparent');
+                }, 1500);
+            });
+        });
+    </script>
+</body></html>

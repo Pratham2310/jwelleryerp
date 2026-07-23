@@ -1,0 +1,485 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Old Gold Exchange Dashboard | AurumERP Retail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(254, 214, 91, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(254, 214, 91, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(254, 214, 91, 0); }
+        }
+        .gold-pulse {
+            animation: pulse-gold 2s infinite;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#95d3ba",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#e0e3e5",
+                      "on-primary-fixed-variant": "#0b513d",
+                      "status-memo": "#F59E0B",
+                      "on-background": "#191c1e",
+                      "on-primary-container": "#80bea6",
+                      "surface-dim": "#d8dadc",
+                      "on-primary": "#ffffff",
+                      "primary": "#003527",
+                      "surface-bright": "#f7f9fb",
+                      "status-error": "#EF4444",
+                      "background": "#f7f9fb",
+                      "primary-container": "#064e3b",
+                      "on-secondary-fixed-variant": "#574500",
+                      "on-surface-variant": "#404944",
+                      "on-secondary-fixed": "#241a00",
+                      "tertiary-container": "#413f70",
+                      "on-error-container": "#93000a",
+                      "tertiary": "#2b2858",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed-dim": "#e9c349",
+                      "outline": "#707974",
+                      "tertiary-fixed": "#e3dfff",
+                      "surface-container-low": "#f2f4f6",
+                      "surface-container": "#eceef0",
+                      "on-tertiary-fixed": "#181445",
+                      "tertiary-fixed-dim": "#c4c1fb",
+                      "on-surface": "#191c1e",
+                      "inverse-primary": "#95d3ba",
+                      "on-secondary-container": "#745c00",
+                      "on-tertiary-container": "#b0ace5",
+                      "on-tertiary-fixed-variant": "#444173",
+                      "status-in-stock": "#10B981",
+                      "surface-variant": "#e0e3e5",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#ffe088",
+                      "secondary": "#735c00",
+                      "status-sold": "#64748B",
+                      "inverse-on-surface": "#eff1f3",
+                      "inverse-surface": "#2d3133",
+                      "primary-fixed": "#b0f0d6",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-high": "#e6e8ea",
+                      "rate-ticker-bg": "#1E1B4B",
+                      "weight-numeric": "#0F172A",
+                      "error-container": "#ffdad6",
+                      "surface": "#f7f9fb",
+                      "outline-variant": "#bfc9c3",
+                      "secondary-container": "#fed65b",
+                      "on-primary-fixed": "#002117",
+                      "surface-tint": "#2b6954",
+                      "surface-container-lowest": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "data-density-sm": "8px",
+                      "container-max": "1440px",
+                      "margin-desktop": "32px",
+                      "data-density-md": "16px",
+                      "margin-mobile": "16px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Playfair Display"],
+                      "headline-sm": ["Playfair Display"],
+                      "headline-md": ["Playfair Display"],
+                      "data-numeric-md": ["Plus Jakarta Sans"],
+                      "label-mono": ["JetBrains Mono"],
+                      "body-md": ["Plus Jakarta Sans"],
+                      "body-lg": ["Plus Jakarta Sans"]
+              }
+            }
+          }
+        }
+      </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 flex justify-between items-center px-gutter h-16 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md font-bold text-primary">AurumERP Retail</span>
+<div class="hidden md:flex gap-6 items-center">
+<span class="cursor-pointer text-on-surface-variant font-body-md hover:text-primary transition-colors">Buyback Ledger</span>
+<span class="cursor-pointer text-primary border-b-2 border-primary pb-1 font-body-md">Old Gold Exchange</span>
+<span class="cursor-pointer text-on-surface-variant font-body-md hover:text-primary transition-colors">Melting Dashboard</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-rate-ticker-bg text-secondary-fixed-dim px-4 py-1 rounded-full flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">trending_up</span>
+<span class="font-label-mono text-label-mono">XAU 24K: ₹7,422.50</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">account_balance_wallet</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">settings</span>
+<div class="w-8 h-8 rounded-full bg-primary-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a store manager in a corporate setting, looking confident and wearing professional business attire. High-end retail banking environment lighting, clean minimalist background with emerald accents, ensuring a premium professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-cTe3p4YelvBPfBrDTGSCdjAvS6rmgUkAaNLVl1fssTXAcnRt-bUnsv67BkZG--IseNhs-eQrtqOP951v7X39nm0KL5aTuveqWnXglzBU7cXNg46FKbqfWvdBD20430XAy8Ow1uFGzdjZ-2dbKF_Km3qgXiz5O-8pi0NnFl1BGs1t7aRo5SD4ijkocKv1g1Aq9-HbcVW2AEj1arR39FAqVJeRKqufmjIQ3JJz6wDPDd_4oO_jcz0X">
+</div>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 pt-20 pb-4 px-4 bg-surface-container-low border-r border-outline-variant">
+<div class="mb-8 px-2">
+<h3 class="text-primary font-headline-sm text-headline-sm">Main Branch</h3>
+<p class="text-on-surface-variant text-sm">Terminal 01 - Active</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-on-primary-container font-bold rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">currency_exchange</span>
+<span class="font-body-md">Old Gold Exchange</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">mop</span>
+<span class="font-body-md">Melting Lots</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="font-body-md">KYC Verifier</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+<span class="font-body-md">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md">Reports</span>
+</a>
+</nav>
+<button class="mb-4 w-full bg-secondary-container text-on-secondary-container py-3 rounded-xl font-bold flex items-center justify-center gap-2 gold-pulse">
+<span class="material-symbols-outlined">add_circle</span>
+            Quick Buyback
+        </button>
+<div class="mt-auto border-t border-outline-variant pt-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="md:pl-64 pt-16 pb-20 md:pb-8 min-h-screen">
+<div class="p-gutter max-w-container-max mx-auto space-y-8">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-headline-md font-headline-md text-primary">Exchange Command Center</h1>
+<p class="text-on-surface-variant">Monitoring real-time buybacks, melting reconciliation, and compliance across Terminal 01.</p>
+</div>
+<div class="flex gap-3">
+<div class="bg-surface-container text-on-surface px-4 py-2 rounded-lg border border-outline-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">calendar_today</span>
+<span class="font-label-mono">Oct 24, 2023</span>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-lg font-bold flex items-center gap-2">
+<span class="material-symbols-outlined">download</span>
+                        Export Daily Report
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- Total Buyback -->
+<div class="col-span-1 md:col-span-2 bg-primary text-on-primary p-6 rounded-xl shadow-sm relative overflow-hidden group">
+<div class="relative z-10">
+<p class="text-sm uppercase tracking-widest opacity-80 mb-2">Total Buyback Today</p>
+<div class="flex items-baseline gap-4 mb-4">
+<span class="text-headline-lg font-headline-lg">1,248.450 <span class="text-xl font-normal">g</span></span>
+<span class="text-secondary-fixed text-headline-sm font-headline-sm">₹84,32,150</span>
+</div>
+<div class="flex gap-4">
+<div class="bg-on-primary/10 px-3 py-1 rounded border border-on-primary/20 flex flex-col">
+<span class="text-[10px] opacity-70">22K NET</span>
+<span class="font-label-mono">842.10 g</span>
+</div>
+<div class="bg-on-primary/10 px-3 py-1 rounded border border-on-primary/20 flex flex-col">
+<span class="text-[10px] opacity-70">18K NET</span>
+<span class="font-label-mono">406.35 g</span>
+</div>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-[120px] opacity-10 rotate-12 group-hover:rotate-0 transition-transform duration-500">payments</span>
+</div>
+<!-- Pending Melting -->
+<div class="bg-surface-container-high border border-outline-variant p-6 rounded-xl">
+<div class="flex justify-between items-start mb-4">
+<p class="text-sm font-bold text-on-surface-variant">Pending Melting</p>
+<span class="material-symbols-outlined text-status-memo">fire_hydrant</span>
+</div>
+<div class="mb-4">
+<h4 class="text-headline-sm font-headline-sm text-primary">12 Lots</h4>
+<p class="text-on-surface-variant text-sm">450.25 g unrefined</p>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mb-2">
+<div class="bg-status-memo h-1.5 rounded-full" style="width: 65%"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant uppercase tracking-tighter">Capacity Utilization: 65%</p>
+</div>
+<!-- KYC Status -->
+<div class="bg-surface-container-high border border-outline-variant p-6 rounded-xl">
+<div class="flex justify-between items-start mb-4">
+<p class="text-sm font-bold text-on-surface-variant">KYC Compliance</p>
+<span class="material-symbols-outlined text-status-in-stock">verified</span>
+</div>
+<div class="mb-4">
+<h4 class="text-headline-sm font-headline-sm text-primary">98.2%</h4>
+<p class="text-on-surface-variant text-sm">2 pending verification</p>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-status-in-stock text-sm">trending_up</span>
+<span class="text-status-in-stock text-xs">+1.4% from yesterday</span>
+</div>
+</div>
+</div>
+<!-- Melting Loop Visualization -->
+<div class="bg-white border border-outline-variant rounded-xl p-8 overflow-hidden relative">
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-headline-sm font-headline-sm text-primary">Active Melting Loop</h2>
+<span class="text-sm text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant">Live Pipeline</span>
+</div>
+<div class="flex flex-col md:flex-row items-center justify-between relative gap-8 md:gap-0">
+<!-- Path Connector Lines -->
+<div class="absolute top-1/2 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-primary-fixed to-transparent hidden md:block -z-10"></div>
+<!-- Customer Node -->
+<div class="flex flex-col items-center gap-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container border-2 border-primary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-300">
+<span class="material-symbols-outlined text-3xl">person</span>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Customer</p>
+<p class="text-xs text-on-surface-variant">Inflow (1,248g)</p>
+</div>
+</div>
+<div class="rotate-90 md:rotate-0">
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+<!-- Testing Node -->
+<div class="flex flex-col items-center gap-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container border-2 border-primary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-300">
+<span class="material-symbols-outlined text-3xl">science</span>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Testing</p>
+<p class="text-xs text-on-surface-variant">Purity Assay</p>
+</div>
+</div>
+<div class="rotate-90 md:rotate-0">
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+<!-- Melting Node -->
+<div class="flex flex-col items-center gap-4 group">
+<div class="w-20 h-20 rounded-full bg-secondary-container border-4 border-white shadow-lg flex items-center justify-center text-on-secondary-container gold-pulse">
+<span class="material-symbols-outlined text-4xl">local_fire_department</span>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Melting</p>
+<p class="text-xs text-secondary">Active Refinement</p>
+</div>
+</div>
+<div class="rotate-90 md:rotate-0">
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+<!-- Raw Stock Node -->
+<div class="flex flex-col items-center gap-4 group">
+<div class="w-16 h-16 rounded-full bg-surface-container border-2 border-primary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-300">
+<span class="material-symbols-outlined text-3xl">inventory_2</span>
+</div>
+<div class="text-center">
+<p class="font-bold text-sm">Raw Stock</p>
+<p class="text-xs text-on-surface-variant">Reconciled</p>
+</div>
+</div>
+</div>
+<!-- Abstract decorative element -->
+<div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+</div>
+<!-- Recent Buybacks Table -->
+<div class="bg-white border border-outline-variant rounded-xl overflow-hidden">
+<div class="px-6 py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+<h2 class="text-headline-sm font-headline-sm text-primary">Recent Buybacks</h2>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container-low border-outline-variant border rounded-lg text-sm focus:ring-primary focus:border-primary outline-none w-64" placeholder="Search Voucher / Phone" type="text">
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">filter_list</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low">
+<tr>
+<th class="px-6 py-3 text-xs font-bold text-primary uppercase tracking-wider">Voucher ID</th>
+<th class="px-6 py-3 text-xs font-bold text-primary uppercase tracking-wider">Customer</th>
+<th class="px-6 py-3 text-xs font-bold text-primary uppercase tracking-wider">Gross Wt.</th>
+<th class="px-6 py-3 text-xs font-bold text-primary uppercase tracking-wider">Assayed Purity</th>
+<th class="px-6 py-3 text-xs font-bold text-primary uppercase tracking-wider text-right">Settlement</th>
+<th class="px-6 py-3 text-xs font-bold text-primary uppercase tracking-wider">Status</th>
+<th class="px-6 py-3 text-xs font-bold text-primary uppercase tracking-wider">KYC</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 font-label-mono text-sm">#BB-240901</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-sm">Ananya Sharma</span>
+<span class="text-xs text-on-surface-variant">+91 98765 43210</span>
+</div>
+</td>
+<td class="px-6 py-4 font-label-mono text-sm">24.500 g</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-sm font-bold">22K / 91.6%</span>
+<span class="material-symbols-outlined text-[14px] text-status-in-stock">verified</span>
+</div>
+</td>
+<td class="px-6 py-4 font-label-mono text-sm text-right font-bold text-primary">₹1,68,450</td>
+<td class="px-6 py-4">
+<span class="bg-status-in-stock/10 text-status-in-stock px-2 py-1 rounded text-[10px] font-bold uppercase">Completed</span>
+</td>
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-status-in-stock fill-icon">assignment_turned_in</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container transition-colors bg-surface-container-low/30">
+<td class="px-6 py-4 font-label-mono text-sm">#BB-240902</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-sm">Vikram Mehta</span>
+<span class="text-xs text-on-surface-variant">+91 87654 32109</span>
+</div>
+</td>
+<td class="px-6 py-4 font-label-mono text-sm">115.420 g</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-sm font-bold">Mixed / Varied</span>
+<span class="material-symbols-outlined text-[14px] text-status-memo">hourglass_empty</span>
+</div>
+</td>
+<td class="px-6 py-4 font-label-mono text-sm text-right font-bold text-primary">₹7,82,100</td>
+<td class="px-6 py-4">
+<span class="bg-status-memo/10 text-status-memo px-2 py-1 rounded text-[10px] font-bold uppercase">Assaying</span>
+</td>
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-status-memo">assignment_late</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 font-label-mono text-sm">#BB-240903</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-sm">Priya Deshmukh</span>
+<span class="text-xs text-on-surface-variant">+91 76543 21098</span>
+</div>
+</td>
+<td class="px-6 py-4 font-label-mono text-sm">8.120 g</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-sm font-bold">18K / 75.0%</span>
+<span class="material-symbols-outlined text-[14px] text-status-in-stock">verified</span>
+</div>
+</td>
+<td class="px-6 py-4 font-label-mono text-sm text-right font-bold text-primary">₹42,850</td>
+<td class="px-6 py-4">
+<span class="bg-status-in-stock/10 text-status-in-stock px-2 py-1 rounded text-[10px] font-bold uppercase">Completed</span>
+</td>
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-status-in-stock fill-icon">assignment_turned_in</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 bg-surface-container-low flex justify-between items-center text-xs text-on-surface-variant">
+<span>Showing 3 of 42 transactions today</span>
+<div class="flex items-center gap-2">
+<button class="p-1 hover:bg-surface-container rounded transition-colors"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<span class="font-bold">1</span>
+<span>2</span>
+<span>3</span>
+<button class="p-1 hover:bg-surface-container rounded transition-colors"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant shadow-lg">
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="text-[10px] font-label-mono uppercase">Counter</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl p-2 px-4 scale-110 -translate-y-2 border-4 border-surface shadow-xl">
+<span class="material-symbols-outlined">sync_alt</span>
+<span class="text-[10px] font-label-mono uppercase">Exchange</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined">fire_hydrant</span>
+<span class="text-[10px] font-label-mono uppercase">Melting</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined">assignment_ind</span>
+<span class="text-[10px] font-label-mono uppercase">KYC</span>
+</div>
+</nav>
+<script>
+        // Simple micro-interaction for the numbers
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString('en-IN');
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Add visual interest to the active melting node
+        const meltingNode = document.querySelector('.gold-pulse');
+        if(meltingNode) {
+            meltingNode.addEventListener('mouseenter', () => {
+                meltingNode.style.transform = 'scale(1.1)';
+            });
+            meltingNode.addEventListener('mouseleave', () => {
+                meltingNode.style.transform = 'scale(1)';
+            });
+        }
+    </script>
+</body></html>

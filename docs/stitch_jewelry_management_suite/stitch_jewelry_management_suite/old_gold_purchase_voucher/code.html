@@ -1,0 +1,449 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E2E8F0;
+        }
+        .ledger-row:nth-child(even) {
+            background-color: #F8FAFC;
+        }
+        .compliance-gate-border {
+            border-left: 4px solid #ba1a1a;
+        }
+        input:focus {
+            outline: none;
+            border-color: #003527 !important;
+            ring: 2px;
+            ring-color: #95d3ba;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#95d3ba",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-primary-fixed-variant": "#0b513d",
+                        "status-memo": "#F59E0B",
+                        "on-background": "#191c1e",
+                        "on-primary-container": "#80bea6",
+                        "surface-dim": "#d8dadc",
+                        "on-primary": "#ffffff",
+                        "primary": "#003527",
+                        "surface-bright": "#f7f9fb",
+                        "status-error": "#EF4444",
+                        "background": "#f7f9fb",
+                        "primary-container": "#064e3b",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-surface-variant": "#404944",
+                        "on-secondary-fixed": "#241a00",
+                        "tertiary-container": "#413f70",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#2b2858",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#e9c349",
+                        "outline": "#707974",
+                        "tertiary-fixed": "#e3dfff",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container": "#eceef0",
+                        "on-tertiary-fixed": "#181445",
+                        "tertiary-fixed-dim": "#c4c1fb",
+                        "on-surface": "#191c1e",
+                        "inverse-primary": "#95d3ba",
+                        "on-secondary-container": "#745c00",
+                        "on-tertiary-container": "#b0ace5",
+                        "on-tertiary-fixed-variant": "#444173",
+                        "status-in-stock": "#10B981",
+                        "surface-variant": "#e0e3e5",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#ffe088",
+                        "secondary": "#735c00",
+                        "status-sold": "#64748B",
+                        "inverse-on-surface": "#eff1f3",
+                        "inverse-surface": "#2d3133",
+                        "primary-fixed": "#b0f0d6",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "rate-ticker-bg": "#1E1B4B",
+                        "weight-numeric": "#0F172A",
+                        "error-container": "#ffdad6",
+                        "surface": "#f7f9fb",
+                        "outline-variant": "#bfc9c3",
+                        "secondary-container": "#fed65b",
+                        "on-primary-fixed": "#002117",
+                        "surface-tint": "#2b6954",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "data-density-sm": "8px",
+                        "container-max": "1440px",
+                        "margin-desktop": "32px",
+                        "data-density-md": "16px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Playfair Display"],
+                        "headline-sm": ["Playfair Display"],
+                        "headline-md": ["Playfair Display"],
+                        "data-numeric-md": ["Plus Jakarta Sans"],
+                        "label-mono": ["JetBrains Mono"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface font-body-md text-on-surface">
+<!-- Top Rate Banner (Global Ticker) -->
+<div class="h-10 bg-rate-ticker-bg text-secondary-fixed flex items-center justify-between px-gutter z-50 fixed top-0 w-full">
+<div class="flex items-center gap-4">
+<span class="font-label-mono text-label-mono tracking-widest uppercase">Live Market Rates</span>
+<div class="flex gap-6 items-center">
+<div class="flex items-center gap-2">
+<span class="text-[10px] opacity-70">AU 24K</span>
+<span class="font-data-numeric-md">₹ 7,245.50</span>
+<span class="material-symbols-outlined text-status-in-stock text-sm">trending_up</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] opacity-70">AU 22K</span>
+<span class="font-data-numeric-md">₹ 6,642.00</span>
+<span class="material-symbols-outlined text-status-error text-sm">trending_down</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 text-status-in-stock">
+<span class="material-symbols-outlined text-sm">charging_station</span>
+<span class="font-label-mono text-label-mono">Connected to NSE Spot</span>
+</div>
+</div>
+<!-- Main Navigation Shell -->
+<nav class="fixed top-10 w-full z-40 flex justify-between items-center px-gutter h-16 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-8">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">AurumERP Retail</h1>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-primary border-b-2 border-primary pb-1 font-body-md" href="#">Buyback</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-md" href="#">Sales Ledger</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-md" href="#">Inventory</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg w-64 focus:border-primary" placeholder="Search Invoice/HUID..." type="text">
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">account_balance_wallet</span>
+<img class="w-8 h-8 rounded-full border border-outline" data-alt="A professional headshot of a store manager in a premium jewellery showroom, high-key studio lighting, soft focus background with luxury display cases, wearing a sophisticated corporate attire, 8k resolution, cinematic quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_AhoQqchUxYV7v0a8zxTiSCDBLD-qN5pIfv6EciI_3XstMKIDAvSFxMwSd1uMrAkO9MA_OjoEO88M64LyijWGkvmkfe4G9-Qa8EIyrEyJCEQmhbMFGqmnsURPUai9EDF597QJDqQ7CgaZqM09Cx274yttMNV0T0FejHA-qOEMccSJO-w9uIPdOkuMWIKx6i50iePtLXD_dWfJLXvHDnnoAJ3W_WYpsTE8ISZfbToj3gzEs24-Pl-y">
+</div>
+</nav>
+<!-- Sidebar -->
+<aside class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-10 pt-20 pb-4 px-4 border-r border-outline-variant bg-surface-container-low">
+<div class="mb-8 px-2">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">diamond</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-[16px] text-primary">Main Branch</h2>
+<p class="text-[10px] text-on-surface-variant">Terminal 01 - Active</p>
+</div>
+</div>
+</div>
+<div class="space-y-1 flex-1">
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 p-3 bg-primary-container text-on-primary-container font-bold rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">currency_exchange</span>
+<span>Old Gold Exchange</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">mop</span>
+<span>Melting Lots</span>
+</a>
+<a class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span>KYC Verifier</span>
+</a>
+</div>
+<button class="w-full bg-primary text-on-primary py-3 rounded-lg font-bold flex items-center justify-center gap-2 mt-4 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">add_circle</span>
+            Quick Buyback
+        </button>
+</aside>
+<!-- Content Canvas -->
+<main class="md:ml-64 pt-32 pb-24 px-gutter max-w-container-max mx-auto min-h-screen">
+<header class="mb-8">
+<div class="flex justify-between items-end">
+<div>
+<span class="text-primary font-label-mono text-label-mono uppercase tracking-widest">Transaction Module</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Buyback Voucher</h2>
+</div>
+<div class="text-right">
+<p class="text-on-surface-variant text-sm">Voucher #</p>
+<p class="font-label-mono text-primary text-lg">BB-2023-10-0942</p>
+</div>
+</div>
+</header>
+<div class="grid grid-cols-12 gap-8">
+<!-- Left Column: Customer & Testing -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Party/Customer Lookup -->
+<section class="glass-card rounded-xl p-6">
+<div class="flex items-center gap-2 mb-6 border-b border-outline-variant pb-4">
+<span class="material-symbols-outlined text-primary">person_search</span>
+<h3 class="font-headline-sm text-lg text-on-surface">Customer / Party Details</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-sm font-bold text-on-surface-variant">Search Customer</label>
+<div class="relative">
+<input class="w-full p-3 bg-surface border border-outline-variant rounded-lg font-body-md" type="text" value="Rajesh Khanna">
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-status-in-stock">check_circle</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-bold text-on-surface-variant">Mobile Number</label>
+<input class="w-full p-3 bg-surface-container-low border border-outline-variant rounded-lg font-body-md text-on-surface-variant" readonly="" type="text" value="+91 98200 12345">
+</div>
+<div class="col-span-2 flex items-center gap-4 bg-primary-container/10 p-4 rounded-lg border border-primary-container/20">
+<img class="w-12 h-12 rounded-full object-cover" data-alt="A portrait photograph of an elderly Indian gentleman for a KYC profile, soft studio lighting, neutral grey background, high detail facial features, professional and authentic look for an ERP system user interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIJwLTVkzFURSATKC5SHkV_m-kIriqLu-hS6xbd4IYJCSM0VUNvFi3PRkakSR_um0a20crY7hKw5KfxcWfXrL34VG8Xwp652sst-EcOTiN-GoN2nzixr0FOdEj5LHf_vd81n0s0-bxcseJ7yXYDicNPgldWMyvP9EGPHRqzSd0bfekBReyb8JXefzykjA7y9CYMincVNXZ-wdewMtDWxgFULoEt267lNeXMFJRDku8rIOVZmB-vAw5">
+<div class="flex-1">
+<div class="flex justify-between">
+<p class="font-bold text-primary">Loyalty Grade: Platinum</p>
+<p class="text-xs text-on-surface-variant">Last Visit: 12 Sep 2023</p>
+</div>
+<p class="text-sm text-on-surface-variant">Total Transaction Volume: ₹ 14,50,000</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Purity Testing Ledger -->
+<section class="glass-card rounded-xl overflow-hidden">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center bg-surface">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">biotech</span>
+<h3 class="font-headline-sm text-lg text-on-surface">Purity Testing &amp; Weight Ledger</h3>
+</div>
+<button class="text-primary font-bold text-sm flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm">add</span> Add Item
+                        </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full border-collapse">
+<thead>
+<tr class="bg-surface-container text-on-surface-variant text-xs uppercase tracking-tighter">
+<th class="p-4 text-left font-bold">Item Description</th>
+<th class="p-4 text-right font-bold">Gross (g)</th>
+<th class="p-4 text-right font-bold">Stone (g)</th>
+<th class="p-4 text-right font-bold">Touch %</th>
+<th class="p-4 text-right font-bold">Fine Gold (g)</th>
+<th class="p-4 text-center font-bold">HUID Sync</th>
+</tr>
+</thead>
+<tbody>
+<tr class="ledger-row border-b border-outline-variant">
+<td class="p-4 font-body-md">Old Gold Bangles (2pcs)</td>
+<td class="p-4 text-right font-label-mono font-bold text-weight-numeric">45.230</td>
+<td class="p-4 text-right font-label-mono text-error">1.120</td>
+<td class="p-4 text-right">
+<input class="w-16 text-right border-none bg-transparent font-label-mono focus:ring-0 p-0" type="text" value="91.60">
+</td>
+<td class="p-4 text-right font-label-mono font-bold text-primary">40.395</td>
+<td class="p-4 text-center">
+<span class="material-symbols-outlined text-status-in-stock" title="HUID Verified">verified</span>
+</td>
+</tr>
+<tr class="ledger-row border-b border-outline-variant">
+<td class="p-4 font-body-md">Gold Chain (Broken)</td>
+<td class="p-4 text-right font-label-mono font-bold text-weight-numeric">12.500</td>
+<td class="p-4 text-right font-label-mono text-error">0.000</td>
+<td class="p-4 text-right font-label-mono">75.00</td>
+<td class="p-4 text-right font-label-mono font-bold text-primary">9.375</td>
+<td class="p-4 text-center">
+<span class="material-symbols-outlined text-on-surface-variant opacity-20">history_edu</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-primary text-on-primary flex justify-between items-center">
+<span class="text-sm font-bold uppercase">Total Net Fine Weight</span>
+<span class="font-data-numeric-lg text-2xl">49.770 g</span>
+</div>
+</section>
+<!-- Rate Application -->
+<section class="glass-card rounded-xl p-6">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary">payments</span>
+<h3 class="font-headline-sm text-lg text-on-surface">Rate Application</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-4 bg-surface-container rounded-lg">
+<p class="text-xs text-on-surface-variant mb-1 uppercase font-bold">Standard Purchase Rate</p>
+<p class="font-data-numeric-md text-xl text-primary">₹ 6,120.00 /g</p>
+<p class="text-[10px] text-status-in-stock mt-1">Ref: Daily Rate Master</p>
+</div>
+<div class="p-4 border border-outline-variant rounded-lg relative overflow-hidden">
+<p class="text-xs text-on-surface-variant mb-1 uppercase font-bold">Applied Rate (Override)</p>
+<input class="w-full bg-transparent border-none p-0 font-data-numeric-md text-xl text-on-surface focus:ring-0" type="text" value="6,150.00">
+<div class="absolute right-2 top-2 h-2 w-2 rounded-full bg-status-memo" title="Manager Override Applied"></div>
+</div>
+<div class="p-4 bg-on-background text-on-primary rounded-lg">
+<p class="text-xs opacity-70 mb-1 uppercase font-bold">Gross Valuation</p>
+<p class="font-data-numeric-lg text-xl">₹ 3,06,085.50</p>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: KYC & Payment -->
+<div class="col-span-12 lg:col-span-4 space-y-8">
+<!-- KYC Checklist -->
+<section class="glass-card rounded-xl p-6 compliance-gate-border">
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error">assignment_ind</span>
+<h3 class="font-headline-sm text-lg text-on-surface">Compliance Checklist</h3>
+</div>
+<span class="bg-error-container text-on-error-container text-[10px] px-2 py-1 rounded font-bold uppercase">Mandatory</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 border border-outline-variant rounded-lg">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-sm font-bold">PAN Card (&gt; 2L)</span>
+</div>
+<span class="text-[10px] font-label-mono text-on-surface-variant">ABCD****1P</span>
+</div>
+<div class="flex items-center justify-between p-3 border border-outline-variant rounded-lg">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-sm font-bold">Aadhaar Verification</span>
+</div>
+<button class="text-primary text-xs font-bold uppercase">View Docs</button>
+</div>
+<div class="flex items-center justify-between p-3 border border-outline-variant rounded-lg bg-error-container/20 border-error">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error">warning</span>
+<span class="text-sm font-bold">Physical Form Signed</span>
+</div>
+<input class="rounded text-primary focus:ring-primary h-5 w-5" type="checkbox">
+</div>
+</div>
+</section>
+<!-- Payment Method Selector -->
+<section class="glass-card rounded-xl p-6">
+<h3 class="font-headline-sm text-lg text-on-surface mb-6">Settlement Method</h3>
+<div class="space-y-3">
+<label class="flex items-center p-4 border border-primary bg-primary/5 rounded-xl cursor-pointer">
+<input checked="" class="text-primary focus:ring-primary" name="payment" type="radio">
+<div class="ml-4 flex-1">
+<p class="font-bold text-on-surface">Credit to Bill</p>
+<p class="text-xs text-on-surface-variant">Adjust against new purchase</p>
+</div>
+<span class="material-symbols-outlined text-primary">receipt_long</span>
+</label>
+<label class="flex items-center p-4 border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container transition-colors">
+<input class="text-primary focus:ring-primary" name="payment" type="radio">
+<div class="ml-4 flex-1">
+<p class="font-bold text-on-surface">Bank Transfer</p>
+<p class="text-xs text-on-surface-variant">RTGS/NEFT to saved account</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">account_balance</span>
+</label>
+<label class="flex items-center p-4 border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container transition-colors group">
+<input class="text-primary focus:ring-primary" name="payment" type="radio">
+<div class="ml-4 flex-1">
+<p class="font-bold text-on-surface">Cash Payout</p>
+<p class="text-xs text-error font-bold uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">report_problem</span>
+                                    Limit ₹ 10,000 max
+                                </p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">payments</span>
+</label>
+</div>
+</section>
+<!-- Summary & Action -->
+<div class="bg-primary p-6 rounded-xl text-on-primary shadow-xl">
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm opacity-70">Payable Amount</span>
+<span class="font-label-mono text-xs bg-on-primary text-primary px-2 py-0.5 rounded">TCS APPLICABLE</span>
+</div>
+<div class="text-3xl font-data-numeric-lg mb-6">₹ 3,06,085.50</div>
+<button class="w-full bg-secondary-container text-on-secondary-fixed-variant py-4 rounded-lg font-bold text-lg hover:brightness-110 transition-all shadow-md">
+                        Generate Buyback Voucher
+                    </button>
+<p class="text-[10px] text-center mt-4 opacity-60">Generated by Admin Terminal 01 at 14:23 PM</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant shadow-lg">
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="font-label-mono text-xs">Counter</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl p-2 px-4 scale-110">
+<span class="material-symbols-outlined">sync_alt</span>
+<span class="font-label-mono text-xs">Exchange</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined">fire_hydrant</span>
+<span class="font-label-mono text-xs">Melting</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant p-2">
+<span class="material-symbols-outlined">assignment_ind</span>
+<span class="font-label-mono text-xs">KYC</span>
+</div>
+</nav>
+<script>
+        // Simple micro-interaction for rate override
+        document.querySelector('input[value="6,150.00"]').addEventListener('input', function(e) {
+            const val = parseFloat(e.target.value.replace(/,/g, ''));
+            const standard = 6120;
+            const diff = ((val - standard) / standard) * 100;
+            
+            if(Math.abs(diff) > 5) {
+                e.target.parentElement.classList.add('border-status-error');
+                e.target.parentElement.classList.remove('border-outline-variant');
+            } else {
+                e.target.parentElement.classList.remove('border-status-error');
+                e.target.parentElement.classList.add('border-outline-variant');
+            }
+        });
+
+        // Toggle active state visualization
+        const navItems = document.querySelectorAll('nav a');
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                navItems.forEach(i => i.classList.remove('text-primary', 'border-b-2', 'border-primary', 'pb-1'));
+                navItems.forEach(i => i.classList.add('text-on-surface-variant'));
+                item.classList.add('text-primary', 'border-b-2', 'border-primary', 'pb-1');
+                item.classList.remove('text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>

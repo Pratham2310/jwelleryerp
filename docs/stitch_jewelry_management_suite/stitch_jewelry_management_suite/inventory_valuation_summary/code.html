@@ -1,0 +1,495 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Inventory Valuation Summary | Aurelian Ledger</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        .ticker-scroll {
+            animation: scroll 20s linear infinite;
+        }
+        @keyframes scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #003527;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#745c00",
+                        "primary": "#003527",
+                        "on-secondary-fixed": "#241a00",
+                        "secondary-fixed": "#ffe088",
+                        "inverse-primary": "#95d3ba",
+                        "secondary-fixed-dim": "#e9c349",
+                        "tertiary": "#2b2858",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary-fixed": "#181445",
+                        "on-secondary-fixed-variant": "#574500",
+                        "on-primary-fixed-variant": "#0b513d",
+                        "status-memo": "#F59E0B",
+                        "tertiary-fixed": "#e3dfff",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container": "#eceef0",
+                        "outline-variant": "#bfc9c3",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-surface": "#2d3133",
+                        "status-sold": "#64748B",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed-dim": "#95d3ba",
+                        "surface": "#f7f9fb",
+                        "secondary": "#735c00",
+                        "tertiary-fixed-dim": "#c4c1fb",
+                        "outline": "#707974",
+                        "rate-ticker-bg": "#1E1B4B",
+                        "on-surface-variant": "#404944",
+                        "surface-bright": "#f7f9fb",
+                        "status-error": "#EF4444",
+                        "tertiary-container": "#413f70",
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#b0ace5",
+                        "on-tertiary-fixed-variant": "#444173",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "on-primary-fixed": "#002117",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#2b6954",
+                        "on-error": "#ffffff",
+                        "status-in-stock": "#10B981",
+                        "secondary-container": "#fed65b",
+                        "primary-container": "#064e3b",
+                        "primary-fixed": "#b0f0d6",
+                        "background": "#f7f9fb",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "weight-numeric": "#0F172A",
+                        "on-primary-container": "#80bea6",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "data-density-sm": "8px",
+                        "data-density-md": "16px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Playfair Display"],
+                        "headline-md": ["Playfair Display"],
+                        "body-lg": ["Plus Jakarta Sans"],
+                        "label-mono": ["JetBrains Mono"],
+                        "data-numeric-md": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Playfair Display"],
+                        "data-numeric-lg": ["Plus Jakarta Sans"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md overflow-x-hidden">
+<!-- Global Rate Ticker Banner -->
+<div class="h-10 bg-rate-ticker-bg text-secondary-fixed flex items-center overflow-hidden border-b border-outline-variant relative z-50">
+<div class="absolute left-0 top-0 bottom-0 bg-rate-ticker-bg px-4 flex items-center z-10 border-r border-outline-variant shadow-lg">
+<span class="text-label-mono font-bold uppercase tracking-widest text-[10px]">Market Live</span>
+</div>
+<div class="flex whitespace-nowrap ticker-scroll items-center gap-12 pl-32">
+<div class="flex items-center gap-2">
+<span class="font-label-mono text-label-mono opacity-70">XAU/INR (24K)</span>
+<span class="font-label-mono text-label-mono font-bold">₹7,245.80</span>
+<span class="material-symbols-outlined text-status-in-stock scale-75">trending_up</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-mono text-label-mono opacity-70">XAU/INR (22K)</span>
+<span class="font-label-mono text-label-mono font-bold">₹6,642.00</span>
+<span class="material-symbols-outlined text-status-in-stock scale-75">trending_up</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-mono text-label-mono opacity-70">XAG/INR</span>
+<span class="font-label-mono text-label-mono font-bold">₹88,240.00</span>
+<span class="material-symbols-outlined text-status-error scale-75">trending_down</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-mono text-label-mono opacity-70">PLATINUM</span>
+<span class="font-label-mono text-label-mono font-bold">₹2,840.50</span>
+<span class="material-symbols-outlined text-status-in-stock scale-75">trending_up</span>
+</div>
+</div>
+</div>
+<div class="flex min-h-screen">
+<!-- SideNavBar Component -->
+<aside class="hidden md:flex flex-col h-screen py-data-density-md bg-surface-container-low border-r border-outline-variant w-64 fixed left-0 top-10">
+<div class="px-6 mb-8">
+<h1 class="font-headline-sm text-headline-sm text-primary font-bold">Aurelian ERP</h1>
+<p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold">Reports Module</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md">Scheme Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined">person_add</span>
+<span class="font-body-md">Enrollment</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md">Collections</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined">event_available</span>
+<span class="font-body-md">Maturity</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg group" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-md">Reports</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg group" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="font-body-md">Compliance</span>
+</a>
+</nav>
+<div class="px-3 pt-4 border-t border-outline-variant mt-4">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-3 rounded-lg font-bold hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">download</span>
+<span class="text-xs uppercase tracking-wider">Export All Data</span>
+</button>
+<div class="mt-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-primary transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-lg">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-error transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-lg">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 mt-10">
+<!-- Top Header -->
+<header class="h-16 flex justify-between items-center px-margin-desktop w-full bg-surface-container-lowest border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary cursor-pointer">menu_open</span>
+<h2 class="font-headline-sm text-headline-sm text-primary font-bold">Inventory Valuation</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden lg:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-sm">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container border border-outline-variant rounded-full text-xs focus:ring-1 focus:ring-primary focus:border-primary w-64" placeholder="Search HUID or SKU..." type="text">
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+<div class="h-8 w-8 rounded-full bg-primary-fixed overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Professional studio portrait of an Indian jewelry store manager wearing a business suit, soft professional lighting, clean white background, high-end corporate photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAgv7iVAu-5Ay43YiBM0tz9LWBO_Dl6YZRHtAgC9PHHH60nKCBZj72XLL3t0fvhQLARXOKaWynjL-am_CBcuccUWR4-TfK0hQ83BGqKYAtyWsaID1bsbXzjpD_Wwfij1bliMy-cM0694ro-g9YZ34p3WIoth0wRhpD2dcHzQJCUAOkUl7FrPS69XvTQa3Ip_aLAsgmMmtxCeEVINB427N2ee5ft-I__Oz-jvSBe6Jk62gmOsyVaHP23">
+</div>
+</div>
+</div>
+</header>
+<!-- Filters Section -->
+<section class="px-margin-desktop py-6 bg-surface-container-low border-b border-outline-variant">
+<div class="flex flex-wrap gap-4 items-center">
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Branch</label>
+<select class="text-sm bg-surface-container-lowest border-outline-variant rounded-lg px-3 py-2 min-w-[160px] focus:border-primary">
+<option>All Branches</option>
+<option>Zaveri Bazaar (Main)</option>
+<option>Bandra West</option>
+<option>Indore Flagship</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Metal</label>
+<select class="text-sm bg-surface-container-lowest border-outline-variant rounded-lg px-3 py-2 min-w-[120px] focus:border-primary">
+<option>Gold</option>
+<option>Silver</option>
+<option>Platinum</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Purity</label>
+<select class="text-sm bg-surface-container-lowest border-outline-variant rounded-lg px-3 py-2 min-w-[120px] focus:border-primary">
+<option>All Purity</option>
+<option>24K (999)</option>
+<option>22K (916)</option>
+<option>18K (750)</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Ownership</label>
+<select class="text-sm bg-surface-container-lowest border-outline-variant rounded-lg px-3 py-2 min-w-[160px] focus:border-primary">
+<option>All Types</option>
+<option>Owned Stock</option>
+<option>GML (Gold Loan)</option>
+<option>Consignment</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5 ml-auto self-end">
+<button class="flex items-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-lg font-bold text-sm">
+<span class="material-symbols-outlined text-sm">filter_alt</span>
+                            Generate Report
+                        </button>
+</div>
+</div>
+</section>
+<!-- Dashboard Content -->
+<div class="p-margin-desktop space-y-gutter">
+<!-- Executive Summary Cards (Bento Style) -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-gutter">
+<!-- Total Market Value -->
+<div class="lg:col-span-2 bg-primary p-8 rounded-xl shadow-sm text-on-primary relative overflow-hidden group">
+<div class="absolute -right-12 -bottom-12 opacity-10 group-hover:scale-110 transition-transform duration-700">
+<span class="material-symbols-outlined text-[200px]" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+</div>
+<div class="relative z-10 flex flex-col h-full justify-between">
+<div>
+<p class="text-xs font-bold uppercase tracking-[0.2em] opacity-80 mb-2">Total Market Valuation (Live)</p>
+<h3 class="font-headline-lg text-headline-lg leading-none">₹124.82 <span class="text-headline-sm opacity-80">Cr</span></h3>
+</div>
+<div class="mt-8 flex items-center gap-4">
+<div class="flex items-center gap-1 text-on-primary-container bg-primary-container px-2 py-1 rounded text-xs font-bold">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>
+                                    +1.4%
+                                </div>
+<p class="text-[10px] opacity-60">Last updated: 2 mins ago via Rate Master</p>
+</div>
+</div>
+</div>
+<!-- Unrealised Gain -->
+<div class="bg-surface-container-lowest border border-outline-variant p-6 rounded-xl flex flex-col justify-between">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4">Unrealised Gain/Loss</p>
+<h4 class="font-data-numeric-lg text-data-numeric-lg text-status-in-stock">+ ₹8.42 Cr</h4>
+<p class="text-xs text-on-surface-variant mt-2 italic">Calculated against acquisition cost</p>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant flex items-center justify-between">
+<span class="text-xs font-bold text-primary">ROI: 7.23%</span>
+<span class="material-symbols-outlined text-status-in-stock">show_chart</span>
+</div>
+</div>
+<!-- Total Cost Value -->
+<div class="bg-surface-container-lowest border border-outline-variant p-6 rounded-xl flex flex-col justify-between">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4">Total At-Cost Value</p>
+<h4 class="font-data-numeric-lg text-data-numeric-lg text-weight-numeric">₹116.40 Cr</h4>
+<p class="text-xs text-on-surface-variant mt-2">Avg. Gold Rate: ₹6,842/g</p>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant flex items-center justify-between text-on-surface-variant">
+<span class="text-xs">Audit Tagged Value</span>
+<span class="material-symbols-outlined text-sm">verified</span>
+</div>
+</div>
+</div>
+<!-- Ownership Split & Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Ownership Distribution Card -->
+<div class="lg:col-span-1 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-outline-variant">
+<h5 class="font-headline-sm text-lg font-bold text-primary">Ownership Split</h5>
+<p class="text-xs text-on-surface-variant">Inventory liability distribution</p>
+</div>
+<div class="p-6 flex-1 space-y-6">
+<!-- Owned -->
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm font-bold">
+<span class="flex items-center gap-2"><div class="w-3 h-3 bg-primary rounded-sm"></div> Owned Stock</span>
+<span>₹82.4 Cr (66%)</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[66%]"></div>
+</div>
+</div>
+<!-- GML -->
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm font-bold">
+<span class="flex items-center gap-2"><div class="w-3 h-3 bg-secondary-container rounded-sm"></div> GML (Metal Loan)</span>
+<span>₹28.1 Cr (22%)</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full w-[22%]"></div>
+</div>
+</div>
+<!-- Consignment -->
+<div class="space-y-2">
+<div class="flex justify-between items-center text-sm font-bold">
+<span class="flex items-center gap-2"><div class="w-3 h-3 bg-status-memo rounded-sm"></div> Consignment</span>
+<span>₹14.3 Cr (12%)</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-status-memo h-full w-[12%]"></div>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low text-center">
+<button class="text-xs font-bold text-primary flex items-center justify-center gap-1 mx-auto hover:underline">
+                                View Liability Details <span class="material-symbols-outlined text-sm">arrow_right_alt</span>
+</button>
+</div>
+</div>
+<!-- Branch Wise Breakdown Ledger Table -->
+<div class="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center">
+<div>
+<h5 class="font-headline-sm text-lg font-bold text-primary">Branch Performance</h5>
+<p class="text-xs text-on-surface-variant">Valuation per retail location</p>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant border border-outline-variant p-2 rounded hover:bg-surface-container-high transition-colors">download</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Branch Name</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant text-right">Net Weight (g)</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant text-right">Cost Value</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant text-right">Market Value</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant text-right">GML Exposure</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container group transition-colors">
+<td class="px-6 py-4 font-bold text-sm text-primary">Zaveri Bazaar (Main)</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">82,450.25</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">₹56,41,13,000</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm font-bold text-primary">₹60,18,62,325</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-block px-2 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded">₹12.4 Cr</span>
+</td>
+</tr>
+<tr class="bg-surface-container-low hover:bg-surface-container group transition-colors">
+<td class="px-6 py-4 font-bold text-sm text-primary">Bandra West</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">45,120.80</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">₹30,87,16,000</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm font-bold text-primary">₹32,93,81,840</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-block px-2 py-1 bg-surface-container-high text-on-surface-variant text-[10px] font-bold rounded">₹4.2 Cr</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container group transition-colors">
+<td class="px-6 py-4 font-bold text-sm text-primary">Indore Flagship</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">34,115.50</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">₹23,34,18,000</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm font-bold text-primary">₹24,90,43,150</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-block px-2 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded">₹8.5 Cr</span>
+</td>
+</tr>
+<tr class="bg-surface-container-low hover:bg-surface-container group transition-colors">
+<td class="px-6 py-4 font-bold text-sm text-primary">Vashi Boutique</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">9,240.10</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">₹5,77,34,000</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm font-bold text-primary">₹6,74,52,730</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-block px-2 py-1 bg-surface-container-high text-on-surface-variant text-[10px] font-bold rounded">₹3.0 Cr</span>
+</td>
+</tr>
+</tbody>
+<tfoot class="bg-primary text-on-primary">
+<tr>
+<td class="px-6 py-4 font-bold text-sm">CONSOLIDATED</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">170,926.65</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm">₹116,40,00,000</td>
+<td class="px-6 py-4 text-right font-label-mono text-sm font-extrabold">₹124,82,00,000</td>
+<td class="px-6 py-4 text-right font-bold">₹28.1 Cr</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+<!-- Footer Summary / Audit Status -->
+<div class="flex flex-col md:flex-row gap-6 justify-between items-center bg-surface-container-high p-6 rounded-xl border border-outline-variant">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 bg-on-primary rounded-full flex items-center justify-center text-primary shadow-inner">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div>
+<p class="font-bold text-sm text-primary">Compliance Audit Verified</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">HUID Ledger Match: 100.00%</p>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-2 border border-primary text-primary font-bold text-sm rounded-lg hover:bg-primary hover:text-on-primary transition-all">Download PDF</button>
+<button class="px-6 py-2 bg-primary text-on-primary font-bold text-sm rounded-lg shadow-lg hover:opacity-90 transition-opacity">Request Audit Re-sync</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Mobile Navigation Shell -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest border-t border-outline-variant flex items-center justify-around px-4 z-[100] shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-bold">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-[10px] font-bold">Inventory</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">description</span>
+<span class="text-[10px] font-bold">Reports</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</a>
+</nav>
+<!-- Background Atmospheric Effect -->
+<div class="fixed inset-0 -z-10 pointer-events-none opacity-40">
+
+</div>
+<script>
+        // Micro-interactions for table rows
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('click', () => {
+                row.classList.toggle('bg-primary-fixed');
+                row.classList.toggle('text-on-primary-fixed');
+            });
+        });
+
+        // Simple ticker interaction
+        const ticker = document.querySelector('.ticker-scroll');
+        ticker.addEventListener('mouseover', () => {
+            ticker.style.animationPlayState = 'paused';
+        });
+        ticker.addEventListener('mouseout', () => {
+            ticker.style.animationPlayState = 'running';
+        });
+    </script>
+</body></html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Daily Rate Master | JewelERP Pro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..900&amp;family=Playfair+Display:wght@100..900&amp;family=Plus+Jakarta+Sans:wght@100..900&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-primary-fixed": "#002117",
+                "surface-container-high": "#e6e8ea",
+                "on-surface-variant": "#404944",
+                "on-secondary-fixed": "#241a00",
+                "primary": "#003527",
+                "primary-fixed-dim": "#95d3ba",
+                "inverse-on-surface": "#eff1f3",
+                "tertiary-container": "#413f70",
+                "on-secondary-container": "#745c00",
+                "on-tertiary": "#ffffff",
+                "on-primary-fixed-variant": "#0b513d",
+                "surface-container-highest": "#e0e3e5",
+                "on-tertiary-fixed": "#181445",
+                "weight-numeric": "#0F172A",
+                "outline-variant": "#bfc9c3",
+                "outline": "#707974",
+                "rate-ticker-bg": "#1E1B4B",
+                "secondary": "#735c00",
+                "error-container": "#ffdad6",
+                "primary-fixed": "#b0f0d6",
+                "background": "#f7f9fb",
+                "secondary-container": "#fed65b",
+                "on-background": "#191c1e",
+                "surface-variant": "#e0e3e5",
+                "surface": "#f7f9fb",
+                "surface-container": "#eceef0",
+                "error": "#ba1a1a",
+                "on-error": "#ffffff",
+                "status-error": "#EF4444",
+                "surface-bright": "#f7f9fb",
+                "status-memo": "#F59E0B",
+                "inverse-surface": "#2d3133",
+                "on-tertiary-fixed-variant": "#444173",
+                "surface-tint": "#2b6954",
+                "on-tertiary-container": "#b0ace5",
+                "on-surface": "#191c1e",
+                "secondary-fixed-dim": "#e9c349",
+                "on-primary": "#ffffff",
+                "tertiary": "#2b2858",
+                "on-error-container": "#93000a",
+                "secondary-fixed": "#ffe088",
+                "on-secondary": "#ffffff",
+                "status-in-stock": "#10B981",
+                "status-sold": "#64748B",
+                "surface-container-low": "#f2f4f6",
+                "tertiary-fixed": "#e3dfff",
+                "on-primary-container": "#80bea6",
+                "inverse-primary": "#95d3ba",
+                "primary-container": "#064e3b",
+                "on-secondary-fixed-variant": "#574500",
+                "surface-container-lowest": "#ffffff",
+                "tertiary-fixed-dim": "#c4c1fb",
+                "surface-dim": "#d8dadc"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "spacing": {
+                "margin-desktop": "32px",
+                "gutter": "24px",
+                "container-max": "1440px",
+                "margin-mobile": "16px",
+                "data-density-sm": "8px",
+                "data-density-md": "16px"
+            },
+            "fontFamily": {
+                "label-mono": ["JetBrains Mono"],
+                "headline-md": ["Playfair Display"],
+                "body-lg": ["Plus Jakarta Sans"],
+                "headline-sm": ["Playfair Display"],
+                "data-numeric-md": ["Plus Jakarta Sans"],
+                "headline-lg": ["Playfair Display"],
+                "data-numeric-lg": ["Plus Jakarta Sans"],
+                "headline-lg-mobile": ["Playfair Display"],
+                "body-md": ["Plus Jakarta Sans"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-border {
+            border-right: 4px solid #003527;
+        }
+        input:focus {
+            outline: 2px solid #003527;
+            outline-offset: -2px;
+        }
+        .ledger-row:nth-child(even) {
+            background-color: #f2f4f6;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md">
+<!-- Sidebar Navigation Shell -->
+<aside class="bg-surface-container h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-data-density-md z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">JewelERP Pro</h1>
+<p class="text-xs font-label-mono text-on-surface-variant opacity-70 uppercase tracking-widest">Enterprise Edition</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 text-primary font-bold border-r-4 border-primary bg-primary-container/10 transition-colors group active-nav-border" href="#">
+<span class="material-symbols-outlined mr-3">database</span>
+<span class="font-body-md">Masters</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined mr-3">inventory_2</span>
+<span class="font-body-md">Inventory &amp; Tagging</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined mr-3">receipt_long</span>
+<span class="font-body-md">Sales &amp; Billing</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined mr-3">swap_horiz</span>
+<span class="font-body-md">Old Gold Exchange</span>
+</a>
+<a class="flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="font-body-md">Reports</span>
+</a>
+</nav>
+<div class="mt-auto px-4 space-y-1">
+<button class="w-full py-3 bg-primary text-on-primary rounded font-bold mb-4 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined">add_circle</span>
+                Quick Bill
+            </button>
+<a class="flex items-center px-4 py-2 text-on-surface-variant hover:bg-surface-container-high rounded transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-label-mono text-label-mono">Settings</span>
+</a>
+<a class="flex items-center px-4 py-2 text-on-surface-variant hover:bg-surface-container-high rounded transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">contact_support</span>
+<span class="font-label-mono text-label-mono">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="bg-surface h-16 border-b border-outline-variant sticky top-0 z-40 flex items-center justify-between px-margin-desktop">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-1 rounded">
+<span class="material-symbols-outlined text-primary text-sm">location_on</span>
+<span class="font-label-mono text-label-mono text-on-surface">Branch: Mumbai Main</span>
+</div>
+<div class="flex items-center gap-4 text-label-mono font-label-mono">
+<span class="text-secondary font-bold">24K: ₹7,250</span>
+<span class="text-on-surface-variant">22K: ₹6,645</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Close up professional portrait of a store manager in a luxury environment, with soft warm lighting and blurred jewelry display cases in the background. The manager is wearing a dark charcoal suit, embodying the professional and authoritative brand personality of a high-end enterprise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBl6lKYMC0eDUm12QE_hDdD950T67X1NgGCqWEexs8HAxspz_fB-XgScltKX243481_G-wcOUUXTSW9dvEC8h3SV3r7HMzVV1DGeCrEP07DQ-PBIkWA_cEEtuJTJMA71NglGcX407Hya5w1Pyq9I99FvN89Rn8uJYM7VUVwV1lWtSi59XraNPPaZVpsGP8rLSV06Y4q81DmXTwocBolt96tFSkOF8WhpplSb3kb0CYXlxQ-hH2lBnfp">
+</div>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Rate Staleness Banner (Optional Interrupt) -->
+<div class="bg-rate-ticker-bg text-secondary-fixed h-10 flex items-center justify-center px-margin-desktop gap-4 overflow-hidden relative" id="rate-ticker">
+<div class="flex items-center gap-2 animate-pulse">
+<span class="material-symbols-outlined text-sm">update</span>
+<span class="font-label-mono text-xs uppercase tracking-tighter">Live Market Feed: Gold Spot $2,342.10 (-0.2%)</span>
+</div>
+<div class="h-4 w-px bg-on-tertiary-container/30"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-label-mono text-xs uppercase tracking-tighter text-on-tertiary-container">Rates Active Tenant-Wide</span>
+</div>
+</div>
+<div class="p-gutter">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<nav class="flex items-center gap-2 text-on-surface-variant mb-2">
+<span class="font-label-mono text-xs">MASTERS</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-label-mono text-xs text-primary font-bold">DAILY RATE MASTER</span>
+</nav>
+<h2 class="font-headline-lg text-headline-lg text-primary">Daily Rate Master</h2>
+<p class="text-on-surface-variant font-body-md max-w-xl">Configure enterprise-level sell and buyback rates. Derived rates are calculated based on HQ-defined purity formulas.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2 border border-outline text-primary font-bold rounded hover:bg-surface-container-low transition-all">Export Rates</button>
+<button class="px-6 py-2 bg-primary text-on-primary font-bold rounded flex items-center gap-2 shadow-lg hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined">publish</span>
+                        Publish All Rates
+                    </button>
+</div>
+</div>
+<!-- Main Workspace Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Left: Rate Inputs & Table -->
+<div class="col-span-8 space-y-gutter">
+<!-- Base 24K Cards -->
+<div class="grid grid-cols-2 gap-gutter">
+<div class="bg-surface-container-lowest p-6 rounded border border-outline-variant shadow-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+<span class="material-symbols-outlined text-6xl">currency_rupee</span>
+</div>
+<label class="block font-label-mono text-xs text-on-surface-variant uppercase tracking-widest mb-4">24K Base Sale Rate (per 10g)</label>
+<div class="flex items-center gap-4">
+<span class="text-3xl font-headline-md text-primary">₹</span>
+<input class="w-full bg-transparent border-b-2 border-outline-variant focus:border-primary text-4xl font-headline-md text-primary py-1" type="number" value="72500">
+</div>
+<div class="mt-4 flex items-center gap-2 text-status-in-stock">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="font-label-mono text-xs">+1.2% from previous</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded border border-outline-variant shadow-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+<span class="material-symbols-outlined text-6xl">account_balance_wallet</span>
+</div>
+<label class="block font-label-mono text-xs text-on-surface-variant uppercase tracking-widest mb-4">24K Buyback Rate (per 10g)</label>
+<div class="flex items-center gap-4">
+<span class="text-3xl font-headline-md text-secondary">₹</span>
+<input class="w-full bg-transparent border-b-2 border-outline-variant focus:border-secondary text-4xl font-headline-md text-secondary py-1" type="number" value="69250">
+</div>
+<div class="mt-4 flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">info</span>
+<span class="font-label-mono text-xs">Spread: 4.48% (System Recommended)</span>
+</div>
+</div>
+</div>
+<!-- Derived Rates Ledger -->
+<div class="bg-surface-container-lowest rounded border border-outline-variant overflow-hidden">
+<div class="bg-primary text-on-primary px-6 py-4 flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm">Derived Purity Rates</h3>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+<span class="font-label-mono text-xs uppercase">Auto-calculate enabled</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-high border-b border-outline-variant">
+<tr>
+<th class="px-6 py-4 font-label-mono text-xs text-on-surface-variant">Purity / Karat</th>
+<th class="px-6 py-4 font-label-mono text-xs text-on-surface-variant text-right">Sale Rate (10g)</th>
+<th class="px-6 py-4 font-label-mono text-xs text-on-surface-variant text-right">Buyback (10g)</th>
+<th class="px-6 py-4 font-label-mono text-xs text-on-surface-variant text-center">Override</th>
+<th class="px-6 py-4 font-label-mono text-xs text-on-surface-variant">Audit Reason</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- 22K Row -->
+<tr class="ledger-row group transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-bold text-primary font-body-lg">22K</span>
+<span class="text-xs font-label-mono bg-primary-fixed text-on-primary-fixed px-2 rounded-full">91.67%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-label-mono font-bold text-weight-numeric">₹ 66,458</td>
+<td class="px-6 py-4 text-right font-label-mono text-on-surface-variant">₹ 63,480</td>
+<td class="px-6 py-4 text-center">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox">
+</td>
+<td class="px-6 py-4">
+<input class="bg-surface-container text-xs font-body-md w-full border-none rounded px-2 py-1 opacity-50" disabled="" placeholder="Mandatory if manual" type="text">
+</td>
+</tr>
+<!-- 20K Row -->
+<tr class="ledger-row group transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-bold text-primary font-body-lg">20K</span>
+<span class="text-xs font-label-mono bg-surface-container-high text-on-surface-variant px-2 rounded-full">83.33%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-label-mono font-bold text-weight-numeric">₹ 60,416</td>
+<td class="px-6 py-4 text-right font-label-mono text-on-surface-variant">₹ 57,710</td>
+<td class="px-6 py-4 text-center">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox">
+</td>
+<td class="px-6 py-4">
+<input class="bg-surface-container text-xs font-body-md w-full border-none rounded px-2 py-1 opacity-50" disabled="" placeholder="Mandatory if manual" type="text">
+</td>
+</tr>
+<!-- 18K Row -->
+<tr class="ledger-row group transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-bold text-primary font-body-lg">18K</span>
+<span class="text-xs font-label-mono bg-surface-container-high text-on-surface-variant px-2 rounded-full">75.00%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-label-mono font-bold text-weight-numeric text-status-memo">₹ 54,375</td>
+<td class="px-6 py-4 text-right font-label-mono text-on-surface-variant">₹ 51,930</td>
+<td class="px-6 py-4 text-center">
+<input checked="" class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox">
+</td>
+<td class="px-6 py-4">
+<input class="bg-status-memo/10 text-xs font-body-md w-full border border-status-memo rounded px-2 py-1" type="text" value="Promotion: Festive Week 1">
+</td>
+</tr>
+<!-- 14K Row -->
+<tr class="ledger-row group transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-bold text-primary font-body-lg">14K</span>
+<span class="text-xs font-label-mono bg-surface-container-high text-on-surface-variant px-2 rounded-full">58.33%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-label-mono font-bold text-weight-numeric">₹ 42,291</td>
+<td class="px-6 py-4 text-right font-label-mono text-on-surface-variant">₹ 40,390</td>
+<td class="px-6 py-4 text-center">
+<input class="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox">
+</td>
+<td class="px-6 py-4">
+<input class="bg-surface-container text-xs font-body-md w-full border-none rounded px-2 py-1 opacity-50" disabled="" placeholder="Mandatory if manual" type="text">
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right: Rate History & Audit Sidebar -->
+<div class="col-span-4 space-y-gutter">
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-6 shadow-sm flex flex-col h-full min-h-[600px]">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-sm text-headline-sm text-primary">Revision History</h3>
+<button class="text-xs font-label-mono text-primary flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm">history</span>
+                                Full Logs
+                            </button>
+</div>
+<div class="relative border-l-2 border-outline-variant ml-3 space-y-8 flex-1">
+<!-- Today Revision 2 -->
+<div class="relative pl-8">
+<div class="absolute -left-[11px] top-1 h-5 w-5 rounded-full bg-primary flex items-center justify-center border-4 border-surface-container-lowest shadow-sm">
+<div class="h-1.5 w-1.5 bg-on-primary rounded-full"></div>
+</div>
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-mono text-xs font-bold text-primary uppercase">Current Active</span>
+<span class="font-label-mono text-xs text-on-surface-variant">11:45 AM</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded">
+<div class="flex justify-between items-center mb-2">
+<span class="font-bold text-weight-numeric">₹ 72,500</span>
+<span class="text-[10px] bg-status-in-stock/10 text-status-in-stock px-1.5 py-0.5 rounded font-bold">+ ₹300</span>
+</div>
+<p class="text-xs text-on-surface-variant flex items-center gap-1 italic">
+<span class="material-symbols-outlined text-xs">person</span>
+                                        Updated by Rajesh K. (HQ Admin)
+                                    </p>
+</div>
+</div>
+<!-- Today Revision 1 -->
+<div class="relative pl-8">
+<div class="absolute -left-[11px] top-1 h-5 w-5 rounded-full bg-outline flex items-center justify-center border-4 border-surface-container-lowest shadow-sm">
+<div class="h-1.5 w-1.5 bg-surface-container-lowest rounded-full"></div>
+</div>
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-mono text-xs font-bold text-on-surface-variant uppercase">Opening Rate</span>
+<span class="font-label-mono text-xs text-on-surface-variant">09:30 AM</span>
+</div>
+<div class="bg-surface-container p-3 rounded opacity-70">
+<div class="flex justify-between items-center mb-2">
+<span class="font-bold text-weight-numeric">₹ 72,200</span>
+<span class="text-[10px] bg-outline-variant text-on-surface-variant px-1.5 py-0.5 rounded font-bold">START</span>
+</div>
+<p class="text-xs text-on-surface-variant flex items-center gap-1 italic">
+<span class="material-symbols-outlined text-xs">schedule_send</span>
+                                        Scheduled System Auto-Push
+                                    </p>
+</div>
+</div>
+<!-- Yesterday Final -->
+<div class="relative pl-8">
+<div class="absolute -left-[11px] top-1 h-5 w-5 rounded-full bg-outline/40 flex items-center justify-center border-4 border-surface-container-lowest shadow-sm">
+</div>
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-mono text-xs font-bold text-on-surface-variant/60 uppercase">Yesterday Close</span>
+<span class="font-label-mono text-xs text-on-surface-variant/60">May 14</span>
+</div>
+<div class="bg-surface-container/50 p-3 rounded opacity-40 grayscale">
+<div class="flex justify-between items-center">
+<span class="font-bold text-weight-numeric">₹ 71,850</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Market Comparison Card -->
+<div class="mt-8 bg-tertiary text-on-tertiary-fixed rounded p-4 relative overflow-hidden">
+<div class="flex justify-between items-center mb-2 relative z-10">
+<span class="font-label-mono text-[10px] uppercase tracking-widest opacity-80">MCX Benchmark</span>
+<span class="text-xs text-secondary-fixed">LIVE</span>
+</div>
+<div class="relative z-10 flex items-baseline gap-2">
+<span class="text-2xl font-bold font-data-numeric-lg">₹ 72,310</span>
+<span class="text-status-error text-xs font-bold">- 0.15%</span>
+</div>
+<p class="text-[10px] mt-2 relative z-10 opacity-70">Margin vs HQ: <span class="text-secondary-fixed">+0.26%</span></p>
+<!-- Faint decorative element -->
+<div class="absolute -bottom-4 -right-4 opacity-10">
+<span class="material-symbols-outlined text-8xl" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB for Critical Overrides -->
+<button class="fixed bottom-8 right-8 h-14 w-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center group transition-all hover:scale-110 active:scale-95" title="Audit Log Entries">
+<span class="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform">verified_user</span>
+<div class="absolute right-full mr-4 bg-primary text-on-primary px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-label-mono text-xs">
+            Review Pending Audits
+        </div>
+</button>
+<script>
+        // Micro-interactions
+        const rateInput = document.querySelectorAll('input[type="number"]');
+        rateInput.forEach(input => {
+            input.addEventListener('change', function() {
+                const banner = document.getElementById('rate-ticker');
+                banner.classList.add('bg-status-in-stock');
+                banner.innerText = "RATE UPDATE STAGED - CLICK PUBLISH TO BROADCAST";
+                
+                setTimeout(() => {
+                    banner.classList.remove('bg-status-in-stock');
+                    banner.innerHTML = `
+                        <div class="flex items-center gap-2 animate-pulse">
+                            <span class="material-symbols-outlined text-sm">update</span>
+                            <span class="font-label-mono text-xs uppercase tracking-tighter">Unpublished Changes Pending Deployment</span>
+                        </div>
+                    `;
+                }, 3000);
+            });
+        });
+
+        // Toggle Manual Override logic
+        const overrideCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+        overrideCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const reasonInput = this.closest('tr').querySelector('input[type="text"]');
+                if (this.checked) {
+                    reasonInput.disabled = false;
+                    reasonInput.classList.remove('opacity-50', 'bg-surface-container');
+                    reasonInput.classList.add('bg-status-memo/5', 'border-status-memo/50');
+                    reasonInput.focus();
+                } else {
+                    reasonInput.disabled = true;
+                    reasonInput.classList.add('opacity-50', 'bg-surface-container');
+                    reasonInput.classList.remove('bg-status-memo/5', 'border-status-memo/50');
+                    reasonInput.value = "";
+                }
+            });
+        });
+    </script>
+</body></html>
