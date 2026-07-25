@@ -1,16 +1,17 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Sparkles, 
-  Gem, 
-  ReceiptIndianRupee, 
-  Hammer, 
-  Users, 
+import {
+  LayoutDashboard,
+  Sparkles,
+  Gem,
+  ReceiptIndianRupee,
+  Hammer,
+  Users,
   TrendingUp,
   FileSpreadsheet,
   Layers,
-  Award
+  Award,
+  X
 } from 'lucide-react';
 import { MetalRate } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -52,18 +53,29 @@ export default function Sidebar({ metalRates, operatorName, sidebarOpen, setSide
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
       {/* Brand Header */}
-      <div className="p-6 border-b border-[#262626] flex items-center gap-3 bg-[#0D0D0E]">
-        <div className="bg-gradient-to-tr from-[#C5A059] to-[#D9B875] p-2.5 rounded-xl shadow-lg shadow-[#C5A059]/10">
-          <Sparkles className="w-6 h-6 text-[#0A0A0B] font-bold" />
+      <div className="p-6 border-b border-[#262626] flex items-center justify-between gap-3 bg-[#0D0D0E]">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-tr from-[#C5A059] to-[#D9B875] p-2.5 rounded-xl shadow-lg shadow-[#C5A059]/10">
+            <Sparkles className="w-6 h-6 text-[#0A0A0B] font-bold" />
+          </div>
+          <div>
+            <h1 className="font-sans font-black tracking-tight text-base text-white">
+              STITCH<span className="font-light text-[#C5A059]">ERP</span>
+            </h1>
+            <p className="font-mono text-[9px] text-[#C5A059] uppercase tracking-widest font-bold">
+              Luxury Jewellery Suite
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-sans font-black tracking-tight text-base text-white">
-            STITCH<span className="font-light text-[#C5A059]">ERP</span>
-          </h1>
-          <p className="font-mono text-[9px] text-[#C5A059] uppercase tracking-widest font-bold">
-            Luxury Jewellery Suite
-          </p>
-        </div>
+        {/* Mobile-only close button — the sidebar panel (z-50) sits above the header's
+            hamburger toggle once open, so that button can't be tapped again to dismiss it. */}
+        <button
+          onClick={() => setSidebarOpen && setSidebarOpen(false)}
+          className="lg:hidden p-1.5 -mr-1.5 text-[#71717A] hover:text-white rounded-lg hover:bg-[#1A1A1D] transition"
+          aria-label="Close navigation"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Live Metal Rates Ticker in Sidebar */}

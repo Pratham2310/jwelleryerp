@@ -4,6 +4,21 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-25 — Live Deployment QA Pass (jwelleryerp.vercel.app) & Mobile Sidebar Fix
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Manual/automated QA against the production Vercel deployment, one bug fix.
+
+**What was done:**
+- Full Playwright walkthrough of the live deployment as a user: guest login, theme toggle, Catalog (both tabs), Add Tag/Add Design modals, Stones & Diamonds, Billing (line-item pull, old-gold trade-in, invoice generation, registry), Karigar & Jobwork, Job Bags, Customers & Schemes, global header search, and every "Add"/"Register"/"Issue" modal — confirmed the deployment is live and current (matches the Milestone 1-3 codebase; e.g. real `huid`/Stock Ownership fields render correctly in the Tag detail and print-preview modals).
+- Specifically re-verified the two Milestone 2 GST/compliance fixes against production data: an invoice with an old-gold trade-in correctly shows GST computed on the full taxable subtotal with the old-gold value netted only against Net Amount Due; Scheme Redemption correctly blocks checkout with a visible error for a customer without an active scheme.
+- 🐛 **Found and fixed:** on mobile viewports, opening the sidebar (hamburger toggle) rendered the drawer at `z-50`, fully covering the same hamburger button underneath it (`z-40`) — there was no way to close the drawer except tapping a narrow, unlabeled backdrop strip. Fixed by adding a visible `X` close button inside the mobile sidebar's header row (`src/components/Sidebar.tsx`), matching the close-button pattern already used in every modal elsewhere in the app.
+- No other bugs, console errors, or broken flows found in this pass.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` (10/10 passing); `npm run build` clean; local Playwright test at a 390×844 mobile viewport confirming the new close button dismisses the drawer, the hamburger button still reopens it, and in-app navigation still auto-closes it — zero console errors throughout.
+
+---
+
 ## 2026-07-25 — Milestone 3 Implemented (Item Design vs. Tag Data Model & Catalog UI Split)
 
 **Author:** AI agent (Claude Code), pair programming with USER.
