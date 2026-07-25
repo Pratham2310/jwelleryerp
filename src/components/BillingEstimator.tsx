@@ -22,6 +22,7 @@ import {
 import { Tag, Customer, SaleInvoice, InvoiceItem } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
+import { isSellable, canTransition } from '../lib/tagStateMachine';
 
 interface BillingEstimatorProps {
   tags: Tag[];
@@ -51,8 +52,8 @@ export default function BillingEstimator({
   invoices,
   setInvoices
 }: BillingEstimatorProps) {
-  // Available stock in showroom
-  const availableStock = tags.filter(i => i.status === 'In Stock' || i.status === 'In Showcase');
+  // Available stock in showroom — only Tags in a legally sellable lifecycle state (Milestone 4)
+  const availableStock = tags.filter(i => isSellable(i.status));
 
   const { theme } = useTheme();
 
@@ -259,11 +260,11 @@ export default function BillingEstimator({
     // Update state
     setInvoices(prev => [invoice, ...prev]);
 
-    // Mark catalogue tags in stock as "Sold"
+    // Mark catalogue tags in stock as "Sold" — only ever via a legal state-machine transition (Milestone 4, Handbook D-7)
     const soldTagIds = processedItems.map(i => i.itemId).filter(id => id !== undefined) as string[];
     if (soldTagIds.length > 0) {
       setTags(prev => prev.map(tag => {
-        if (soldTagIds.includes(tag.id)) {
+        if (soldTagIds.includes(tag.id) && canTransition(tag.status, 'Sold')) {
           return { ...tag, status: 'Sold' };
         }
         return tag;

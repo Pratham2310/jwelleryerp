@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Scale
 } from 'lucide-react';
+import { isSellable } from '../lib/tagStateMachine';
 import { Tag, SaleInvoice, Karigar, MetalRate } from '../types';
 
 interface DashboardProps {
@@ -46,7 +47,7 @@ export default function Dashboard({
   // Calculate KPIs
   const totalSalesRevenue = invoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
   const totalItemsCount = tags.length;
-  const inStockItemsCount = tags.filter(i => i.status === 'In Stock' || i.status === 'In Showcase').length;
+  const inStockItemsCount = tags.filter(i => isSellable(i.status)).length;
   
   // Calculate total artisan gold balance outstanding
   const totalArtisanGoldOutstanding = karigars.reduce((sum, k) => sum + Math.max(0, k.metalBalance), 0);

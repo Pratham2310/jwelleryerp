@@ -157,7 +157,7 @@ export const initialItemDesigns: ItemDesign[] = [
     defaultStoneType: 'None',
     hsnCode: '7113',
     isActive: true,
-    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=400&auto=format&fit=crop&q=60'
+    imageUrl: 'https://images.unsplash.com/photo-1610375461369-d613b564f4c4?w=400&auto=format&fit=crop&q=60'
   }
 ];
 
@@ -183,7 +183,7 @@ export const initialTags: Tag[] = [
     certificateNo: 'GIA-8736481',
     huid: 'A1B2C3',
     stockOwnershipType: 'OWNED',
-    status: 'In Showcase',
+    status: 'InShowcase',
     imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&auto=format&fit=crop&q=60'
   },
   {
@@ -204,7 +204,7 @@ export const initialTags: Tag[] = [
     certificateNo: 'BIS-9983173',
     huid: 'D4E5F6',
     stockOwnershipType: 'OWNED',
-    status: 'In Stock',
+    status: 'InStock',
     imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&auto=format&fit=crop&q=60'
   },
   {
@@ -224,7 +224,7 @@ export const initialTags: Tag[] = [
     stoneCharge: 85000,
     certificateNo: 'IGI-2248590',
     stockOwnershipType: 'GML_FINANCED',
-    status: 'In Showcase',
+    status: 'PendingHallmark',
     imageUrl: 'https://images.unsplash.com/photo-1635767798638-3e25273a8236?w=400&auto=format&fit=crop&q=60'
   },
   {
@@ -245,7 +245,7 @@ export const initialTags: Tag[] = [
     certificateNo: 'BIS-7324519',
     huid: 'G7H8J9',
     stockOwnershipType: 'OWNED',
-    status: 'In Stock',
+    status: 'InStock',
     imageUrl: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&auto=format&fit=crop&q=60'
   },
   {
@@ -265,7 +265,7 @@ export const initialTags: Tag[] = [
     stoneCharge: 165000,
     certificateNo: 'IGI-7483921',
     stockOwnershipType: 'CONSIGNMENT',
-    status: 'In Showcase',
+    status: 'InShowcase',
     imageUrl: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&auto=format&fit=crop&q=60'
   },
   {
@@ -285,7 +285,7 @@ export const initialTags: Tag[] = [
     stoneCharge: 0,
     certificateNo: undefined,
     stockOwnershipType: 'OWNED',
-    status: 'In Stock',
+    status: 'InStock',
     imageUrl: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=400&auto=format&fit=crop&q=60'
   },
   {
@@ -306,7 +306,7 @@ export const initialTags: Tag[] = [
     certificateNo: 'BIS-8392104',
     huid: 'K1L2M3',
     stockOwnershipType: 'OWNED',
-    status: 'Out for Jobwork',
+    status: 'OutForJobwork',
     imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&auto=format&fit=crop&q=60'
   },
   {
@@ -327,8 +327,8 @@ export const initialTags: Tag[] = [
     certificateNo: 'MMTC-110294',
     huid: 'N4P5Q6',
     stockOwnershipType: 'OWNED',
-    status: 'In Stock',
-    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=400&auto=format&fit=crop&q=60'
+    status: 'InStock',
+    imageUrl: 'https://images.unsplash.com/photo-1610375461369-d613b564f4c4?w=400&auto=format&fit=crop&q=60'
   }
 ];
 

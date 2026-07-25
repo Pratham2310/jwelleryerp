@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ItemDesign, Tag, ItemCategory, MetalStandard, StoneVariety } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { ALL_TAG_STATUSES, TAG_STATUS_LABEL, canTransition, nextLegalStatuses, type TagStatus } from '../lib/tagStateMachine';
 
 interface CatalogManagerProps {
   itemDesigns: ItemDesign[];
@@ -90,10 +91,24 @@ export default function CatalogManager({
     certificateNo: '',
     huid: '',
     stockOwnershipType: 'OWNED',
-    status: 'In Stock',
+    status: 'InStock',
     imageUrl: ''
   };
   const [newTag, setNewTag] = useState<Partial<Tag>>(emptyNewTag);
+  const [statusChangeError, setStatusChangeError] = useState('');
+  const [pendingStatus, setPendingStatus] = useState<TagStatus | ''>('');
+
+  const handleTagStatusChange = (tag: Tag) => {
+    if (!pendingStatus) return;
+    if (!canTransition(tag.status, pendingStatus)) {
+      setStatusChangeError(`Cannot move "${tag.sku}" from ${TAG_STATUS_LABEL[tag.status]} to ${TAG_STATUS_LABEL[pendingStatus]} — that transition is not allowed by the Tag lifecycle.`);
+      return;
+    }
+    setTags(prev => prev.map(t => t.id === tag.id ? { ...t, status: pendingStatus } : t));
+    setSelectedTag(prev => prev && prev.id === tag.id ? { ...prev, status: pendingStatus } : prev);
+    setStatusChangeError('');
+    setPendingStatus('');
+  };
 
   // Selecting a Design pre-fills its defaults onto the new Tag form — still fully editable after.
   const handleDesignSelectForNewTag = (designId: string) => {
@@ -176,17 +191,25 @@ export default function CatalogManager({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: TagStatus) => {
     switch (status) {
-      case 'In Stock': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'In Showcase': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'Out for Jobwork': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'InStock': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'InShowcase': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'OutForJobwork': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'Sold': return 'bg-yellow-400 text-black border-yellow-500';
+      case 'DamagedOrMelted': return 'bg-red-50 text-red-700 border-red-200';
+      case 'PendingHallmark': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Hallmarked': return 'bg-teal-50 text-teal-700 border-teal-200';
+      case 'RawMetal': return 'bg-slate-100 text-slate-600 border-slate-200';
+      case 'IssuedToKarigar': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'ReceivedFromKarigar': return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+      case 'MemoOut': return 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200';
+      case 'TransferInTransit': return 'bg-sky-50 text-sky-700 border-sky-200';
       default: return 'bg-white text-slate-800 border-slate-200';
     }
   };
 
-  const statuses = ['All', 'In Stock', 'In Showcase', 'Out for Jobwork', 'Sold'];
+  const statuses: ('All' | TagStatus)[] = ['All', ...ALL_TAG_STATUSES];
 
   // ---------- Item Design Templates tab state ----------
   const [designSearchTerm, setDesignSearchTerm] = useState('');
@@ -343,7 +366,7 @@ export default function CatalogManager({
                         : 'bg-white text-slate-700 hover:bg-amber-50/50 border border-slate-200'
                     }`}
                   >
-                    {stat}
+                    {stat === 'All' ? 'All' : TAG_STATUS_LABEL[stat]}
                   </button>
                 ))}
               </div>
@@ -378,6 +401,8 @@ export default function CatalogManager({
                   onClick={() => {
                     setSelectedTag(tag);
                     setShowTagPreview(false);
+                    setPendingStatus('');
+                    setStatusChangeError('');
                   }}
                   className="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-amber-400/50 transition duration-250 flex flex-col group cursor-pointer"
                 >
@@ -391,7 +416,7 @@ export default function CatalogManager({
                     />
                     <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getStatusColor(tag.status)}`}>
-                        {tag.status}
+                        {TAG_STATUS_LABEL[tag.status]}
                       </span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${OWNERSHIP_BADGE_CLASS[tag.stockOwnershipType]}`}>
                         {OWNERSHIP_LABEL[tag.stockOwnershipType]}
@@ -657,6 +682,47 @@ export default function CatalogManager({
                         }`}>Stock Ownership</span>
                         <span className="font-bold">{OWNERSHIP_LABEL[selectedTag.stockOwnershipType]}</span>
                       </div>
+                    </div>
+
+                    {/* Tag lifecycle status transition — every status change is validated through canTransition() (Milestone 4) */}
+                    <div className={`mt-4 p-3 rounded-xl border transition-colors duration-200 ${
+                      theme === 'light' ? 'bg-slate-50 border-slate-100' : 'bg-zinc-900/50 border-zinc-800/80'
+                    }`}>
+                      <span className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-2 ${
+                        theme === 'light' ? 'text-slate-400' : 'text-zinc-500'
+                      }`}>Lifecycle Status</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getStatusColor(selectedTag.status)}`}>
+                          {TAG_STATUS_LABEL[selectedTag.status]}
+                        </span>
+                        {nextLegalStatuses(selectedTag.status).length > 0 && (
+                          <>
+                            <span className={theme === 'light' ? 'text-slate-300' : 'text-zinc-700'}>→</span>
+                            <select
+                              value={pendingStatus}
+                              onChange={(e) => setPendingStatus(e.target.value as TagStatus)}
+                              className={`flex-1 text-xs rounded-lg px-2 py-1.5 border ${
+                                theme === 'light' ? 'bg-white border-slate-200 text-slate-800' : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                              }`}
+                            >
+                              <option value="">Move to...</option>
+                              {nextLegalStatuses(selectedTag.status).map(s => (
+                                <option key={s} value={s}>{TAG_STATUS_LABEL[s]}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleTagStatusChange(selectedTag)}
+                              disabled={!pendingStatus}
+                              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 transition"
+                            >
+                              Move
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {statusChangeError && (
+                        <p className="text-[11px] text-red-500 font-semibold mt-2">{statusChangeError}</p>
+                      )}
                     </div>
 
                     {selectedTag.stoneType !== 'None' && (

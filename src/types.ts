@@ -1,3 +1,5 @@
+import type { TagStatus } from './lib/tagStateMachine';
+
 export type ItemCategory = 'Rings' | 'Necklaces' | 'Earrings' | 'Bangles' | 'Bracelets' | 'Chains' | 'Coins';
 export type MetalStandard = 'Gold (24K)' | 'Gold (22K)' | 'Gold (18K)' | 'Silver (999)' | 'Platinum (950)';
 export type StoneVariety = 'None' | 'Diamond' | 'Ruby' | 'Emerald' | 'Sapphire' | 'Cubic Zirconia';
@@ -45,7 +47,7 @@ export interface Tag {
   certificateNo?: string;
   huid?: string; // 6-char BIS Hallmark Unique ID, assigned once hallmarked (Milestone 24/Phase 9)
   stockOwnershipType: 'OWNED' | 'GML_FINANCED' | 'CONSIGNMENT'; // Handbook §1.6/D-3
-  status: 'In Stock' | 'In Showcase' | 'Sold' | 'Out for Jobwork';
+  status: TagStatus; // enforced lifecycle, see lib/tagStateMachine.ts (Milestone 4, Handbook D-6)
   imageUrl?: string;
 }
 
