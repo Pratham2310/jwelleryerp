@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-25 — Milestone 3 completed (see `CHANGELOG.md`); Milestone 4 is next up. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-25 — **Milestones 1–10 complete** (see `CHANGELOG.md`); Milestone 11 (Estimate/Quotation Mode Toggle) is next up. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -17,18 +17,18 @@ Phase 1: Foundation & Calculations                        [DONE]
   ├── M1  State Unification & Design System Cleanup
   └── M2  Critical Financial & Billing Calculation Fixes
 
-Phase 2: Tagging & Inventory Foundation
+Phase 2: Tagging & Inventory Foundation                   [DONE]
   ├── M3  Item Design vs. Tag Data Model & Catalog UI Split      [DONE]
-  ├── M4  Tag Lifecycle State Machine                            <- next up
-  ├── M5  Barcode/QR Tag Generation & Thermal Print Layout
-  └── M6  Physical Stock Audit / Reconciliation UI
+  ├── M4  Tag Lifecycle State Machine                            [DONE]
+  ├── M5  Barcode/QR Tag Generation & Thermal Print Layout       [DONE]
+  └── M6  Physical Stock Audit / Reconciliation UI               [DONE]
 
 Phase 3: Billing Compliance & Correctness (each independent of the others; all depend only on M2)
-  ├── M7  Discount-Before-GST Calculation Fix
-  ├── M8  Mandatory PAN Verification Modal
-  ├── M9  Multi-Payment Split UI
-  ├── M10 Manager Override + Reason-Log Workflow
-  ├── M11 Estimate / Quotation Mode Toggle
+  ├── M7  Discount-Before-GST Calculation Fix                    [DONE]
+  ├── M8  Mandatory PAN Verification Modal                       [DONE]
+  ├── M9  Multi-Payment Split UI                                 [DONE]
+  ├── M10 Manager Override + Reason-Log Workflow                 [DONE]
+  ├── M11 Estimate / Quotation Mode Toggle                       <- next up
   ├── M12 Sales Return & Credit Note
   └── M13 Dashboard Real-Data Accuracy Fix
 
@@ -109,29 +109,30 @@ Phase 11: Admin, Security & Hardware
   3. ✅ Added Stock Ownership badge/filter (`OWNED`/`GML_FINANCED`/`CONSIGNMENT`) to the Tag Inventory tab.
 - **Testable via:** ✅ Catalog shows two working tabs over real, separately-typed data; `App.tsx`/`BillingEstimator.tsx`/`Header.tsx`/`Dashboard.tsx` all compile and function against the new `Tag` type (`tsc --noEmit` clean, Playwright smoke test passing with zero console errors); a new Tag created against a selected `ItemDesign` correctly inherits its defaults and shows the right ownership badge.
 
-### 📍 Milestone 4: Tag Lifecycle State Machine
+### 📍 Milestone 4: Tag Lifecycle State Machine — ✅ DONE (2026-07-25)
 - **Goal:** Enforce the full Tag status lifecycle instead of a free-text status field.
 - **Dependencies:** Milestone 3.
 - **Tasks:**
-  1. Implement `src/lib/tagStateMachine.ts` — a pure, unit-tested `canTransition(from, to)` function covering `RawMetal → IssuedToKarigar → ReceivedFromKarigar → PendingHallmark → Hallmarked → InStock → {MemoOut, TransferInTransit, Sold, DamagedOrMelted}`.
-  2. Wire every UI action that changes a Tag's status through this function; reject illegal transitions with a validation error (reuse the existing `validationError` pattern from `BillingEstimator.tsx`).
-- **Testable via:** Vitest coverage of every legal/illegal transition pair; manually attempting an illegal transition in the UI (e.g. `InStock → RawMetal`) is blocked with a visible error.
+  1. ✅ `src/lib/tagStateMachine.ts` — pure `canTransition(from, to)` over the full 12-state lifecycle, with `Sold`/`DamagedOrMelted` terminal. 31 unit tests.
+  2. ✅ `Tag.status` is now this enum; Catalog's detail modal offers only legal next states and rejects illegal ones with a visible error. Billing/Dashboard read status via `isSellable()`/`canTransition()`.
+- **Testable via:** ✅ Vitest coverage of legal/illegal transition pairs; Playwright-verified that the UI only offers legal targets and blocks the rest.
 
-### 📍 Milestone 5: Barcode/QR Tag Generation & Thermal Print Layout
+### 📍 Milestone 5: Barcode/QR Tag Generation & Thermal Print Layout — ✅ DONE (2026-07-25)
 - **Goal:** Replace the decorative barcode icon with a real, scannable barcode/QR generator and a printable thermal-label layout.
 - **Dependencies:** Milestone 3.
 - **Tasks:**
-  1. Integrate a real QR/Barcode generation library (`qrcode.react` or `bwip-js`).
-  2. Build the Thermal Tag Sticker Generator & Print Layout preview (2-line/3-line jewellery tag stickers showing HUID, SKU, Wt, Purity, QR) — reuse the existing `JobBagManager.tsx` tag-preview modal pattern rather than inventing new markup.
-- **Testable via:** A generated tag renders a real, scannable QR/barcode encoding the Tag ID; the print layout renders correctly under `@media print` (existing `#print-area` convention).
+  1. ✅ Integrated `qrcode.react` + `jsbarcode` behind a shared `src/components/ui/TagCode.tsx` (`TagQRCode`, `TagBarcode`).
+  2. ✅ Catalog's Tag Preview and JobBagManager's print tag now render real codes (QR = Tag/JobBag id, CODE128 barcode = SKU). Fixed the sticker not being wrapped in the `#print-area` convention, which had made "Print Tag" print the whole page.
+- **Testable via:** ✅ Playwright confirmed real SVG barcode geometry (44 bars) rather than an icon glyph.
 
-### 📍 Milestone 6: Physical Stock Audit / Reconciliation UI
+### 📍 Milestone 6: Physical Stock Audit / Reconciliation UI — ✅ DONE (2026-07-25)
 - **Goal:** Let staff scan/enter a tray of tags and reconcile against the expected system list.
 - **Dependencies:** Milestone 4, Milestone 5.
 - **Tasks:**
-  1. Build a Stock Audit screen: scan-or-manually-enter barcode input, compares against the expected `Tag[]` list for a location, flags missing/extra tags.
-  2. Produce a discrepancy report (count-and-weight-wise) for owner sign-off.
-- **Testable via:** Simulating a scan sequence that omits one known tag correctly flags it as missing; an unexpected tag ID correctly flags as "extra."
+  1. ✅ New Stock Audit tab in Catalog (`StockAuditPanel.tsx`) with scan-or-type input, backed by `src/lib/stockAudit.ts`'s pure `reconcileStockAudit()`. Flags missing tags and extra scans (unknown codes *and* real tags not expected in this tray). 7 unit tests.
+  2. ✅ Count-and-weight discrepancy summary + generated report for owner sign-off.
+- **Testable via:** ✅ Playwright-verified missing/extra flagging and report generation.
+- **Note:** the panel is explicitly theme-aware (`useTheme()`) rather than relying on `index.css`'s global dark-mode repaint — see `KNOWN_ISSUES.md` #12.
 
 ---
 
@@ -139,36 +140,38 @@ Phase 11: Admin, Security & Hardware
 
 _Each milestone in this phase depends only on Milestone 2 and is independent of every other milestone in this phase — they can be built and tested in any order._
 
-### 📍 Milestone 7: Discount-Before-GST Calculation Fix
-- **Goal:** Correct `calculateInvoiceTotals()` so bill-level discount reduces the taxable value *before* GST is computed (PRD §7.4), not after GST against the invoice total (the current, deliberately-flagged simplification from Milestone 2).
+### 📍 Milestone 7: Discount-Before-GST Calculation Fix — ✅ DONE (2026-07-25)
+- **Goal:** Correct `calculateInvoiceTotals()` so bill-level discount reduces the taxable value *before* GST is computed (PRD §7.4).
 - **Dependencies:** Milestone 2.
 - **Tasks:**
-  1. Update `src/lib/billingCalculations.ts`'s discount handling and add new Vitest cases proving GST is computed on `(subtotal − discount)`, not `subtotal`.
-  2. Update the Billing summary panel and both invoice-display surfaces to reflect the corrected order.
-- **Testable via:** New unit tests; manually applying a discount and confirming the printed GST figure changes accordingly.
+  1. ✅ `calculateInvoiceTotals()` gained an explicit `taxableValue` (`subtotal − discount`, clamped at 0) and computes GST from it. New Vitest cases prove GST changes with the discount.
+  2. ✅ POS summary panel and both invoice-display surfaces reordered to Subtotal → Discount → GST → Invoice Total. The affected mock invoice's stored figures were corrected.
+- **Testable via:** ✅ Unit tests + Playwright-confirmed on-screen arithmetic.
 
-### 📍 Milestone 8: Mandatory PAN Verification Modal
+### 📍 Milestone 8: Mandatory PAN Verification Modal — ✅ DONE (2026-07-25)
 - **Goal:** Block checkout ≥₹2,00,000 without a captured PAN (or Form 60), per PRD §4.4/§15.3.
 - **Dependencies:** Milestone 2.
 - **Tasks:**
-  1. Build a PAN Verification modal in `BillingEstimator.tsx`, triggered when `finalGrandTotal >= 200000`, format-validating only (no real government verification).
-- **Testable via:** Attempting checkout above the threshold without a PAN is blocked; entering a valid-format PAN allows checkout.
+  1. ✅ `src/lib/statutoryChecks.ts` (threshold + structural PAN format check, 9 unit tests) and a PAN/Form 60 modal in `BillingEstimator.tsx`, plus a live requirement banner in the summary panel.
+- **Testable via:** ✅ Playwright-verified: blocked without PAN, malformed PAN rejected, valid PAN or Form 60 allows checkout.
+- **Note:** the threshold tests the **tax invoice total**, not the post-old-gold cash collected. Threshold becomes data-driven in Milestone 34.
 
-### 📍 Milestone 9: Multi-Payment Split UI
+### 📍 Milestone 9: Multi-Payment Split UI — ✅ DONE (2026-07-25)
 - **Goal:** Allow one bill to be settled across multiple payment modes simultaneously (PRD §7.5).
 - **Dependencies:** Milestone 2.
 - **Tasks:**
-  1. Replace the single `paymentMethod` selector with a `{mode, amount}[]` list, validated so the sum equals `finalGrandTotal` before checkout is allowed.
-  2. Add `validatePaymentSplit()` to `billingCalculations.ts`, unit-tested.
-- **Testable via:** Splitting a bill across Cash+Card+UPI sums correctly and blocks checkout if the split is short/over.
+  1. ✅ Opt-in split mode with a `{mode, amount}[]` list; the single-mode quick-select remains the default fast path. Invoices persist their `paymentSplit`, shown as "Settled Via" on both display surfaces.
+  2. ✅ `validatePaymentSplit()` in `billingCalculations.ts`, 6 unit tests. Scheme Redemption is now portion-aware — only the amount tendered against the scheme is validated/debited.
+- **Testable via:** ✅ Playwright-verified under- and overpayment both block checkout; an exact split settles.
 
-### 📍 Milestone 10: Manager Override + Reason-Log Workflow
-- **Goal:** Require a logged reason (and, later, a Supervisor PIN — see Milestone 33) when staff overrides rate, wastage %, making charge, or discount at the counter (PRD §7.1 step 4, §15.1).
+### 📍 Milestone 10: Manager Override + Reason-Log Workflow — ✅ DONE (2026-07-25)
+- **Goal:** Require a logged reason (and, later, a Supervisor PIN — see Milestone 33) when staff overrides wastage %, making charge, or rate at the counter (PRD §7.1 step 4, §15.1).
 - **Dependencies:** Milestone 2.
 - **Tasks:**
-  1. Detect when a billing-line field is edited away from its item-master default; prompt for a mandatory reason before accepting the override.
-  2. Persist the override + reason onto the resulting `SaleInvoice` line for later audit.
-- **Testable via:** Editing a wastage % away from its default prompts for a reason and refuses to proceed without one; the saved invoice shows the logged reason.
+  1. ✅ `src/lib/priceOverrides.ts` detects lines edited away from their Tag's master values and blocks checkout until a ≥5-char reason is logged per field. 11 unit tests.
+  2. ✅ Reasons persist onto the saved `SaleInvoice` line and render as an "Approved Price Overrides" audit block on the receipt.
+- **Testable via:** ✅ Playwright-verified: no false positives before editing, gate blocks on edit, short reasons rejected, audit trail persisted.
+- **Note:** bill-level *discount* is deliberately not gated here — it's a separate, already-visible field rather than a deviation from an item master. Gate it in Milestone 33 alongside the Supervisor PIN if the business wants that.
 
 ### 📍 Milestone 11: Estimate / Quotation Mode Toggle
 - **Goal:** Let staff generate a non-fiscal Estimate (same calculation engine, no invoice number consumed, no stock deduction) before committing to a Tax Invoice (PRD §7.8).

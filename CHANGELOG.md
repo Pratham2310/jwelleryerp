@@ -4,6 +4,31 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-25 — Milestones 4–10 Implemented (Tagging Foundation + Billing Compliance)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. Implements `TODO.md` Milestones 4 through 10, each built, tested, and committed independently. No visual redesign — all new UI reuses the app's established card/modal/filter-chip patterns and color tokens.
+
+**Milestone 4 — Tag Lifecycle State Machine:** `src/lib/tagStateMachine.ts` implements a pure `canTransition(from, to)` over the full 12-state lifecycle (`RawMetal → IssuedToKarigar → ReceivedFromKarigar → PendingHallmark → Hallmarked → InStock → {InShowcase, OutForJobwork, MemoOut, TransferInTransit, Sold, DamagedOrMelted}`), with `Sold`/`DamagedOrMelted` terminal. `Tag.status` is now this enum instead of a free-text 4-value union. Catalog's Tag detail modal gained a guarded "move to next status" control that only offers legal targets and rejects illegal ones with a visible error. Billing's `availableStock`/checkout and Dashboard's in-stock KPI now use `isSellable()`/`canTransition()` (Handbook D-6/D-7). 31 unit tests.
+
+**Milestone 5 — Barcode/QR Generation:** `src/components/ui/TagCode.tsx` wraps `qrcode.react` (QR encoding the Tag/JobBag id) and `jsbarcode` (CODE128 encoding the SKU), replacing the decorative `lucide-react` icons in both Catalog's Tag Preview and JobBagManager's print tag. Also fixed a real bug found while wiring this: Catalog's "Print Tag" called `window.print()` but the sticker was never wrapped in the app's `#print-area` convention, so it printed the whole page.
+
+**Milestone 6 — Physical Stock Audit:** new third Catalog tab. `src/lib/stockAudit.ts`'s `reconcileStockAudit()` compares a scanned tray sequence against the tags the system expects on-premises, flagging missing tags and extra/unexpected scans (unknown codes *and* real tags that shouldn't be in this tray), with a count-and-weight discrepancy report for owner sign-off. 7 unit tests.
+
+**Milestone 7 — 🚨 Discount-Before-GST Fix:** a bill-level discount now reduces the taxable value *before* GST is computed (PRD §7.4). The previous order applied the discount post-GST against the invoice total, overstating GST on every discounted sale. `calculateInvoiceTotals()` gained an explicit `taxableValue` field, clamped at zero. Both invoice display surfaces and the POS summary panel reordered to Subtotal → Discount → GST → Invoice Total. The affected mock invoice's stored figures were corrected (tax 3191 → 3146, grandTotal 108057 → 108012).
+
+**Milestone 8 — Mandatory PAN Verification:** `src/lib/statutoryChecks.ts` blocks checkout at/above ₹2,00,000 without a captured PAN (structural format validation only) or a Form 60 declaration (PRD §4.4/§15.3, Rule 114B). The threshold tests the tax invoice total, not the post-old-gold cash collected. A live banner in the summary panel surfaces the requirement before staff reach checkout. 9 unit tests.
+
+**Milestone 9 — Multi-Payment Split:** `validatePaymentSplit()` allows one bill to be settled across several modes, requiring the tendered amounts to sum exactly to the amount due (PRD §7.5). Split mode is opt-in; the single-mode quick-select remains the default fast path. Scheme Redemption validation is now portion-aware — only the amount actually tendered against the scheme is validated and debited. Invoices record their full `paymentSplit`, shown as "Settled Via" on both display surfaces. 6 new unit tests.
+
+**Milestone 10 — Manager Override + Reason Log:** `src/lib/priceOverrides.ts` detects billing lines edited away from their Tag's master values and blocks checkout until a manager reason (min. 5 chars) is logged per changed field (PRD §7.1 step 4, §15.1). Reasons persist onto the saved invoice line and render as an "Approved Price Overrides" audit block on the receipt. Custom rows with no linked Tag correctly aren't treated as overrides. 11 unit tests.
+
+**Bug found and fixed during this work (beyond the milestone scope):** the "Goddess Lakshmi Gold Coin" design/tag pointed at a dead Unsplash URL, producing an `ERR_BLOCKED_BY_ORB` console error and a broken-image card on Catalog — replaced with a working URL. Separately, my own new Stock Audit panel initially reproduced `KNOWN_ISSUES.md` #12 exactly (unreadable gray-on-gray rows and an invisible white-on-white button in dark mode, because `index.css`'s blanket dark-mode overrides don't cover every ad hoc class combo); fixed by making that panel explicitly theme-aware via `useTheme()` rather than relying on the global override.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **76 tests passing across 5 suites** (up from 10); `npm run build` clean. Each milestone was individually Playwright-verified against the running app (state transitions rejected/accepted correctly, real QR/barcode SVG geometry rendered, audit discrepancies flagged, discount-before-GST arithmetic confirmed on screen, PAN gate blocking then allowing checkout, split payment under/overpayment blocked then settled, override gate blocking then logging). A final full-app regression pass across all 7 screens, both themes, and a 390×844 mobile viewport reported **zero console errors**.
+
+---
+
 ## 2026-07-25 — Live Deployment QA Pass (jwelleryerp.vercel.app) & Mobile Sidebar Fix
 
 **Author:** AI agent (Claude Code), pair programming with USER.

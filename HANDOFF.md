@@ -60,9 +60,17 @@ The full 14-phase **Developer Implementation Handbook** (`docs/Jewellery_ERP_Dev
 - **✅ Done (2026-07-25): Milestone 1 — State Unification & Design System Cleanup.** `ThemeContext`/`useTheme()` extracted; `LooseStone[]`/`JobBag[]` lifted to `App.tsx`; `Header.tsx` search wired to live state; Vitest configured. See `CHANGELOG.md` and `KNOWN_ISSUES.md` #8, #9, #14.
 - **✅ Done (2026-07-25): Milestone 2 — Critical Financial & Billing Calculation Fixes.** Old-gold/GST base bug, hardcoded wastage, making-charge type branching, Scheme Redemption wiring, and invoice numbering all fixed in a new `src/lib/billingCalculations.ts` engine, unit-tested against the PRD §17 worked example. See `CHANGELOG.md` and `KNOWN_ISSUES.md` #1, #3, #4, #5, #11.
 - **✅ Done (2026-07-25): Milestone 3 — Item Design vs. Tag Data Model & Catalog UI Split.** `JewelleryItem` split into `ItemDesign` (template) + `Tag` (physical piece, with real `huid` and `stockOwnershipType` fields); `CatalogManager.tsx` rebuilt with Tag Inventory / Item Design Templates tabs. Resolves Handbook decision D-6. See `CHANGELOG.md`.
-- **Next Up:** **Milestone 4 — Tag Lifecycle State Machine** (`TODO.md`), dependent on Milestone 3 (now done).
-  - Task 1: Implement `src/lib/tagStateMachine.ts` — a pure, unit-tested `canTransition(from, to)` function covering the full `RawMetal → IssuedToKarigar → ReceivedFromKarigar → PendingHallmark → Hallmarked → InStock → {MemoOut, TransferInTransit, Sold, DamagedOrMelted}` lifecycle (today `Tag.status` is still the same 4-value union it always was — `In Stock`/`In Showcase`/`Sold`/`Out for Jobwork` — Milestone 3 deliberately did not touch this).
-  - Task 2: Wire every UI action that changes a Tag's status through this function; reject illegal transitions with a visible validation error.
+- **✅ Done (2026-07-25): Milestones 4–10.** Phase 2 (Tagging Foundation) and Phase 3's first four billing-compliance milestones are complete — Tag lifecycle state machine, real barcode/QR generation, Stock Audit UI, discount-before-GST fix, PAN verification gate, multi-payment split, and the manager override reason log. Test suite grew from 10 to **76 passing tests across 5 suites**. See `CHANGELOG.md` for the full per-milestone detail.
+- **Next Up:** **Milestone 11 — Estimate / Quotation Mode Toggle** (`TODO.md`), dependent only on Milestone 2 (done).
+  - Task 1: Add an `invoiceType: 'ESTIMATE' | 'TAX_INVOICE'` toggle; Estimate mode must skip the PAN gate (Milestone 8) and the invoice-number sequence, and must not deduct stock or transition any Tag to `Sold`.
+  - Task 2: Add a "Convert to Tax Invoice" action that re-pulls the current rate or honors the estimate's original rate (staff's explicit choice).
+  - **Watch out:** `handleCheckout()` in `BillingEstimator.tsx` now has four sequential validation gates (items present → override reasons → PAN → payment split) before it builds the invoice. Estimate mode needs to bypass the PAN gate specifically, not all four.
+
+### Notes for whoever picks this up
+
+- **Every status change to a `Tag` must go through `canTransition()`** (`src/lib/tagStateMachine.ts`). Do not assign `tag.status` directly anywhere — the whole point of Milestone 4 is that the lifecycle is enforced rather than advisory (Handbook D-6/D-7).
+- **New UI must be explicitly theme-aware** via `useTheme()`. `index.css`'s global dark-mode overrides only repaint a fixed list of Tailwind class names; any new combination silently renders wrong in dark mode (`KNOWN_ISSUES.md` #12). This bit the Stock Audit panel during Milestone 6 and was fixed there — don't reintroduce it.
+- **The billing calculation engine is the single source of truth** (`src/lib/billingCalculations.ts`, Handbook D-9). Estimate mode, Sales Return (M12), and Old Gold (M14) must all call it rather than re-deriving any formula.
 
 ---
 

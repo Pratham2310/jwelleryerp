@@ -73,8 +73,12 @@ See `FRONTEND_ARCHITECTURE.md` §3 and `DATABASE.md` §1.1. `LooseStone[]` and `
 
 **Resolved (a):** `nextInvoiceNumber()` in `BillingEstimator.tsx` now uses a monotonic counter persisted at `stitch_invoice_seq_<year>` in `localStorage`, gap-free regardless of array filtering/deletion. **Still open (b):** no per-GSTIN/per-branch scoping — that depends on Multi-Branch (Milestone 8) and GST Compliance (Milestone 9) work not yet done.
 
-### 12. Design-system duplication: `ui/` components vs. raw-Tailwind + global CSS overrides
+### 12. ⚠️ CONFIRMED IN PRACTICE (2026-07-25) — Design-system duplication: `ui/` components vs. raw-Tailwind + global CSS overrides
 See `COMPONENT_LIBRARY.md` §3 for full detail. Only 3 of 15 components use the shared `ui/Button`/`Input`/`Card`/`Badge` primitives; the other 8 screens hand-roll markup styled via generic Tailwind class names that are then repainted by `!important` overrides in `index.css`. Not a functional bug, but a real maintainability risk: any new Tailwind class not already covered by an override rule will silently render with wrong/un-themed colors in dark mode.
+
+**This is no longer hypothetical.** Building `StockAuditPanel.tsx` (Milestone 6) reproduced it exactly on the first attempt: discrepancy rows rendered unreadable gray-on-gray, and the "Generate Discrepancy Report" button rendered white-on-white (invisible), because `bg-slate-50`/`text-slate-900` combinations in a new component aren't covered by the global dark-mode repaint list. Fixed there by making the panel explicitly theme-aware via `useTheme()`.
+
+**Working rule for new UI until this is properly resolved:** branch on `useTheme()` explicitly for background/text/border colors in any new component. Do not assume `index.css` will repaint it. A shared `Card`/`Modal` primitive that encapsulates this (see `CURRENT_PROGRESS.md` §3.6) remains the real fix.
 
 ### 13. Dead dependencies
 `@google/genai`, `express`, `motion` are all declared in `package.json` but never imported anywhere in `src/`. Space Grotesk is imported as a web font in `index.css` but never referenced by any class. Not harmful, but worth pruning or deliberately using before shipping, to avoid confusing future contributors into thinking there's a hidden AI/animation/server feature.
