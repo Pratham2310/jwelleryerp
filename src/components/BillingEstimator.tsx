@@ -19,43 +19,42 @@ import {
   Users,
   Sparkles
 } from 'lucide-react';
-import { JewelleryItem, Customer, SaleInvoice, InvoiceItem } from '../types';
+import { Tag, Customer, SaleInvoice, InvoiceItem } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
+import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 
 interface BillingEstimatorProps {
-  items: JewelleryItem[];
-  setItems: React.Dispatch<React.SetStateAction<JewelleryItem[]>>;
+  tags: Tag[];
+  setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
   customers: Customer[];
+  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
   metalRates: { metalType: string; ratePerGram: number }[];
   invoices: SaleInvoice[];
   setInvoices: React.Dispatch<React.SetStateAction<SaleInvoice[]>>;
 }
 
+/** Gap-free, session-persistent invoice number sequence (fixes KNOWN_ISSUES.md #11). */
+function nextInvoiceNumber(): string {
+  const year = new Date().getFullYear();
+  const key = `stitch_invoice_seq_${year}`;
+  const next = Number(localStorage.getItem(key) || '1000') + 1;
+  localStorage.setItem(key, String(next));
+  return `INV-${year}-${next}`;
+}
+
 export default function BillingEstimator({
-  items,
-  setItems,
+  tags,
+  setTags,
   customers,
+  setCustomers,
   metalRates,
   invoices,
   setInvoices
 }: BillingEstimatorProps) {
   // Available stock in showroom
-  const availableStock = items.filter(i => i.status === 'In Stock' || i.status === 'In Showcase');
+  const availableStock = tags.filter(i => i.status === 'In Stock' || i.status === 'In Showcase');
 
-  // Theme state
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('stitch_theme') as 'light' | 'dark') || 'dark';
-  });
-
-  useEffect(() => {
-    const checkTheme = () => {
-      const isLight = document.documentElement.classList.contains('light');
-      setTheme(isLight ? 'light' : 'dark');
-    };
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+  const { theme } = useTheme();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'create' | 'registry'>('create');
@@ -81,9 +80,11 @@ export default function BillingEstimator({
   const [guestPhone, setGuestPhone] = useState('');
   
   // Invoice items being billed
-  const [billingItems, setBillingItems] = useState<Partial<InvoiceItem>[]>([
-    { name: '', metalType: 'Gold (22K)', netWeight: 0, makingCharge: 0, stoneCharge: 0, subtotal: 0 }
-  ]);
+  const emptyBillingItem: Partial<InvoiceItem> = {
+    name: '', metalType: 'Gold (22K)', netWeight: 0, wastagePercent: 0,
+    makingChargeType: 'per-gram', makingChargeValue: 0, makingCharge: 0, stoneCharge: 0, subtotal: 0
+  };
+  const [billingItems, setBillingItems] = useState<Partial<InvoiceItem>[]>([{ ...emptyBillingItem }]);
 
   // Scrap / Old Gold trade-in
   const [oldGoldWeight, setOldGoldWeight] = useState<number>(0);
@@ -105,27 +106,17 @@ export default function BillingEstimator({
     return rate ? rate.ratePerGram : 0;
   };
 
-  // Recalculate billing item subtotals whenever weight, metalType, charges, or rates change
+  // Recalculate a billing line's Metal/Wastage/Making/Stone breakdown (PRD §7.2)
   const calculateItemSubtotal = (item: Partial<InvoiceItem>) => {
     const rate = getMetalRate(item.metalType || 'Gold (22K)');
-    const netWeight = Number(item.netWeight || 0);
-    const goldValue = netWeight * rate;
-    const makingCharge = Number(item.makingCharge || 0);
-    const stoneCharge = Number(item.stoneCharge || 0);
-
-    // If item was pulled from catalog, it may have wastage %
-    // We will calculate making charge considering wastage or flat
-    const wastagePercent = 3.5; // average default if not specified
-    const wastageWeight = netWeight * (wastagePercent / 100);
-    const totalMakingBasis = netWeight + wastageWeight;
-    
-    // Total for this item
-    const finalMaking = totalMakingBasis * makingCharge;
-    const itemTotal = goldValue + finalMaking + stoneCharge;
-    return {
-      goldPrice: Math.round(goldValue),
-      subtotal: Math.round(itemTotal)
-    };
+    return calculateLineItem({
+      netWeight: Number(item.netWeight || 0),
+      metalRate: rate,
+      wastagePercent: Number(item.wastagePercent || 0),
+      makingChargeType: item.makingChargeType === 'flat' ? 'flat' : 'per-gram',
+      makingChargeValue: Number(item.makingChargeValue || 0),
+      stoneCharge: Number(item.stoneCharge || 0)
+    });
   };
 
   const handleStockSelection = (stockId: string) => {
@@ -136,19 +127,23 @@ export default function BillingEstimator({
     // Replace the last empty or new item, or add to list
     const updated = [...billingItems];
     const lastItemIdx = updated.length - 1;
-    
+
     const billingItem: Partial<InvoiceItem> = {
       itemId: stockItem.id,
       sku: stockItem.sku,
       name: stockItem.name,
       metalType: stockItem.metalType,
       netWeight: stockItem.netWeight,
-      makingCharge: stockItem.makingChargeValue, // base making charge
+      wastagePercent: stockItem.wastagePercent,
+      makingChargeType: stockItem.makingChargeType,
+      makingChargeValue: stockItem.makingChargeValue,
       stoneCharge: stockItem.stoneCharge,
     };
 
     const calculated = calculateItemSubtotal(billingItem);
-    billingItem.goldPrice = calculated.goldPrice;
+    billingItem.goldPrice = calculated.metalValue;
+    billingItem.wastageValue = calculated.wastageValue;
+    billingItem.makingCharge = calculated.makingCharge;
     billingItem.subtotal = calculated.subtotal;
 
     if (updated[lastItemIdx]?.name === '' && updated[lastItemIdx]?.netWeight === 0) {
@@ -167,7 +162,9 @@ export default function BillingEstimator({
 
     // Trigger recalculation for this item
     const calculated = calculateItemSubtotal(updated[index]);
-    updated[index].goldPrice = calculated.goldPrice;
+    updated[index].goldPrice = calculated.metalValue;
+    updated[index].wastageValue = calculated.wastageValue;
+    updated[index].makingCharge = calculated.makingCharge;
     updated[index].subtotal = calculated.subtotal;
 
     setBillingItems(updated);
@@ -175,19 +172,21 @@ export default function BillingEstimator({
 
   const handleRemoveItem = (index: number) => {
     const updated = billingItems.filter((_, i) => i !== index);
-    setBillingItems(updated.length > 0 ? updated : [{ name: '', metalType: 'Gold (22K)', netWeight: 0, makingCharge: 0, stoneCharge: 0, subtotal: 0 }]);
+    setBillingItems(updated.length > 0 ? updated : [{ ...emptyBillingItem }]);
   };
 
   const handleAddItemRow = () => {
-    setBillingItems([...billingItems, { name: '', metalType: 'Gold (22K)', netWeight: 0, makingCharge: 0, stoneCharge: 0, subtotal: 0 }]);
+    setBillingItems([...billingItems, { ...emptyBillingItem }]);
   };
 
-  // Summary Calculations
-  const invoiceSubtotal = billingItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+  // Summary Calculations (PRD §7.3 / §17 — GST is computed on the full taxable
+  // subtotal and is NEVER reduced by the old-gold trade-in; old gold is netted
+  // only against the final payable amount at settlement — KNOWN_ISSUES.md #1)
+  const lineSubtotals = billingItems.map(item => item.subtotal || 0);
+  const { subtotal: invoiceSubtotal, gstTax, grandTotal: invoiceTotal } = calculateInvoiceTotals(lineSubtotals, discount);
   const oldGoldValue = Math.round(oldGoldWeight * oldGoldRate);
-  const payableSubtotal = Math.max(0, invoiceSubtotal - oldGoldValue);
-  const gstTax = Math.round(payableSubtotal * 0.03); // 3% Indian GST on Gold
-  const finalGrandTotal = Math.max(0, payableSubtotal + gstTax - discount);
+  const netAmountDue = settleOldGold(invoiceTotal, oldGoldValue);
+  const finalGrandTotal = netAmountDue; // actual amount collected from the customer, after old-gold settlement
 
   const handleCheckout = () => {
     setValidationError(null);
@@ -204,6 +203,19 @@ export default function BillingEstimator({
       return;
     }
 
+    // Scheme Redemption must validate against and deduct from the customer's
+    // actual savings balance — previously a purely cosmetic label (KNOWN_ISSUES.md #5)
+    if (paymentMethod === 'Scheme Redemption') {
+      if (!selectedCustomer || !selectedCustomer.savingsSchemeActive) {
+        setValidationError("Scheme Redemption requires a CRM customer with an active Gold Savings Scheme.");
+        return;
+      }
+      if (finalGrandTotal > (selectedCustomer.savingsSchemeBalance || 0)) {
+        setValidationError(`Scheme balance (₹${(selectedCustomer.savingsSchemeBalance || 0).toLocaleString('en-IN')}) is insufficient to cover the amount due (₹${finalGrandTotal.toLocaleString('en-IN')}).`);
+        return;
+      }
+    }
+
     const customerName = selectedCustomer ? selectedCustomer.name : guestName.trim() || 'Guest Walk-in';
     const customerPhone = selectedCustomer ? selectedCustomer.phone : guestPhone.trim() || 'N/A';
 
@@ -215,7 +227,11 @@ export default function BillingEstimator({
         name,
         metalType: item.metalType || 'Gold (22K)',
         netWeight: Number(item.netWeight || 0),
+        wastagePercent: Number(item.wastagePercent || 0),
+        makingChargeType: (item.makingChargeType === 'flat' ? 'flat' : 'per-gram') as 'flat' | 'per-gram',
+        makingChargeValue: Number(item.makingChargeValue || 0),
         goldPrice: Number(item.goldPrice || 0),
+        wastageValue: Number(item.wastageValue || 0),
         makingCharge: Number(item.makingCharge || 0),
         stoneCharge: Number(item.stoneCharge || 0),
         subtotal: Number(item.subtotal || 0)
@@ -224,7 +240,7 @@ export default function BillingEstimator({
 
     const invoice: SaleInvoice = {
       id: `inv-${Date.now()}`,
-      invoiceNumber: `INV-2026-${1000 + invoices.length + 1}`,
+      invoiceNumber: nextInvoiceNumber(),
       date: new Date().toISOString().split('T')[0],
       customerId: selectedCustomer?.id,
       customerName,
@@ -235,22 +251,32 @@ export default function BillingEstimator({
       subtotal: invoiceSubtotal,
       tax: gstTax,
       discount,
-      grandTotal: finalGrandTotal,
+      grandTotal: invoiceTotal,
+      netAmountDue: finalGrandTotal,
       paymentMethod
     };
 
     // Update state
     setInvoices(prev => [invoice, ...prev]);
 
-    // Mark catalogue items in stock as "Sold"
-    const soldItemIds = processedItems.map(i => i.itemId).filter(id => id !== undefined) as string[];
-    if (soldItemIds.length > 0) {
-      setItems(prev => prev.map(item => {
-        if (soldItemIds.includes(item.id)) {
-          return { ...item, status: 'Sold' };
+    // Mark catalogue tags in stock as "Sold"
+    const soldTagIds = processedItems.map(i => i.itemId).filter(id => id !== undefined) as string[];
+    if (soldTagIds.length > 0) {
+      setTags(prev => prev.map(tag => {
+        if (soldTagIds.includes(tag.id)) {
+          return { ...tag, status: 'Sold' };
         }
-        return item;
+        return tag;
       }));
+    }
+
+    // Deduct the redeemed amount from the customer's scheme balance
+    if (paymentMethod === 'Scheme Redemption' && selectedCustomer) {
+      setCustomers(prev => prev.map(c =>
+        c.id === selectedCustomer.id
+          ? { ...c, savingsSchemeBalance: (c.savingsSchemeBalance || 0) - finalGrandTotal }
+          : c
+      ));
     }
 
     // Set completed invoice for receipt presentation
@@ -258,7 +284,7 @@ export default function BillingEstimator({
   };
 
   const handleResetBilling = () => {
-    setBillingItems([{ name: '', metalType: 'Gold (22K)', netWeight: 0, makingCharge: 0, stoneCharge: 0, subtotal: 0 }]);
+    setBillingItems([{ ...emptyBillingItem }]);
     setSelectedCustomer(null);
     setGuestName('');
     setGuestPhone('');
@@ -393,7 +419,7 @@ export default function BillingEstimator({
                     <th>Standard</th>
                     <th className="text-right">Net Wt</th>
                     <th className="text-right">Metal Rate</th>
-                    <th className="text-right">Labor / Stones</th>
+                    <th className="text-right">Wastage + MC + Stones</th>
                     <th className="text-right py-2">Subtotal</th>
                   </tr>
                 </thead>
@@ -407,7 +433,7 @@ export default function BillingEstimator({
                       <td className="font-mono text-slate-500">{item.metalType}</td>
                       <td className="text-right font-mono">{item.netWeight.toFixed(2)} g</td>
                       <td className="text-right font-mono">₹{item.goldPrice ? Math.round(item.goldPrice / item.netWeight).toLocaleString('en-IN') : '-'}</td>
-                      <td className="text-right font-mono">₹{(item.makingCharge * item.netWeight + item.stoneCharge).toLocaleString('en-IN')}</td>
+                      <td className="text-right font-mono">₹{(item.wastageValue + item.makingCharge + item.stoneCharge).toLocaleString('en-IN')}</td>
                       <td className="text-right font-mono font-bold text-slate-900 py-3">₹{item.subtotal.toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
@@ -418,18 +444,8 @@ export default function BillingEstimator({
             {/* Price Calculations breakdown */}
             <div className="w-1/2 ml-auto text-xs font-medium space-y-2">
               <div className="flex justify-between text-slate-500">
-                <span>Showroom Items Total:</span>
+                <span>Taxable Subtotal:</span>
                 <span className="font-mono">₹{completedInvoice.subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              {completedInvoice.oldGoldWeight > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
-                  <span>Old Gold Trade-In ({completedInvoice.oldGoldWeight}g):</span>
-                  <span className="font-mono">-₹{completedInvoice.oldGoldValue.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-slate-500 border-t pt-2">
-                <span>Taxable Amount:</span>
-                <span className="font-mono">₹{(completedInvoice.subtotal - completedInvoice.oldGoldValue).toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between text-slate-500">
                 <span>Jewelry GST (3%):</span>
@@ -442,8 +458,18 @@ export default function BillingEstimator({
                 </div>
               )}
               <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                <span>Invoice Grand Total:</span>
+                <span>Invoice Total (Tax Invoice):</span>
                 <span className="font-mono text-amber-800">₹{completedInvoice.grandTotal.toLocaleString('en-IN')}</span>
+              </div>
+              {completedInvoice.oldGoldWeight > 0 && (
+                <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
+                  <span>Less: Old Gold Buyback ({completedInvoice.oldGoldWeight}g, settlement only):</span>
+                  <span className="font-mono">-₹{completedInvoice.oldGoldValue.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
+                <span>Net Amount Due:</span>
+                <span className="font-mono text-amber-800">₹{completedInvoice.netAmountDue.toLocaleString('en-IN')}</span>
               </div>
             </div>
 
@@ -621,16 +647,40 @@ export default function BillingEstimator({
                       </div>
                     </div>
 
-                    {/* Bottom Row: Labor & Stones */}
+                    {/* Middle Row: Wastage & Making Charge inputs */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Making Charge / g</label>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Wastage %</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          placeholder="0.0"
+                          className="w-full text-xs font-mono px-2.5 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-amber-500 bg-white"
+                          value={item.wastagePercent || ''}
+                          onChange={(e) => updateItemField(index, 'wastagePercent', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Making Charge Type</label>
+                        <select
+                          className="w-full text-xs px-2.5 py-1.5 border border-slate-200 bg-white rounded-md focus:outline-none focus:border-amber-500"
+                          value={item.makingChargeType || 'per-gram'}
+                          onChange={(e) => updateItemField(index, 'makingChargeType', e.target.value as any)}
+                        >
+                          <option value="per-gram">Per Gram</option>
+                          <option value="flat">Flat / Piece</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          Making Charge {item.makingChargeType === 'flat' ? '(Flat ₹)' : '(₹/g)'}
+                        </label>
                         <input
                           type="number"
                           placeholder="₹400"
                           className="w-full text-xs font-mono px-2.5 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-amber-500 bg-white"
-                          value={item.makingCharge || ''}
-                          onChange={(e) => updateItemField(index, 'makingCharge', parseFloat(e.target.value) || 0)}
+                          value={item.makingChargeValue || ''}
+                          onChange={(e) => updateItemField(index, 'makingChargeValue', parseFloat(e.target.value) || 0)}
                         />
                       </div>
                       <div>
@@ -643,10 +693,26 @@ export default function BillingEstimator({
                           onChange={(e) => updateItemField(index, 'stoneCharge', parseFloat(e.target.value) || 0)}
                         />
                       </div>
+                    </div>
+
+                    {/* Bottom Row: Computed breakdown */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div className="bg-amber-50/40 border border-amber-100 p-2.5 rounded-md flex flex-col justify-center">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Metal Value</span>
                         <span className="font-mono text-xs font-bold text-amber-800">
                           ₹{(item.goldPrice || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="bg-amber-50/40 border border-amber-100 p-2.5 rounded-md flex flex-col justify-center">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Wastage Value</span>
+                        <span className="font-mono text-xs font-bold text-amber-800">
+                          ₹{(item.wastageValue || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <div className="bg-amber-50/40 border border-amber-100 p-2.5 rounded-md flex flex-col justify-center">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Making Charge</span>
+                        <span className="font-mono text-xs font-bold text-amber-800">
+                          ₹{(item.makingCharge || 0).toLocaleString('en-IN')}
                         </span>
                       </div>
                       <div className="bg-amber-100/50 p-2.5 rounded-md flex flex-col justify-center">
@@ -737,27 +803,18 @@ export default function BillingEstimator({
                 <h3 className="font-sans font-bold text-slate-800 text-sm">Invoice Calculation Sheet</h3>
               </div>
 
-              {/* Items value subtotal */}
+              {/* Items value subtotal — GST is computed on this in full; old gold
+                  NEVER reduces the taxable base (PRD §8.3 / KNOWN_ISSUES.md #1) */}
               <div className="space-y-2.5 text-xs font-medium">
                 <div className="flex justify-between text-slate-500">
-                  <span>Gross Showroom Items:</span>
-                  <span className="font-mono">₹{invoiceSubtotal.toLocaleString('en-IN')}</span>
-                </div>
-                {oldGoldWeight > 0 && (
-                  <div className="flex justify-between text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded">
-                    <span>Trade-In Scrap Credit:</span>
-                    <span className="font-mono">-₹{oldGoldValue.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-700 border-t pt-2.5">
                   <span>Taxable Subtotal:</span>
-                  <span className="font-mono">₹{payableSubtotal.toLocaleString('en-IN')}</span>
+                  <span className="font-mono">₹{invoiceSubtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span className="flex items-center gap-1">GST/Taxes (3%): <Percent className="w-3 h-3 text-slate-400" /></span>
                   <span className="font-mono">₹{gstTax.toLocaleString('en-IN')}</span>
                 </div>
-                
+
                 {/* Discount input */}
                 <div className="pt-2 border-t flex gap-2">
                   <input
@@ -768,14 +825,26 @@ export default function BillingEstimator({
                     onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                   />
                 </div>
+
+                <div className="flex justify-between text-slate-700 border-t pt-2.5 font-bold">
+                  <span>Invoice Total (Tax Invoice):</span>
+                  <span className="font-mono">₹{invoiceTotal.toLocaleString('en-IN')}</span>
+                </div>
+
+                {oldGoldWeight > 0 && (
+                  <div className="flex justify-between text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded">
+                    <span>Less: Old Gold Buyback (settlement):</span>
+                    <span className="font-mono">-₹{oldGoldValue.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Grand Total */}
+              {/* Net Amount Due */}
               <div className="bg-slate-900 text-white p-4.5 rounded-2xl border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">Showroom Payable</span>
+                <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">Net Amount Due</span>
                 <div className="flex justify-between items-baseline">
                   <span className="text-xl font-bold font-mono text-amber-400">₹{finalGrandTotal.toLocaleString('en-IN')}</span>
-                  <span className="text-[10px] text-slate-400">incl. 3% GST</span>
+                  <span className="text-[10px] text-slate-400">after old-gold settlement</span>
                 </div>
               </div>
 
@@ -995,7 +1064,7 @@ export default function BillingEstimator({
                       <th>Standard</th>
                       <th className="text-right">Net Wt</th>
                       <th className="text-right">Metal Rate</th>
-                      <th className="text-right">Labor / Stones</th>
+                      <th className="text-right">Wastage + MC + Stones</th>
                       <th className="text-right py-2">Subtotal</th>
                     </tr>
                   </thead>
@@ -1009,7 +1078,7 @@ export default function BillingEstimator({
                         <td className="font-mono text-slate-500">{item.metalType}</td>
                         <td className="text-right font-mono">{item.netWeight.toFixed(2)} g</td>
                         <td className="text-right font-mono">₹{item.goldPrice ? Math.round(item.goldPrice / item.netWeight).toLocaleString('en-IN') : '-'}</td>
-                        <td className="text-right font-mono">₹{(item.makingCharge * item.netWeight + item.stoneCharge).toLocaleString('en-IN')}</td>
+                        <td className="text-right font-mono">₹{(item.wastageValue + item.makingCharge + item.stoneCharge).toLocaleString('en-IN')}</td>
                         <td className="text-right font-mono font-bold text-slate-900 py-3">₹{item.subtotal.toLocaleString('en-IN')}</td>
                       </tr>
                     ))}
@@ -1020,18 +1089,8 @@ export default function BillingEstimator({
               {/* Price Calculations breakdown */}
               <div className="w-1/2 ml-auto text-xs font-medium space-y-2">
                 <div className="flex justify-between text-slate-500">
-                  <span>Showroom Items Total:</span>
+                  <span>Taxable Subtotal:</span>
                   <span className="font-mono">₹{selectedInvoiceForDetail.subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                {selectedInvoiceForDetail.oldGoldWeight > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
-                    <span>Old Gold Trade-In ({selectedInvoiceForDetail.oldGoldWeight}g):</span>
-                    <span className="font-mono">-₹{selectedInvoiceForDetail.oldGoldValue.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-500 border-t pt-2">
-                  <span>Taxable Amount:</span>
-                  <span className="font-mono">₹{(selectedInvoiceForDetail.subtotal - selectedInvoiceForDetail.oldGoldValue).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span>Jewelry GST (3%):</span>
@@ -1044,8 +1103,18 @@ export default function BillingEstimator({
                   </div>
                 )}
                 <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                  <span>Invoice Grand Total:</span>
+                  <span>Invoice Total (Tax Invoice):</span>
                   <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.grandTotal.toLocaleString('en-IN')}</span>
+                </div>
+                {selectedInvoiceForDetail.oldGoldWeight > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
+                    <span>Less: Old Gold Buyback ({selectedInvoiceForDetail.oldGoldWeight}g, settlement only):</span>
+                    <span className="font-mono">-₹{selectedInvoiceForDetail.oldGoldValue.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
+                  <span>Net Amount Due:</span>
+                  <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.netAmountDue.toLocaleString('en-IN')}</span>
                 </div>
               </div>
 

@@ -24,9 +24,8 @@ import Breadcrumbs from './Breadcrumbs';
 import { Badge } from '../ui/Badge';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-
-// Types for search results
-import { initialJewelleryItems, initialCustomers, initialKarigars } from '../../data/mockData';
+import { useTheme } from '../../contexts/ThemeContext';
+import { Tag, Customer, Karigar } from '../../types';
 
 interface HeaderProps {
   user: { name: string; role: string; branch: string } | null;
@@ -34,12 +33,14 @@ interface HeaderProps {
   activeWorkOrdersCount: number;
   sidebarOpen?: boolean;
   setSidebarOpen?: (open: boolean) => void;
-  theme?: 'light' | 'dark';
-  toggleTheme?: () => void;
+  tags: Tag[];
+  customers: Customer[];
+  karigars: Karigar[];
 }
 
-export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarOpen, setSidebarOpen, theme = 'dark', toggleTheme }: HeaderProps) {
+export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarOpen, setSidebarOpen, tags, customers, karigars }: HeaderProps) {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   // State controls
   const [isSearchOpen, setSearchOpen] = useState(false);
@@ -94,16 +95,16 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
 
   // Filter lists for Global Search
   const searchResults = searchQuery.trim() === '' ? { items: [], customers: [], karigars: [] } : {
-    items: initialJewelleryItems.filter(item => 
+    items: tags.filter(item =>
       item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase())
     ).slice(0, 3),
-    customers: initialCustomers.filter(cust => 
+    customers: customers.filter(cust =>
       cust.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cust.phone.includes(searchQuery)
     ).slice(0, 3),
-    karigars: initialKarigars.filter(kar => 
+    karigars: karigars.filter(kar =>
       kar.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       kar.specialty.toLowerCase().includes(searchQuery.toLowerCase())
     ).slice(0, 3)

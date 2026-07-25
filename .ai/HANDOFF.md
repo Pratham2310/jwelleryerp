@@ -10,7 +10,7 @@
 > 4. `HANDOFF.md`
 > 5. `TODO.md`
 > 
-> Both the root copies and `.ai/` / `.ai_backup/` copies must be kept synchronized. Never complete a task without updating them.
+> Both the root copies and the `.ai/` copies must be kept synchronized (`.ai_backup/` was consolidated into `.ai/` on 2026-07-25 and no longer exists as a separate folder). Never complete a task without updating them.
 
 ---
 
@@ -56,12 +56,13 @@ The full 14-phase **Developer Implementation Handbook** (`docs/Jewellery_ERP_Dev
 
 ## 4. Development Roadmap & Execution Status
 
-- **Completed so far:** Full codebase analysis, full PRD & complete 14-phase Developer Handbook reading, gap analysis, and 13-milestone development roadmap in `TODO.md`.
-- **Next Up:** **Milestone 1 — State Unification & Design System Cleanup** (`TODO.md`).
-  - Task 1: Extract `ThemeContext` / `useTheme()` hook.
-  - Task 2: Lift `LooseStone[]` (`StoneManager.tsx`) and `JobBag[]` (`JobBagManager.tsx`) state to `App.tsx`.
-  - Task 3: Wire live state into `Header.tsx` global search.
-  - Task 4: Configure Vitest test runner for calculation testing.
+- **Completed so far:** Full codebase analysis, full PRD & complete 14-phase Developer Handbook reading, gap analysis, and a 34-milestone development roadmap in `TODO.md` (restructured 2026-07-25 from the original 13 into single-feature, independently-testable milestones — see `TODO.md`'s header note).
+- **✅ Done (2026-07-25): Milestone 1 — State Unification & Design System Cleanup.** `ThemeContext`/`useTheme()` extracted; `LooseStone[]`/`JobBag[]` lifted to `App.tsx`; `Header.tsx` search wired to live state; Vitest configured. See `CHANGELOG.md` and `KNOWN_ISSUES.md` #8, #9, #14.
+- **✅ Done (2026-07-25): Milestone 2 — Critical Financial & Billing Calculation Fixes.** Old-gold/GST base bug, hardcoded wastage, making-charge type branching, Scheme Redemption wiring, and invoice numbering all fixed in a new `src/lib/billingCalculations.ts` engine, unit-tested against the PRD §17 worked example. See `CHANGELOG.md` and `KNOWN_ISSUES.md` #1, #3, #4, #5, #11.
+- **✅ Done (2026-07-25): Milestone 3 — Item Design vs. Tag Data Model & Catalog UI Split.** `JewelleryItem` split into `ItemDesign` (template) + `Tag` (physical piece, with real `huid` and `stockOwnershipType` fields); `CatalogManager.tsx` rebuilt with Tag Inventory / Item Design Templates tabs. Resolves Handbook decision D-6. See `CHANGELOG.md`.
+- **Next Up:** **Milestone 4 — Tag Lifecycle State Machine** (`TODO.md`), dependent on Milestone 3 (now done).
+  - Task 1: Implement `src/lib/tagStateMachine.ts` — a pure, unit-tested `canTransition(from, to)` function covering the full `RawMetal → IssuedToKarigar → ReceivedFromKarigar → PendingHallmark → Hallmarked → InStock → {MemoOut, TransferInTransit, Sold, DamagedOrMelted}` lifecycle (today `Tag.status` is still the same 4-value union it always was — `In Stock`/`In Showcase`/`Sold`/`Out for Jobwork` — Milestone 3 deliberately did not touch this).
+  - Task 2: Wire every UI action that changes a Tag's status through this function; reject illegal transitions with a visible validation error.
 
 ---
 

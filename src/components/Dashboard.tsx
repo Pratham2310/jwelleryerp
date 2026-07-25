@@ -13,12 +13,12 @@ import {
   RefreshCw,
   Scale
 } from 'lucide-react';
-import { JewelleryItem, SaleInvoice, Karigar, MetalRate } from '../types';
+import { Tag, SaleInvoice, Karigar, MetalRate } from '../types';
 
 interface DashboardProps {
   metalRates: MetalRate[];
   setMetalRates: React.Dispatch<React.SetStateAction<MetalRate[]>>;
-  items: JewelleryItem[];
+  tags: Tag[];
   customersCount: number;
   karigars: Karigar[];
   invoices: SaleInvoice[];
@@ -28,11 +28,11 @@ interface DashboardProps {
   openIssueOrderModal: () => void;
 }
 
-export default function Dashboard({ 
-  metalRates, 
-  setMetalRates, 
-  items, 
-  customersCount, 
+export default function Dashboard({
+  metalRates,
+  setMetalRates,
+  tags,
+  customersCount,
   karigars, 
   invoices, 
   activeWorkOrdersCount,
@@ -45,8 +45,8 @@ export default function Dashboard({
 
   // Calculate KPIs
   const totalSalesRevenue = invoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
-  const totalItemsCount = items.length;
-  const inStockItemsCount = items.filter(i => i.status === 'In Stock' || i.status === 'In Showcase').length;
+  const totalItemsCount = tags.length;
+  const inStockItemsCount = tags.filter(i => i.status === 'In Stock' || i.status === 'In Showcase').length;
   
   // Calculate total artisan gold balance outstanding
   const totalArtisanGoldOutstanding = karigars.reduce((sum, k) => sum + Math.max(0, k.metalBalance), 0);
@@ -111,8 +111,8 @@ export default function Dashboard({
   // Category Stock Breakdown Calculator
   const categories = ['Rings', 'Necklaces', 'Earrings', 'Bangles', 'Bracelets', 'Chains', 'Coins'];
   const categoryCounts = categories.map(cat => {
-    const count = items.filter(item => item.category === cat).length;
-    const weight = items.filter(item => item.category === cat).reduce((sum, i) => sum + i.netWeight, 0);
+    const count = tags.filter(item => item.category === cat).length;
+    const weight = tags.filter(item => item.category === cat).reduce((sum, i) => sum + i.netWeight, 0);
     return { name: cat, count, weight: Number(weight.toFixed(2)) };
   }).filter(c => c.count > 0);
 

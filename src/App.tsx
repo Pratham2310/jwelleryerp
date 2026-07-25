@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialJewelleryItems, initialCustomers, initialKarigars, initialWorkOrders, initialInvoices } from './data/mockData';
-import { JewelleryItem, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialWorkOrders, initialInvoices, initialLooseStones, initialJobBags } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag } from './types';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 // Custom layouts & Auth pages
 import Sidebar from './components/Sidebar';
@@ -36,27 +37,7 @@ function AppContent() {
   const [forceOffline, setForceOffline] = useState(() => localStorage.getItem('stitch_api_force_offline') === 'true');
   const [isDeskOpen, setIsDeskOpen] = useState(false);
 
-  // Theme Toggle State
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('stitch_theme') as 'light' | 'dark') || 'dark';
-  });
-
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    localStorage.setItem('stitch_theme', nextTheme);
-  };
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    } else {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    }
-  }, [theme]);
+  const { theme, toggleTheme } = useTheme();
 
   // Core database states (with LocalStorage persistence)
   const [metalRates, setMetalRates] = useState<MetalRate[]>(() => {
@@ -64,9 +45,14 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialMetalRates;
   });
 
-  const [items, setItems] = useState<JewelleryItem[]>(() => {
-    const saved = localStorage.getItem('stitch_jewellery_items');
-    return saved ? JSON.parse(saved) : initialJewelleryItems;
+  const [itemDesigns, setItemDesigns] = useState<ItemDesign[]>(() => {
+    const saved = localStorage.getItem('stitch_item_designs');
+    return saved ? JSON.parse(saved) : initialItemDesigns;
+  });
+
+  const [tags, setTags] = useState<Tag[]>(() => {
+    const saved = localStorage.getItem('stitch_tags');
+    return saved ? JSON.parse(saved) : initialTags;
   });
 
   const [customers, setCustomers] = useState<Customer[]>(() => {
@@ -89,6 +75,16 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialInvoices;
   });
 
+  const [stones, setStones] = useState<LooseStone[]>(() => {
+    const saved = localStorage.getItem('stitch_loose_stones');
+    return saved ? JSON.parse(saved) : initialLooseStones;
+  });
+
+  const [jobBags, setJobBags] = useState<JobBag[]>(() => {
+    const saved = localStorage.getItem('stitch_job_bags');
+    return saved ? JSON.parse(saved) : initialJobBags;
+  });
+
   // Global popup controllers
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
@@ -99,8 +95,12 @@ function AppContent() {
   }, [metalRates]);
 
   useEffect(() => {
-    localStorage.setItem('stitch_jewellery_items', JSON.stringify(items));
-  }, [items]);
+    localStorage.setItem('stitch_item_designs', JSON.stringify(itemDesigns));
+  }, [itemDesigns]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_tags', JSON.stringify(tags));
+  }, [tags]);
 
   useEffect(() => {
     localStorage.setItem('stitch_customers', JSON.stringify(customers));
@@ -117,6 +117,14 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_invoices', JSON.stringify(invoices));
   }, [invoices]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_loose_stones', JSON.stringify(stones));
+  }, [stones]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_job_bags', JSON.stringify(jobBags));
+  }, [jobBags]);
 
   // Trigger simulated API load on navigation
   useEffect(() => {
@@ -174,14 +182,15 @@ function AppContent() {
       {/* RIGHT MAIN CONTAINER */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* GLOBAL EXECUTIVE HEADER */}
-        <Header 
-          user={user} 
-          onLogout={handleLogout} 
-          activeWorkOrdersCount={activeWorkOrdersCount} 
+        <Header
+          user={user}
+          onLogout={handleLogout}
+          activeWorkOrdersCount={activeWorkOrdersCount}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
-          theme={theme}
-          toggleTheme={toggleTheme}
+          tags={tags}
+          customers={customers}
+          karigars={karigars}
         />
 
         {/* CORE SCROLLABLE CLIENT AREA */}
@@ -295,10 +304,10 @@ function AppContent() {
               <Route 
                 path="/dashboard" 
                 element={
-                  <Dashboard 
-                    metalRates={metalRates} 
+                  <Dashboard
+                    metalRates={metalRates}
                     setMetalRates={setMetalRates}
-                    items={items}
+                    tags={tags}
                     customersCount={customers.length}
                     karigars={karigars}
                     invoices={invoices}
@@ -315,37 +324,42 @@ function AppContent() {
                   />
                 } 
               />
-              <Route 
-                path="/catalog" 
+              <Route
+                path="/catalog"
                 element={
-                  <CatalogManager 
-                    items={items} 
-                    setItems={setItems}
+                  <CatalogManager
+                    itemDesigns={itemDesigns}
+                    setItemDesigns={setItemDesigns}
+                    tags={tags}
+                    setTags={setTags}
                     isAddModalOpen={isAddModalOpen}
                     setAddModalOpen={setAddModalOpen}
                   />
-                } 
+                }
               />
-              <Route 
-                path="/stones" 
+              <Route
+                path="/stones"
                 element={
-                  <StoneManager 
+                  <StoneManager
                     karigars={karigars}
+                    stones={stones}
+                    setStones={setStones}
                   />
-                } 
+                }
               />
-              <Route 
-                path="/billing" 
+              <Route
+                path="/billing"
                 element={
-                  <BillingEstimator 
-                    items={items} 
-                    setItems={setItems}
+                  <BillingEstimator
+                    tags={tags}
+                    setTags={setTags}
                     customers={customers}
+                    setCustomers={setCustomers}
                     metalRates={metalRates}
                     invoices={invoices}
                     setInvoices={setInvoices}
                   />
-                } 
+                }
               />
               <Route 
                 path="/karigar" 
@@ -360,13 +374,15 @@ function AppContent() {
                   />
                 } 
               />
-              <Route 
-                path="/jobbags" 
+              <Route
+                path="/jobbags"
                 element={
-                  <JobBagManager 
+                  <JobBagManager
                     karigars={karigars}
+                    jobBags={jobBags}
+                    setJobBags={setJobBags}
                   />
-                } 
+                }
               />
               <Route 
                 path="/customers" 
@@ -481,8 +497,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </ThemeProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -13,6 +13,7 @@ import {
   Award
 } from 'lucide-react';
 import { MetalRate } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SidebarProps {
   metalRates: MetalRate[];
@@ -25,21 +26,7 @@ export default function Sidebar({ metalRates, operatorName, sidebarOpen, setSide
   const location = useLocation();
   const currentPath = location.pathname;
 
-  // Theme state
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('stitch_theme') as 'light' | 'dark') || 'dark';
-  });
-
-  useEffect(() => {
-    const checkTheme = () => {
-      const isLight = document.documentElement.classList.contains('light');
-      setTheme(isLight ? 'light' : 'dark');
-    };
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+  const { theme } = useTheme();
 
   const menuItems = [
     { id: '/dashboard', name: 'Dashboard Overview', icon: LayoutDashboard, desc: 'Executive control summary' },

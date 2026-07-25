@@ -1,4 +1,4 @@
-import { JewelleryItem, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -43,10 +43,132 @@ export const initialMetalRates: MetalRate[] = [
   }
 ];
 
-export const initialJewelleryItems: JewelleryItem[] = [
+// Design templates (PRD §4.3, Handbook Phase 2 §2.5) — category/metal/defaults/images only,
+// never actual weight or stock status. Each design below is instantiated by exactly one Tag
+// in this seed data, but a real catalog would tag many physical pieces per design over time.
+export const initialItemDesigns: ItemDesign[] = [
+  {
+    id: 'design-1',
+    designCode: 'RNG-22K-001',
+    name: 'Antique Peacock Royal Ring',
+    category: 'Rings',
+    metalType: 'Gold (22K)',
+    defaultWastagePercent: 3.5,
+    defaultMakingChargeType: 'per-gram',
+    defaultMakingChargeValue: 450,
+    defaultStoneType: 'Ruby',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&auto=format&fit=crop&q=60'
+  },
+  {
+    id: 'design-2',
+    designCode: 'NEC-22K-042',
+    name: 'Temple Heritage Kundan Choker',
+    category: 'Necklaces',
+    metalType: 'Gold (22K)',
+    defaultWastagePercent: 5.0,
+    defaultMakingChargeType: 'per-gram',
+    defaultMakingChargeValue: 650,
+    defaultStoneType: 'Cubic Zirconia',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&auto=format&fit=crop&q=60'
+  },
+  {
+    id: 'design-3',
+    designCode: 'EAR-18K-109',
+    name: 'Solitaire Halo Diamond Studs',
+    category: 'Earrings',
+    metalType: 'Gold (18K)',
+    defaultWastagePercent: 2.0,
+    defaultMakingChargeType: 'flat',
+    defaultMakingChargeValue: 2500,
+    defaultStoneType: 'Diamond',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1635767798638-3e25273a8236?w=400&auto=format&fit=crop&q=60'
+  },
+  {
+    id: 'design-4',
+    designCode: 'BGL-22K-081',
+    name: 'Bridal Filigree Kada Bangles (Pair)',
+    category: 'Bangles',
+    metalType: 'Gold (22K)',
+    defaultWastagePercent: 4.0,
+    defaultMakingChargeType: 'per-gram',
+    defaultMakingChargeValue: 500,
+    defaultStoneType: 'None',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&auto=format&fit=crop&q=60'
+  },
+  {
+    id: 'design-5',
+    designCode: 'NEC-18K-005',
+    name: 'Modernist Diamond Drop Pendant',
+    category: 'Necklaces',
+    metalType: 'Gold (18K)',
+    defaultWastagePercent: 3.0,
+    defaultMakingChargeType: 'per-gram',
+    defaultMakingChargeValue: 550,
+    defaultStoneType: 'Diamond',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&auto=format&fit=crop&q=60'
+  },
+  {
+    id: 'design-6',
+    designCode: 'RNG-SLV-002',
+    name: 'Classic Vintage Marquise Silver Ring',
+    category: 'Rings',
+    metalType: 'Silver (999)',
+    defaultWastagePercent: 2.0,
+    defaultMakingChargeType: 'flat',
+    defaultMakingChargeValue: 600,
+    defaultStoneType: 'None',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=400&auto=format&fit=crop&q=60'
+  },
+  {
+    id: 'design-7',
+    designCode: 'CHN-22K-033',
+    name: 'Classic 4-Sided Laser Cut Rope Chain',
+    category: 'Chains',
+    metalType: 'Gold (22K)',
+    defaultWastagePercent: 2.5,
+    defaultMakingChargeType: 'per-gram',
+    defaultMakingChargeValue: 350,
+    defaultStoneType: 'None',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&auto=format&fit=crop&q=60'
+  },
+  {
+    id: 'design-8',
+    designCode: 'COI-24K-001',
+    name: 'Goddess Lakshmi Gold Coin 10g',
+    category: 'Coins',
+    metalType: 'Gold (24K)',
+    defaultWastagePercent: 0,
+    defaultMakingChargeType: 'flat',
+    defaultMakingChargeValue: 450,
+    defaultStoneType: 'None',
+    hsnCode: '7113',
+    isActive: true,
+    imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=400&auto=format&fit=crop&q=60'
+  }
+];
+
+// Atomic, individually-weighed physical pieces (PRD §5.1-5.2, Handbook Phase 3). IDs are kept
+// identical to the pre-split `item-N` ids so existing mock SaleInvoice.items[].itemId
+// references above still resolve correctly.
+export const initialTags: Tag[] = [
   {
     id: 'item-1',
     sku: 'RNG-22K-001',
+    itemDesignId: 'design-1',
     name: 'Antique Peacock Royal Ring',
     category: 'Rings',
     metalType: 'Gold (22K)',
@@ -59,12 +181,15 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 0.85,
     stoneCharge: 4500,
     certificateNo: 'GIA-8736481',
+    huid: 'A1B2C3',
+    stockOwnershipType: 'OWNED',
     status: 'In Showcase',
     imageUrl: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&auto=format&fit=crop&q=60'
   },
   {
     id: 'item-2',
     sku: 'NEC-22K-042',
+    itemDesignId: 'design-2',
     name: 'Temple Heritage Kundan Choker',
     category: 'Necklaces',
     metalType: 'Gold (22K)',
@@ -77,12 +202,15 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 4.5,
     stoneCharge: 12500,
     certificateNo: 'BIS-9983173',
+    huid: 'D4E5F6',
+    stockOwnershipType: 'OWNED',
     status: 'In Stock',
     imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&auto=format&fit=crop&q=60'
   },
   {
     id: 'item-3',
     sku: 'EAR-18K-109',
+    itemDesignId: 'design-3',
     name: 'Solitaire Halo Diamond Studs',
     category: 'Earrings',
     metalType: 'Gold (18K)',
@@ -95,12 +223,14 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 1.20,
     stoneCharge: 85000,
     certificateNo: 'IGI-2248590',
+    stockOwnershipType: 'GML_FINANCED',
     status: 'In Showcase',
     imageUrl: 'https://images.unsplash.com/photo-1635767798638-3e25273a8236?w=400&auto=format&fit=crop&q=60'
   },
   {
     id: 'item-4',
     sku: 'BGL-22K-081',
+    itemDesignId: 'design-4',
     name: 'Bridal Filigree Kada Bangles (Pair)',
     category: 'Bangles',
     metalType: 'Gold (22K)',
@@ -113,12 +243,15 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 0,
     stoneCharge: 0,
     certificateNo: 'BIS-7324519',
+    huid: 'G7H8J9',
+    stockOwnershipType: 'OWNED',
     status: 'In Stock',
     imageUrl: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&auto=format&fit=crop&q=60'
   },
   {
     id: 'item-5',
     sku: 'NEC-18K-005',
+    itemDesignId: 'design-5',
     name: 'Modernist Diamond Drop Pendant',
     category: 'Necklaces',
     metalType: 'Gold (18K)',
@@ -131,12 +264,14 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 2.10,
     stoneCharge: 165000,
     certificateNo: 'IGI-7483921',
+    stockOwnershipType: 'CONSIGNMENT',
     status: 'In Showcase',
     imageUrl: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&auto=format&fit=crop&q=60'
   },
   {
     id: 'item-6',
     sku: 'RNG-SLV-002',
+    itemDesignId: 'design-6',
     name: 'Classic Vintage Marquise Silver Ring',
     category: 'Rings',
     metalType: 'Silver (999)',
@@ -149,12 +284,14 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 0,
     stoneCharge: 0,
     certificateNo: undefined,
+    stockOwnershipType: 'OWNED',
     status: 'In Stock',
     imageUrl: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=400&auto=format&fit=crop&q=60'
   },
   {
     id: 'item-7',
     sku: 'CHN-22K-033',
+    itemDesignId: 'design-7',
     name: 'Classic 4-Sided Laser Cut Rope Chain',
     category: 'Chains',
     metalType: 'Gold (22K)',
@@ -167,12 +304,15 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 0,
     stoneCharge: 0,
     certificateNo: 'BIS-8392104',
+    huid: 'K1L2M3',
+    stockOwnershipType: 'OWNED',
     status: 'Out for Jobwork',
     imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&auto=format&fit=crop&q=60'
   },
   {
     id: 'item-8',
     sku: 'COI-24K-001',
+    itemDesignId: 'design-8',
     name: 'Goddess Lakshmi Gold Coin 10g',
     category: 'Coins',
     metalType: 'Gold (24K)',
@@ -185,6 +325,8 @@ export const initialJewelleryItems: JewelleryItem[] = [
     stoneWeight: 0,
     stoneCharge: 0,
     certificateNo: 'MMTC-110294',
+    huid: 'N4P5Q6',
+    stockOwnershipType: 'OWNED',
     status: 'In Stock',
     imageUrl: 'https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=400&auto=format&fit=crop&q=60'
   }
@@ -351,18 +493,23 @@ export const initialInvoices: SaleInvoice[] = [
         name: 'Solitaire Halo Diamond Studs',
         metalType: 'Gold (18K)',
         netWeight: 3.40,
-        goldPrice: 18496, // 3.4 * 5440
-        makingCharge: 2500,
+        wastagePercent: 2.0,
+        makingChargeType: 'flat',
+        makingChargeValue: 2500,
+        goldPrice: 18496, // metal value only: 3.4 * 5440
+        wastageValue: 370, // 3.4 * 2% * 5440, rounded
+        makingCharge: 2500, // flat charge, not multiplied by weight
         stoneCharge: 85000,
-        subtotal: 105996
+        subtotal: 106366 // 18496 + 370 + 2500 + 85000
       }
     ],
     oldGoldWeight: 5.0,
-    oldGoldValue: 30000, // old gold bought back at reduced purity valuation
-    subtotal: 75996,
-    tax: 2279.88, // 3% of subtotal (75996 * 0.03)
+    oldGoldValue: 30000, // old gold bought back at reduced purity valuation, netted at settlement only
+    subtotal: 106366,
+    tax: 3191, // 3% GST on full taxable subtotal — never reduced by old gold trade-in
     discount: 1500,
-    grandTotal: 76775.88,
+    grandTotal: 108057, // 106366 + 3191 - 1500
+    netAmountDue: 78057, // grandTotal - oldGoldValue
     paymentMethod: 'UPI'
   },
   {
@@ -379,18 +526,23 @@ export const initialInvoices: SaleInvoice[] = [
         name: 'Antique Peacock Royal Ring',
         metalType: 'Gold (22K)',
         netWeight: 8.20,
-        goldPrice: 54530, // 8.2 * 6650
+        wastagePercent: 3.5,
+        makingChargeType: 'per-gram',
+        makingChargeValue: 450,
+        goldPrice: 54530, // metal value only: 8.2 * 6650
+        wastageValue: 1909, // 8.2 * 3.5% * 6650, rounded
         makingCharge: 3690, // 8.2 * 450
         stoneCharge: 4500,
-        subtotal: 62720
+        subtotal: 64629 // 54530 + 1909 + 3690 + 4500
       }
     ],
     oldGoldWeight: 0,
     oldGoldValue: 0,
-    subtotal: 62720,
-    tax: 1881.6, // 3% GST
+    subtotal: 64629,
+    tax: 1939, // 3% GST on taxable subtotal
     discount: 0,
-    grandTotal: 64601.6,
+    grandTotal: 66568, // 64629 + 1939
+    netAmountDue: 66568,
     paymentMethod: 'Card'
   }
 ];

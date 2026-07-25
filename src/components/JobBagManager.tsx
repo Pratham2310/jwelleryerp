@@ -1,58 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Layers, 
-  Search, 
-  Plus, 
-  Sparkles, 
-  Clock, 
-  UserCheck, 
-  CheckCircle2, 
-  X, 
-  Scale, 
-  Award, 
-  Printer, 
+import React, { useState } from 'react';
+import {
+  Layers,
+  Search,
+  Plus,
+  Sparkles,
+  Clock,
+  UserCheck,
+  CheckCircle2,
+  X,
+  Scale,
+  Award,
+  Printer,
   ArrowRight,
   TrendingUp,
   AlertTriangle,
   QrCode
 } from 'lucide-react';
 import { JobBag, Karigar } from '../types';
-import { initialJobBags } from '../data/mockData';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface JobBagManagerProps {
   karigars: Karigar[];
+  jobBags: JobBag[];
+  setJobBags: React.Dispatch<React.SetStateAction<JobBag[]>>;
 }
 
-export default function JobBagManager({ karigars }: JobBagManagerProps) {
-  // Theme state
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('stitch_theme') as 'light' | 'dark') || 'dark';
-  });
-
-  useEffect(() => {
-    const checkTheme = () => {
-      const isLight = document.documentElement.classList.contains('light');
-      setTheme(isLight ? 'light' : 'dark');
-    };
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-
-  // Persistence state
-  const [bags, setBags] = useState<JobBag[]>(() => {
-    const saved = localStorage.getItem('stitch_job_bags');
-    if (saved) return JSON.parse(saved);
-    
-    // Default initial bags if none exist
-    return initialJobBags;
-  });
-
-  // Sync to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('stitch_job_bags', JSON.stringify(bags));
-  }, [bags]);
+export default function JobBagManager({ karigars, jobBags: bags, setJobBags: setBags }: JobBagManagerProps) {
+  const { theme } = useTheme();
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');

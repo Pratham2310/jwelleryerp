@@ -1,56 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Gem, 
-  Search, 
-  Plus, 
-  Sparkles, 
-  Award, 
-  UserCheck, 
-  CheckCircle, 
-  X, 
-  Scale, 
-  Layers, 
+import React, { useState } from 'react';
+import {
+  Gem,
+  Search,
+  Plus,
+  Sparkles,
+  Award,
+  UserCheck,
+  CheckCircle,
+  X,
+  Scale,
+  Layers,
   ChevronRight,
   TrendingUp,
   RefreshCw
 } from 'lucide-react';
 import { LooseStone, Karigar } from '../types';
-import { initialLooseStones } from '../data/mockData';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface StoneManagerProps {
   karigars: Karigar[];
+  stones: LooseStone[];
+  setStones: React.Dispatch<React.SetStateAction<LooseStone[]>>;
 }
 
-export default function StoneManager({ karigars }: StoneManagerProps) {
-  // Persistence state
-  const [stones, setStones] = useState<LooseStone[]>(() => {
-    const saved = localStorage.getItem('stitch_loose_stones');
-    if (saved) return JSON.parse(saved);
-    
-    // Default initial stones if none exist
-    return initialLooseStones;
-  });
-
-  // Sync to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('stitch_loose_stones', JSON.stringify(stones));
-  }, [stones]);
-
-  // Theme state
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('stitch_theme') as 'light' | 'dark') || 'dark';
-  });
-
-  useEffect(() => {
-    const checkTheme = () => {
-      const isLight = document.documentElement.classList.contains('light');
-      setTheme(isLight ? 'light' : 'dark');
-    };
-    checkTheme();
-    const observer = new MutationObserver(checkTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+export default function StoneManager({ karigars, stones, setStones }: StoneManagerProps) {
+  const { theme } = useTheme();
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');
