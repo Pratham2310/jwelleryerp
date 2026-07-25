@@ -180,11 +180,12 @@ export default function BillingEstimator({
     setBillingItems([...billingItems, { ...emptyBillingItem }]);
   };
 
-  // Summary Calculations (PRD §7.3 / §17 — GST is computed on the full taxable
-  // subtotal and is NEVER reduced by the old-gold trade-in; old gold is netted
-  // only against the final payable amount at settlement — KNOWN_ISSUES.md #1)
+  // Summary Calculations (PRD §7.3/§7.4/§17 — a bill-level discount reduces the
+  // taxable value BEFORE GST is computed (Milestone 7); GST/discount are NEVER
+  // reduced by the old-gold trade-in — old gold is netted only against the
+  // final payable amount at settlement — KNOWN_ISSUES.md #1)
   const lineSubtotals = billingItems.map(item => item.subtotal || 0);
-  const { subtotal: invoiceSubtotal, gstTax, grandTotal: invoiceTotal } = calculateInvoiceTotals(lineSubtotals, discount);
+  const { subtotal: invoiceSubtotal, taxableValue, gstTax, grandTotal: invoiceTotal } = calculateInvoiceTotals(lineSubtotals, discount);
   const oldGoldValue = Math.round(oldGoldWeight * oldGoldRate);
   const netAmountDue = settleOldGold(invoiceTotal, oldGoldValue);
   const finalGrandTotal = netAmountDue; // actual amount collected from the customer, after old-gold settlement
@@ -445,12 +446,8 @@ export default function BillingEstimator({
             {/* Price Calculations breakdown */}
             <div className="w-1/2 ml-auto text-xs font-medium space-y-2">
               <div className="flex justify-between text-slate-500">
-                <span>Taxable Subtotal:</span>
+                <span>Subtotal:</span>
                 <span className="font-mono">₹{completedInvoice.subtotal.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="flex justify-between text-slate-500">
-                <span>Jewelry GST (3%):</span>
-                <span className="font-mono">₹{completedInvoice.tax.toLocaleString('en-IN')}</span>
               </div>
               {completedInvoice.discount > 0 && (
                 <div className="flex justify-between text-slate-500">
@@ -458,6 +455,10 @@ export default function BillingEstimator({
                   <span className="font-mono">-₹{completedInvoice.discount.toLocaleString('en-IN')}</span>
                 </div>
               )}
+              <div className="flex justify-between text-slate-500">
+                <span>Jewelry GST (3% on taxable value):</span>
+                <span className="font-mono">₹{completedInvoice.tax.toLocaleString('en-IN')}</span>
+              </div>
               <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
                 <span>Invoice Total (Tax Invoice):</span>
                 <span className="font-mono text-amber-800">₹{completedInvoice.grandTotal.toLocaleString('en-IN')}</span>
@@ -804,16 +805,13 @@ export default function BillingEstimator({
                 <h3 className="font-sans font-bold text-slate-800 text-sm">Invoice Calculation Sheet</h3>
               </div>
 
-              {/* Items value subtotal — GST is computed on this in full; old gold
-                  NEVER reduces the taxable base (PRD §8.3 / KNOWN_ISSUES.md #1) */}
+              {/* Subtotal -> Discount -> GST (on the post-discount taxable value, PRD §7.4,
+                  Milestone 7) -> Invoice Total; old gold NEVER reduces the taxable base
+                  (PRD §8.3 / KNOWN_ISSUES.md #1) */}
               <div className="space-y-2.5 text-xs font-medium">
                 <div className="flex justify-between text-slate-500">
-                  <span>Taxable Subtotal:</span>
+                  <span>Subtotal:</span>
                   <span className="font-mono">₹{invoiceSubtotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span className="flex items-center gap-1">GST/Taxes (3%): <Percent className="w-3 h-3 text-slate-400" /></span>
-                  <span className="font-mono">₹{gstTax.toLocaleString('en-IN')}</span>
                 </div>
 
                 {/* Discount input */}
@@ -825,6 +823,17 @@ export default function BillingEstimator({
                     value={discount || ''}
                     onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                   />
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-slate-500">
+                    <span>Less: Discount</span>
+                    <span className="font-mono">-₹{Math.min(discount, invoiceSubtotal).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between text-slate-500">
+                  <span className="flex items-center gap-1">GST/Taxes (3% on taxable value): <Percent className="w-3 h-3 text-slate-400" /></span>
+                  <span className="font-mono">₹{gstTax.toLocaleString('en-IN')}</span>
                 </div>
 
                 <div className="flex justify-between text-slate-700 border-t pt-2.5 font-bold">
@@ -1090,12 +1099,8 @@ export default function BillingEstimator({
               {/* Price Calculations breakdown */}
               <div className="w-1/2 ml-auto text-xs font-medium space-y-2">
                 <div className="flex justify-between text-slate-500">
-                  <span>Taxable Subtotal:</span>
+                  <span>Subtotal:</span>
                   <span className="font-mono">₹{selectedInvoiceForDetail.subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Jewelry GST (3%):</span>
-                  <span className="font-mono">₹{selectedInvoiceForDetail.tax.toLocaleString('en-IN')}</span>
                 </div>
                 {selectedInvoiceForDetail.discount > 0 && (
                   <div className="flex justify-between text-slate-500">
@@ -1103,6 +1108,10 @@ export default function BillingEstimator({
                     <span className="font-mono">-₹{selectedInvoiceForDetail.discount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
+                <div className="flex justify-between text-slate-500">
+                  <span>Jewelry GST (3% on taxable value):</span>
+                  <span className="font-mono">₹{selectedInvoiceForDetail.tax.toLocaleString('en-IN')}</span>
+                </div>
                 <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
                   <span>Invoice Total (Tax Invoice):</span>
                   <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.grandTotal.toLocaleString('en-IN')}</span>

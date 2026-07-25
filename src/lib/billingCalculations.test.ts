@@ -109,10 +109,26 @@ describe('zero old-gold transaction', () => {
   });
 });
 
-describe('bill-level discount', () => {
-  it('is applied after GST, against the invoice total', () => {
+describe('bill-level discount reduces the taxable value before GST (fixes Milestone 7 / PRD §7.4)', () => {
+  it('computes GST on (subtotal - discount), not on the pre-discount subtotal', () => {
     const invoice = calculateInvoiceTotals([106366], 1500);
-    expect(invoice.gstTax).toBe(3191); // 106366 * 3%, rounded
-    expect(invoice.grandTotal).toBe(108057); // 106366 + 3191 - 1500
+    expect(invoice.subtotal).toBe(106366);
+    expect(invoice.taxableValue).toBe(104866); // 106366 - 1500
+    expect(invoice.gstTax).toBe(3146); // 104866 * 3%, rounded (not 106366 * 3% = 3191)
+    expect(invoice.grandTotal).toBe(108012); // 104866 + 3146
+  });
+
+  it('a zero discount leaves the taxable value equal to the subtotal', () => {
+    const invoice = calculateInvoiceTotals([100000], 0);
+    expect(invoice.taxableValue).toBe(100000);
+    expect(invoice.gstTax).toBe(3000);
+    expect(invoice.grandTotal).toBe(103000);
+  });
+
+  it('a discount larger than the subtotal never produces a negative taxable value or GST', () => {
+    const invoice = calculateInvoiceTotals([1000], 5000);
+    expect(invoice.taxableValue).toBe(0);
+    expect(invoice.gstTax).toBe(0);
+    expect(invoice.grandTotal).toBe(0);
   });
 });

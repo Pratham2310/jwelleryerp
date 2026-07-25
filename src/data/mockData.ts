@@ -506,10 +506,10 @@ export const initialInvoices: SaleInvoice[] = [
     oldGoldWeight: 5.0,
     oldGoldValue: 30000, // old gold bought back at reduced purity valuation, netted at settlement only
     subtotal: 106366,
-    tax: 3191, // 3% GST on full taxable subtotal — never reduced by old gold trade-in
+    tax: 3146, // 3% GST on the taxable value AFTER discount (106366 - 1500 = 104866), per Milestone 7 — never reduced by old gold trade-in
     discount: 1500,
-    grandTotal: 108057, // 106366 + 3191 - 1500
-    netAmountDue: 78057, // grandTotal - oldGoldValue
+    grandTotal: 108012, // (106366 - 1500) + 3146
+    netAmountDue: 78012, // grandTotal - oldGoldValue
     paymentMethod: 'UPI'
   },
   {

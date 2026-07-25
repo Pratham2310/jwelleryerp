@@ -58,7 +58,8 @@ export function calculateLineItem(input: LineItemInput): LineItemResult {
 }
 
 export interface InvoiceTotals {
-  subtotal: number;
+  subtotal: number; // pre-discount sum of line items
+  taxableValue: number; // subtotal - discount — the actual GST base (PRD §7.4)
   gstTax: number;
   grandTotal: number;
 }
@@ -66,18 +67,22 @@ export interface InvoiceTotals {
 const GST_RATE = 0.03; // 3% composite jewellery GST rate (PRD §17)
 
 /**
- * Bill-level aggregation (PRD §7.3). GST is computed on the full taxable
- * subtotal — old gold trade-in must NEVER reduce this base (PRD §8.3,
- * .ai/KNOWN_ISSUES.md #1). Discount is applied post-GST, against the
- * invoice total (matches this app's existing discount UX — a bill-level
- * cash/voucher discount, not a taxable-value discount).
+ * Bill-level aggregation (PRD §7.3, §7.4). A bill-level discount reduces the
+ * taxable value BEFORE GST is computed — GST must never be charged on an
+ * amount the customer isn't actually being asked to pay for the goods
+ * (Milestone 7; previously this app computed GST on the pre-discount
+ * subtotal and applied the discount only after, which overstates GST).
+ * Old gold trade-in must still NEVER touch this base (PRD §8.3, KNOWN_ISSUES #1)
+ * — it is netted separately via settleOldGold(), after grandTotal.
  */
 export function calculateInvoiceTotals(lineSubtotals: number[], discount: number): InvoiceTotals {
   const subtotal = lineSubtotals.reduce((sum, s) => sum + s, 0);
-  const gstTax = Math.round(subtotal * GST_RATE);
-  const grandTotal = Math.max(0, subtotal + gstTax - (Number(discount) || 0));
+  const discountAmount = Number(discount) || 0;
+  const taxableValue = Math.max(0, subtotal - discountAmount);
+  const gstTax = Math.round(taxableValue * GST_RATE);
+  const grandTotal = taxableValue + gstTax;
 
-  return { subtotal, gstTax, grandTotal };
+  return { subtotal, taxableValue, gstTax, grandTotal };
 }
 
 /**

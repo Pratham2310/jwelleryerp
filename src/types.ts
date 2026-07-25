@@ -118,10 +118,10 @@ export interface SaleInvoice {
   items: InvoiceItem[];
   oldGoldWeight: number; // trade-in weight
   oldGoldValue: number; // trade-in buyback value, settled at payment stage only
-  subtotal: number; // taxable value (metal + wastage + making + stones, post discount)
-  tax: number; // e.g. 3% GST, computed on subtotal — never reduced by old gold
+  subtotal: number; // pre-discount sum of line items (metal + wastage + making + stones)
+  tax: number; // GST, computed on (subtotal - discount) per PRD §7.4 — never reduced by old gold
   discount: number;
-  grandTotal: number; // compliant tax invoice total = subtotal + tax - discount
+  grandTotal: number; // compliant tax invoice total = (subtotal - discount) + tax
   netAmountDue: number; // grandTotal - oldGoldValue: actual cash/digital amount collected
   paymentMethod: 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Mixed';
 }
