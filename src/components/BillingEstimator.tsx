@@ -26,6 +26,7 @@ import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib
 import { isSellable, canTransition } from '../lib/tagStateMachine';
 import { validatePaymentSplit, type PaymentSplitEntry, type PaymentMode } from '../lib/billingCalculations';
 import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD, type PanDeclaration } from '../lib/statutoryChecks';
+import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
 
 interface BillingEstimatorProps {
   tags: Tag[];
@@ -108,6 +109,11 @@ export default function BillingEstimator({
   // quick-select above remains the fast path for the common one-payment case.
   const [isSplitPayment, setSplitPayment] = useState(false);
   const [paymentSplit, setPaymentSplit] = useState<PaymentSplitEntry[]>([]);
+
+  // Counter-level price overrides (Milestone 10, PRD §7.1 step 4 / §15.1).
+  // Reasons are keyed "<lineIndex>:<field>" so each line's overrides log independently.
+  const [overrideReasons, setOverrideReasons] = useState<Record<string, string>>({});
+  const [isOverrideModalOpen, setOverrideModalOpen] = useState(false);
 
   // Success screen
   const [completedInvoice, setCompletedInvoice] = useState<SaleInvoice | null>(null);
@@ -206,6 +212,26 @@ export default function BillingEstimator({
 
   const splitValidation = validatePaymentSplit(finalGrandTotal, paymentSplit);
 
+  // Any billing line edited away from its Tag's master values is an override needing
+  // a logged reason before checkout (Milestone 10, PRD §7.1 step 4 / §15.1).
+  const lineOverrides = billingItems.map((item, index) => {
+    const master = item.itemId ? tags.find(t => t.id === item.itemId) : null;
+    const candidates = detectOverrides(
+      { wastagePercent: Number(item.wastagePercent ?? 0), makingChargeValue: Number(item.makingChargeValue ?? 0) },
+      master ? { wastagePercent: master.wastagePercent, makingChargeValue: master.makingChargeValue } : null
+    );
+    return { index, item, candidates };
+  }).filter(l => l.candidates.length > 0);
+
+  const overrideReasonKey = (index: number, field: OverrideField) => `${index}:${field}`;
+
+  const unloggedOverrideError = lineOverrides
+    .map(l => validateOverrideReasons(
+      l.candidates,
+      Object.fromEntries(l.candidates.map(c => [c.field, overrideReasons[overrideReasonKey(l.index, c.field)] || ''])) as Partial<Record<OverrideField, string>>
+    ))
+    .find(err => err !== null) || null;
+
   const handleToggleSplitPayment = () => {
     if (isSplitPayment) {
       setSplitPayment(false);
@@ -257,6 +283,13 @@ export default function BillingEstimator({
       }
     }
 
+    // Every price override must carry a logged manager reason (PRD §7.1 step 4/§15.1, Milestone 10)
+    if (unloggedOverrideError) {
+      setOverrideModalOpen(true);
+      setValidationError(unloggedOverrideError);
+      return;
+    }
+
     // A multi-tender split must sum exactly to the amount due before checkout (PRD §7.5, Milestone 9)
     if (isSplitPayment && !splitValidation.isValid) {
       setValidationError(splitValidation.error || 'The payment split does not settle the amount due.');
@@ -286,6 +319,16 @@ export default function BillingEstimator({
 
     const processedItems = filledItems.map(item => {
       const name = item.name?.trim() || `${item.metalType || 'Gold'} Showroom Ornament`;
+      // Carry any logged overrides onto the saved invoice line for later audit (Milestone 10)
+      const originalIndex = billingItems.indexOf(item);
+      const lineOverride = lineOverrides.find(l => l.index === originalIndex);
+      const overrides = lineOverride
+        ? buildOverrideRecords(
+            lineOverride.candidates,
+            Object.fromEntries(lineOverride.candidates.map(c => [c.field, overrideReasons[overrideReasonKey(originalIndex, c.field)] || ''])) as Partial<Record<OverrideField, string>>
+          )
+        : undefined;
+
       return {
         itemId: item.itemId,
         sku: item.sku,
@@ -299,7 +342,8 @@ export default function BillingEstimator({
         wastageValue: Number(item.wastageValue || 0),
         makingCharge: Number(item.makingCharge || 0),
         stoneCharge: Number(item.stoneCharge || 0),
-        subtotal: Number(item.subtotal || 0)
+        subtotal: Number(item.subtotal || 0),
+        overrides
       };
     });
 
@@ -363,6 +407,7 @@ export default function BillingEstimator({
     setPanModalError('');
     setSplitPayment(false);
     setPaymentSplit([]);
+    setOverrideReasons({});
   };
 
   const handleConfirmPan = (type: PanDeclaration['type']) => {
@@ -574,6 +619,20 @@ export default function BillingEstimator({
                 </div>
               )}
             </div>
+
+            {/* Logged price overrides — audit trail (PRD §15.1, Milestone 10) */}
+            {completedInvoice.items.some(i => i.overrides && i.overrides.length > 0) && (
+              <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-100 text-[10px] text-amber-900 space-y-1.5">
+                <p className="font-bold uppercase tracking-wider font-mono">Approved Price Overrides</p>
+                {completedInvoice.items.flatMap((item, i) =>
+                  (item.overrides || []).map((o, j) => (
+                    <p key={`${i}-${j}`}>
+                      <span className="font-bold">{item.name}</span> — {OVERRIDE_FIELD_LABEL[o.field]}: {o.originalValue} → {o.newValue} · <span className="italic">{o.reason}</span>
+                    </p>
+                  ))
+                )}
+              </div>
+            )}
 
             {/* Hallmark Warranty declaration */}
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-[10px] text-slate-500 space-y-1.5">
@@ -958,6 +1017,28 @@ export default function BillingEstimator({
                 </div>
               </div>
 
+              {/* Price override reason log (Milestone 10, PRD §7.1 step 4 / §15.1) */}
+              {lineOverrides.length > 0 && (
+                <button
+                  onClick={() => setOverrideModalOpen(true)}
+                  className={`w-full text-left p-3 rounded-xl border text-xs font-medium transition ${
+                    unloggedOverrideError
+                      ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {unloggedOverrideError
+                      ? 'Price override needs a manager reason'
+                      : 'Price override reasons logged'}
+                  </span>
+                  <span className="block mt-0.5 opacity-80">
+                    {lineOverrides.reduce((n, l) => n + l.candidates.length, 0)} field(s) edited away from item-master values. Tap to review.
+                  </span>
+                </button>
+              )}
+
               {/* PAN / Form 60 requirement (Milestone 8, PRD §4.4/§15.3 — Income Tax Rule 114B) */}
               {isPanRequired(invoiceTotal) && (
                 <button
@@ -1082,6 +1163,73 @@ export default function BillingEstimator({
               </button>
             </div>
           </div>
+
+          {/* Manager Override Reason-Log Modal (Milestone 10, PRD §7.1 step 4 / §15.1) */}
+          {isOverrideModalOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className={`w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden ${
+                theme === 'light' ? 'bg-white border-zinc-200 text-slate-800' : 'bg-[#141416] border-zinc-800 text-zinc-100'
+              }`}>
+                <div className={`flex items-center justify-between p-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-zinc-800'}`}>
+                  <div>
+                    <h3 className="font-bold text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4 text-amber-500" /> Manager Override — Reason Required</h3>
+                    <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                      These values were edited away from the item master. Each needs a logged reason before the sale can proceed.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setOverrideModalOpen(false)}
+                    className={`p-1.5 rounded-lg transition ${theme === 'light' ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-zinc-900 text-zinc-500'}`}
+                    aria-label="Close override reasons"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+                  {lineOverrides.map(line => (
+                    <div key={line.index} className={`rounded-xl border p-3 space-y-3 ${theme === 'light' ? 'border-slate-150 bg-slate-50/60' : 'border-zinc-800 bg-zinc-900/40'}`}>
+                      <p className="text-xs font-bold">{line.item.name || `Line ${line.index + 1}`}{line.item.sku ? ` (${line.item.sku})` : ''}</p>
+                      {line.candidates.map(c => {
+                        const key = overrideReasonKey(line.index, c.field);
+                        return (
+                          <div key={c.field} className="space-y-1.5">
+                            <p className={`text-[11px] ${theme === 'light' ? 'text-slate-500' : 'text-zinc-400'}`}>
+                              {OVERRIDE_FIELD_LABEL[c.field]}:{' '}
+                              <span className="font-mono line-through opacity-60">{c.originalValue}</span>{' '}
+                              <span className="font-mono font-bold text-amber-600">{c.newValue}</span>
+                            </p>
+                            <input
+                              type="text"
+                              placeholder="Reason for this override (min. 5 characters)"
+                              className={`w-full text-xs px-3 py-2 rounded-lg border focus:outline-none focus:border-amber-500 ${
+                                theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                              }`}
+                              value={overrideReasons[key] || ''}
+                              onChange={(e) => setOverrideReasons(prev => ({ ...prev, [key]: e.target.value }))}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`p-5 border-t ${theme === 'light' ? 'border-slate-100' : 'border-zinc-800'}`}>
+                  {unloggedOverrideError && (
+                    <p className="text-[11px] text-amber-700 font-semibold mb-2.5">{unloggedOverrideError}</p>
+                  )}
+                  <button
+                    onClick={() => { setOverrideModalOpen(false); setValidationError(null); }}
+                    disabled={!!unloggedOverrideError}
+                    className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold text-xs py-2.5 rounded-xl transition"
+                  >
+                    Save Override Reasons
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* PAN / Form 60 Verification Modal (Milestone 8) */}
           {isPanModalOpen && (

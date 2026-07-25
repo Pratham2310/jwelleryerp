@@ -1,5 +1,6 @@
 import type { TagStatus } from './lib/tagStateMachine';
 import type { PaymentSplitEntry } from './lib/billingCalculations';
+import type { OverrideRecord } from './lib/priceOverrides';
 
 export type ItemCategory = 'Rings' | 'Necklaces' | 'Earrings' | 'Bangles' | 'Bracelets' | 'Chains' | 'Coins';
 export type MetalStandard = 'Gold (24K)' | 'Gold (22K)' | 'Gold (18K)' | 'Silver (999)' | 'Platinum (950)';
@@ -107,6 +108,7 @@ export interface InvoiceItem {
   makingCharge: number; // computed making charge total in currency
   stoneCharge: number;
   subtotal: number;
+  overrides?: OverrideRecord[]; // counter-level price overrides + logged reasons (PRD §7.1/§15.1)
 }
 
 export interface SaleInvoice {
