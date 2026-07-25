@@ -17,12 +17,14 @@ import {
   AlertCircle,
   Calendar,
   Users,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { Tag, Customer, SaleInvoice, InvoiceItem } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 import { isSellable, canTransition } from '../lib/tagStateMachine';
+import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD, type PanDeclaration } from '../lib/statutoryChecks';
 
 interface BillingEstimatorProps {
   tags: Tag[];
@@ -94,6 +96,12 @@ export default function BillingEstimator({
 
   const [discount, setDiscount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'UPI' | 'Scheme Redemption'>('UPI');
+
+  // PAN / Form 60 capture, mandatory at or above Rs 2,00,000 (Milestone 8, PRD §4.4/§15.3)
+  const [panDeclaration, setPanDeclaration] = useState<PanDeclaration | null>(null);
+  const [isPanModalOpen, setPanModalOpen] = useState(false);
+  const [panInput, setPanInput] = useState('');
+  const [panModalError, setPanModalError] = useState('');
 
   // Success screen
   const [completedInvoice, setCompletedInvoice] = useState<SaleInvoice | null>(null);
@@ -205,6 +213,17 @@ export default function BillingEstimator({
       return;
     }
 
+    // PAN / Form 60 is mandatory at or above Rs 2,00,000 (PRD §4.4/§15.3, Rule 114B).
+    // The threshold applies to the tax invoice value, not the post-old-gold cash collected.
+    if (isPanRequired(invoiceTotal)) {
+      const panError = validatePanDeclaration(invoiceTotal, panDeclaration);
+      if (panError) {
+        setPanModalOpen(true);
+        setValidationError(panError);
+        return;
+      }
+    }
+
     // Scheme Redemption must validate against and deduct from the customer's
     // actual savings balance — previously a purely cosmetic label (KNOWN_ISSUES.md #5)
     if (paymentMethod === 'Scheme Redemption') {
@@ -293,6 +312,27 @@ export default function BillingEstimator({
     setOldGoldWeight(0);
     setDiscount(0);
     setCompletedInvoice(null);
+    setValidationError(null);
+    setPanDeclaration(null);
+    setPanInput('');
+    setPanModalError('');
+  };
+
+  const handleConfirmPan = (type: PanDeclaration['type']) => {
+    if (type === 'FORM_60') {
+      setPanDeclaration({ type: 'FORM_60' });
+      setPanModalError('');
+      setPanModalOpen(false);
+      setValidationError(null);
+      return;
+    }
+    if (!isValidPanFormat(panInput)) {
+      setPanModalError('Enter a valid PAN in the format ABCDE1234F.');
+      return;
+    }
+    setPanDeclaration({ type: 'PAN', panNumber: panInput.trim().toUpperCase() });
+    setPanModalError('');
+    setPanModalOpen(false);
     setValidationError(null);
   };
 
@@ -858,6 +898,28 @@ export default function BillingEstimator({
                 </div>
               </div>
 
+              {/* PAN / Form 60 requirement (Milestone 8, PRD §4.4/§15.3 — Income Tax Rule 114B) */}
+              {isPanRequired(invoiceTotal) && (
+                <button
+                  onClick={() => { setPanInput(panDeclaration?.panNumber || ''); setPanModalError(''); setPanModalOpen(true); }}
+                  className={`w-full text-left p-3 rounded-xl border text-xs font-medium transition ${
+                    panDeclaration
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                      : 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <FileCheck className="w-3.5 h-3.5 shrink-0" />
+                    {panDeclaration
+                      ? (panDeclaration.type === 'FORM_60' ? 'Form 60 declaration recorded' : `PAN captured: ${panDeclaration.panNumber}`)
+                      : 'PAN / Form 60 required for this transaction'}
+                  </span>
+                  <span className="block mt-0.5 opacity-80">
+                    Invoice value is ₹{PAN_THRESHOLD.toLocaleString('en-IN')} or above. Tap to {panDeclaration ? 'change' : 'capture'}.
+                  </span>
+                </button>
+              )}
+
               {/* Payment selection */}
               <div className="space-y-2">
                 <label className="block text-[10px] uppercase font-bold font-mono text-slate-400">Payment Channel</label>
@@ -895,6 +957,78 @@ export default function BillingEstimator({
               </button>
             </div>
           </div>
+
+          {/* PAN / Form 60 Verification Modal (Milestone 8) */}
+          {isPanModalOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className={`w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden ${
+                theme === 'light' ? 'bg-white border-zinc-200 text-slate-800' : 'bg-[#141416] border-zinc-800 text-zinc-100'
+              }`}>
+                <div className={`flex items-center justify-between p-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-zinc-800'}`}>
+                  <div>
+                    <h3 className="font-bold text-sm flex items-center gap-2"><FileCheck className="w-4 h-4 text-amber-500" /> PAN / Form 60 Verification</h3>
+                    <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                      Mandatory for transactions of ₹{PAN_THRESHOLD.toLocaleString('en-IN')} or more (Income Tax Rule 114B).
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setPanModalOpen(false)}
+                    className={`p-1.5 rounded-lg transition ${theme === 'light' ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-zinc-900 text-zinc-500'}`}
+                    aria-label="Close PAN verification"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <div className={`text-xs p-3 rounded-xl ${theme === 'light' ? 'bg-slate-50 text-slate-600' : 'bg-zinc-900/60 text-zinc-400'}`}>
+                    Invoice value: <span className="font-mono font-bold">₹{invoiceTotal.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  <div>
+                    <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                      Customer PAN
+                    </label>
+                    <input
+                      type="text"
+                      autoFocus
+                      maxLength={10}
+                      placeholder="ABCDE1234F"
+                      className={`w-full text-sm font-mono uppercase px-3.5 py-2.5 rounded-xl border focus:outline-none focus:border-amber-500 ${
+                        theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                      }`}
+                      value={panInput}
+                      onChange={(e) => { setPanInput(e.target.value.toUpperCase()); setPanModalError(''); }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleConfirmPan('PAN')}
+                    />
+                    {panModalError && <p className="text-[11px] text-rose-500 font-semibold mt-1.5">{panModalError}</p>}
+                    <p className={`text-[10px] mt-1.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                      Format validation only — this prototype does not verify against the Income Tax database.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => handleConfirmPan('PAN')}
+                      className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition"
+                    >
+                      Confirm PAN
+                    </button>
+                    <button
+                      onClick={() => handleConfirmPan('FORM_60')}
+                      className={`flex-1 font-bold text-xs py-2.5 rounded-xl border transition ${
+                        theme === 'light'
+                          ? 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                          : 'border-zinc-800 text-zinc-300 hover:bg-zinc-900'
+                      }`}
+                    >
+                      Customer has no PAN — record Form 60
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* SALES INVOICE REGISTRY & HISTORY TAB */
