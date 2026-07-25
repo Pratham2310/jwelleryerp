@@ -14,12 +14,14 @@ import {
   Award,
   Trash2,
   LayoutTemplate,
-  Tags as TagsIcon
+  Tags as TagsIcon,
+  ScanLine
 } from 'lucide-react';
 import { ItemDesign, Tag, ItemCategory, MetalStandard, StoneVariety } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { ALL_TAG_STATUSES, TAG_STATUS_LABEL, canTransition, nextLegalStatuses, type TagStatus } from '../lib/tagStateMachine';
 import { TagBarcode, TagQRCode } from './ui/TagCode';
+import StockAuditPanel from './StockAuditPanel';
 
 interface CatalogManagerProps {
   itemDesigns: ItemDesign[];
@@ -55,8 +57,8 @@ export default function CatalogManager({
 }: CatalogManagerProps) {
   const { theme } = useTheme();
 
-  // Which of the two tabs is active — Item Design Templates vs. Tag Inventory (PRD §5.1, Handbook D-6)
-  const [activeTab, setActiveTab] = useState<'designs' | 'tags'>('tags');
+  // Which tab is active — Item Design Templates, Tag Inventory, or Stock Audit (PRD §5.1, Handbook D-6; Milestone 6)
+  const [activeTab, setActiveTab] = useState<'designs' | 'tags' | 'audit'>('tags');
 
   // Dashboard's "Add Showcase Item" quick action opens the Add Tag modal specifically
   // (adding new physical stock is the more common day-to-day action) and should land on that tab.
@@ -304,9 +306,21 @@ export default function CatalogManager({
         >
           <LayoutTemplate className="w-4 h-4" /> Item Design Templates
         </button>
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`pb-3 text-sm font-bold border-b-2 transition flex items-center gap-1.5 ${
+            activeTab === 'audit'
+              ? 'border-amber-500 text-slate-900'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <ScanLine className="w-4 h-4" /> Stock Audit
+        </button>
       </div>
 
-      {activeTab === 'tags' ? (
+      {activeTab === 'audit' ? (
+        <StockAuditPanel tags={tags} />
+      ) : activeTab === 'tags' ? (
         <div className="space-y-6">
           {/* Search and Filters panel */}
           <div className="bg-white border border-slate-150 p-5 rounded-2xl shadow-sm space-y-4">
