@@ -1,4 +1,5 @@
 import type { TagStatus } from './lib/tagStateMachine';
+import type { PaymentSplitEntry } from './lib/billingCalculations';
 
 export type ItemCategory = 'Rings' | 'Necklaces' | 'Earrings' | 'Bangles' | 'Bracelets' | 'Chains' | 'Coins';
 export type MetalStandard = 'Gold (24K)' | 'Gold (22K)' | 'Gold (18K)' | 'Silver (999)' | 'Platinum (950)';
@@ -124,6 +125,7 @@ export interface SaleInvoice {
   grandTotal: number; // compliant tax invoice total = (subtotal - discount) + tax
   netAmountDue: number; // grandTotal - oldGoldValue: actual cash/digital amount collected
   paymentMethod: 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Mixed';
+  paymentSplit?: PaymentSplitEntry[]; // multi-tender breakdown (PRD §7.5); single-mode bills record one entry
 }
 
 export interface MetalRate {

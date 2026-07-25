@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from './billingCalculations';
+import { calculateLineItem, calculateInvoiceTotals, settleOldGold, validatePaymentSplit } from './billingCalculations';
 
 describe('PRD §17 worked example — 22KT diamond necklace + old gold exchange', () => {
   // Item Master / Tag Data
@@ -130,5 +130,53 @@ describe('bill-level discount reduces the taxable value before GST (fixes Milest
     expect(invoice.taxableValue).toBe(0);
     expect(invoice.gstTax).toBe(0);
     expect(invoice.grandTotal).toBe(0);
+  });
+});
+
+describe('multi-tender payment split (PRD §7.5, Milestone 9)', () => {
+  it('accepts a split across Cash + Card + UPI that sums exactly to the amount due', () => {
+    const result = validatePaymentSplit(100000, [
+      { mode: 'Cash', amount: 40000 },
+      { mode: 'Card', amount: 35000 },
+      { mode: 'UPI', amount: 25000 },
+    ]);
+    expect(result.isValid).toBe(true);
+    expect(result.totalPaid).toBe(100000);
+    expect(result.error).toBeNull();
+  });
+
+  it('blocks an underpaid split and reports the shortfall', () => {
+    const result = validatePaymentSplit(100000, [{ mode: 'Cash', amount: 60000 }]);
+    expect(result.isValid).toBe(false);
+    expect(result.shortfall).toBe(40000);
+    expect(result.error).toMatch(/short by/i);
+  });
+
+  it('blocks an overpaid split and reports the excess', () => {
+    const result = validatePaymentSplit(100000, [
+      { mode: 'Cash', amount: 60000 },
+      { mode: 'Card', amount: 60000 },
+    ]);
+    expect(result.isValid).toBe(false);
+    expect(result.shortfall).toBe(-20000);
+    expect(result.error).toMatch(/exceeds/i);
+  });
+
+  it('rejects a negative payment amount', () => {
+    const result = validatePaymentSplit(100000, [
+      { mode: 'Cash', amount: 120000 },
+      { mode: 'Card', amount: -20000 },
+    ]);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toMatch(/negative/i);
+  });
+
+  it('accepts a single-mode payment (the common case) as a valid split of one', () => {
+    const result = validatePaymentSplit(65538, [{ mode: 'UPI', amount: 65538 }]);
+    expect(result.isValid).toBe(true);
+  });
+
+  it('treats a zero-value bill with no payment entries as settled', () => {
+    expect(validatePaymentSplit(0, []).isValid).toBe(true);
   });
 });

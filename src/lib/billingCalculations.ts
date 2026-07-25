@@ -93,3 +93,39 @@ export function calculateInvoiceTotals(lineSubtotals: number[], discount: number
 export function settleOldGold(grandTotal: number, oldGoldValue: number): number {
   return Math.max(0, grandTotal - (Number(oldGoldValue) || 0));
 }
+
+export type PaymentMode = 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption';
+
+export interface PaymentSplitEntry {
+  mode: PaymentMode;
+  amount: number;
+}
+
+export interface PaymentSplitValidation {
+  totalPaid: number;
+  shortfall: number; // positive if underpaid, negative if overpaid
+  isValid: boolean;
+  error: string | null;
+}
+
+/**
+ * Multi-tender split validation (PRD §7.5). One bill may be settled across
+ * several payment modes; the sum must exactly equal the amount due before
+ * checkout is allowed.
+ */
+export function validatePaymentSplit(amountDue: number, entries: PaymentSplitEntry[]): PaymentSplitValidation {
+  const due = Number(amountDue) || 0;
+  const totalPaid = entries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const shortfall = Math.round((due - totalPaid) * 100) / 100;
+
+  if (entries.some(e => (Number(e.amount) || 0) < 0)) {
+    return { totalPaid, shortfall, isValid: false, error: 'A payment amount cannot be negative.' };
+  }
+  if (shortfall > 0) {
+    return { totalPaid, shortfall, isValid: false, error: `Payment is short by ₹${shortfall.toLocaleString('en-IN')}.` };
+  }
+  if (shortfall < 0) {
+    return { totalPaid, shortfall, isValid: false, error: `Payment exceeds the amount due by ₹${Math.abs(shortfall).toLocaleString('en-IN')}.` };
+  }
+  return { totalPaid, shortfall: 0, isValid: true, error: null };
+}

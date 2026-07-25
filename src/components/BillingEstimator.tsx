@@ -24,6 +24,7 @@ import { Tag, Customer, SaleInvoice, InvoiceItem } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 import { isSellable, canTransition } from '../lib/tagStateMachine';
+import { validatePaymentSplit, type PaymentSplitEntry, type PaymentMode } from '../lib/billingCalculations';
 import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD, type PanDeclaration } from '../lib/statutoryChecks';
 
 interface BillingEstimatorProps {
@@ -102,6 +103,11 @@ export default function BillingEstimator({
   const [isPanModalOpen, setPanModalOpen] = useState(false);
   const [panInput, setPanInput] = useState('');
   const [panModalError, setPanModalError] = useState('');
+
+  // Multi-tender split (Milestone 9, PRD §7.5). Off by default — the single-mode
+  // quick-select above remains the fast path for the common one-payment case.
+  const [isSplitPayment, setSplitPayment] = useState(false);
+  const [paymentSplit, setPaymentSplit] = useState<PaymentSplitEntry[]>([]);
 
   // Success screen
   const [completedInvoice, setCompletedInvoice] = useState<SaleInvoice | null>(null);
@@ -198,6 +204,33 @@ export default function BillingEstimator({
   const netAmountDue = settleOldGold(invoiceTotal, oldGoldValue);
   const finalGrandTotal = netAmountDue; // actual amount collected from the customer, after old-gold settlement
 
+  const splitValidation = validatePaymentSplit(finalGrandTotal, paymentSplit);
+
+  const handleToggleSplitPayment = () => {
+    if (isSplitPayment) {
+      setSplitPayment(false);
+      setPaymentSplit([]);
+    } else {
+      // Seed the split with the currently-selected mode covering the full amount,
+      // so staff adjust downward and add a second mode rather than starting from zero.
+      setSplitPayment(true);
+      setPaymentSplit([{ mode: paymentMethod, amount: finalGrandTotal }]);
+    }
+    setValidationError(null);
+  };
+
+  const addSplitEntry = () => {
+    setPaymentSplit(prev => [...prev, { mode: 'Cash', amount: Math.max(0, splitValidation.shortfall) }]);
+  };
+
+  const updateSplitEntry = (index: number, patch: Partial<PaymentSplitEntry>) => {
+    setPaymentSplit(prev => prev.map((e, i) => i === index ? { ...e, ...patch } : e));
+  };
+
+  const removeSplitEntry = (index: number) => {
+    setPaymentSplit(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleCheckout = () => {
     setValidationError(null);
 
@@ -224,15 +257,26 @@ export default function BillingEstimator({
       }
     }
 
-    // Scheme Redemption must validate against and deduct from the customer's
-    // actual savings balance — previously a purely cosmetic label (KNOWN_ISSUES.md #5)
-    if (paymentMethod === 'Scheme Redemption') {
+    // A multi-tender split must sum exactly to the amount due before checkout (PRD §7.5, Milestone 9)
+    if (isSplitPayment && !splitValidation.isValid) {
+      setValidationError(splitValidation.error || 'The payment split does not settle the amount due.');
+      return;
+    }
+
+    // Scheme Redemption must validate against and deduct from the customer's actual savings
+    // balance — previously a purely cosmetic label (KNOWN_ISSUES.md #5). With a split, only
+    // the portion actually tendered against the scheme is validated and debited.
+    const schemeRedeemedAmount = isSplitPayment
+      ? paymentSplit.filter(e => e.mode === 'Scheme Redemption').reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+      : (paymentMethod === 'Scheme Redemption' ? finalGrandTotal : 0);
+
+    if (schemeRedeemedAmount > 0) {
       if (!selectedCustomer || !selectedCustomer.savingsSchemeActive) {
         setValidationError("Scheme Redemption requires a CRM customer with an active Gold Savings Scheme.");
         return;
       }
-      if (finalGrandTotal > (selectedCustomer.savingsSchemeBalance || 0)) {
-        setValidationError(`Scheme balance (₹${(selectedCustomer.savingsSchemeBalance || 0).toLocaleString('en-IN')}) is insufficient to cover the amount due (₹${finalGrandTotal.toLocaleString('en-IN')}).`);
+      if (schemeRedeemedAmount > (selectedCustomer.savingsSchemeBalance || 0)) {
+        setValidationError(`Scheme balance (₹${(selectedCustomer.savingsSchemeBalance || 0).toLocaleString('en-IN')}) is insufficient to cover the redeemed amount (₹${schemeRedeemedAmount.toLocaleString('en-IN')}).`);
         return;
       }
     }
@@ -274,7 +318,8 @@ export default function BillingEstimator({
       discount,
       grandTotal: invoiceTotal,
       netAmountDue: finalGrandTotal,
-      paymentMethod
+      paymentMethod: isSplitPayment && paymentSplit.length > 1 ? 'Mixed' : (isSplitPayment ? paymentSplit[0]?.mode || paymentMethod : paymentMethod),
+      paymentSplit: isSplitPayment ? paymentSplit : [{ mode: paymentMethod, amount: finalGrandTotal }]
     };
 
     // Update state
@@ -291,11 +336,11 @@ export default function BillingEstimator({
       }));
     }
 
-    // Deduct the redeemed amount from the customer's scheme balance
-    if (paymentMethod === 'Scheme Redemption' && selectedCustomer) {
+    // Deduct only the portion actually tendered against the scheme (single-mode or split)
+    if (schemeRedeemedAmount > 0 && selectedCustomer) {
       setCustomers(prev => prev.map(c =>
         c.id === selectedCustomer.id
-          ? { ...c, savingsSchemeBalance: (c.savingsSchemeBalance || 0) - finalGrandTotal }
+          ? { ...c, savingsSchemeBalance: (c.savingsSchemeBalance || 0) - schemeRedeemedAmount }
           : c
       ));
     }
@@ -316,6 +361,8 @@ export default function BillingEstimator({
     setPanDeclaration(null);
     setPanInput('');
     setPanModalError('');
+    setSplitPayment(false);
+    setPaymentSplit([]);
   };
 
   const handleConfirmPan = (type: PanDeclaration['type']) => {
@@ -513,6 +560,19 @@ export default function BillingEstimator({
                 <span>Net Amount Due:</span>
                 <span className="font-mono text-amber-800">₹{completedInvoice.netAmountDue.toLocaleString('en-IN')}</span>
               </div>
+
+              {/* Multi-tender breakdown (PRD §7.5) */}
+              {completedInvoice.paymentSplit && completedInvoice.paymentSplit.length > 0 && (
+                <div className="pt-2 mt-1 border-t border-dashed border-slate-200 space-y-1">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">Settled Via</p>
+                  {completedInvoice.paymentSplit.map((entry, idx) => (
+                    <div key={idx} className="flex justify-between text-slate-500">
+                      <span>{entry.mode}</span>
+                      <span className="font-mono">₹{entry.amount.toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Hallmark Warranty declaration */}
@@ -922,22 +982,87 @@ export default function BillingEstimator({
 
               {/* Payment selection */}
               <div className="space-y-2">
-                <label className="block text-[10px] uppercase font-bold font-mono text-slate-400">Payment Channel</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {['UPI', 'Cash', 'Card', 'Scheme Redemption'].map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setPaymentMethod(mode as any)}
-                      className={`text-xs py-2 rounded-xl border text-center font-bold transition ${
-                        paymentMethod === mode
-                          ? 'border-amber-500 bg-amber-50 text-amber-800'
-                          : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                      }`}
-                    >
-                      {mode}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] uppercase font-bold font-mono text-slate-400">Payment Channel</label>
+                  <button
+                    onClick={handleToggleSplitPayment}
+                    className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition ${
+                      isSplitPayment
+                        ? 'border-amber-500 bg-amber-50 text-amber-800'
+                        : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    {isSplitPayment ? 'Single Payment' : 'Split Payment'}
+                  </button>
                 </div>
+
+                {!isSplitPayment ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {['UPI', 'Cash', 'Card', 'Scheme Redemption'].map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setPaymentMethod(mode as any)}
+                        className={`text-xs py-2 rounded-xl border text-center font-bold transition ${
+                          paymentMethod === mode
+                            ? 'border-amber-500 bg-amber-50 text-amber-800'
+                            : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  /* Multi-tender split (Milestone 9, PRD §7.5) — the sum must equal Net Amount Due */
+                  <div className="space-y-2">
+                    {paymentSplit.map((entry, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <select
+                          value={entry.mode}
+                          onChange={(e) => updateSplitEntry(idx, { mode: e.target.value as PaymentMode })}
+                          className="text-xs px-2 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 w-2/5"
+                        >
+                          {(['UPI', 'Cash', 'Card', 'Scheme Redemption'] as PaymentMode[]).map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="Amount (₹)"
+                          className="flex-1 text-xs font-mono px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-amber-500"
+                          value={entry.amount || ''}
+                          onChange={(e) => updateSplitEntry(idx, { amount: parseFloat(e.target.value) || 0 })}
+                        />
+                        <button
+                          onClick={() => removeSplitEntry(idx)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition"
+                          aria-label="Remove payment line"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      onClick={addSplitEntry}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg border border-dashed border-slate-300 text-slate-500 hover:border-amber-500 hover:text-amber-700 transition"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Payment Mode
+                    </button>
+
+                    <div className={`flex justify-between text-xs font-bold px-2.5 py-1.5 rounded-lg ${
+                      splitValidation.isValid ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
+                    }`}>
+                      <span>Split total:</span>
+                      <span className="font-mono">
+                        ₹{splitValidation.totalPaid.toLocaleString('en-IN')} / ₹{finalGrandTotal.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    {splitValidation.error && (
+                      <p className="text-[11px] text-amber-700 font-semibold">{splitValidation.error}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Inline Validation Alert */}
@@ -1260,6 +1385,19 @@ export default function BillingEstimator({
                   <span>Net Amount Due:</span>
                   <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.netAmountDue.toLocaleString('en-IN')}</span>
                 </div>
+
+                {/* Multi-tender breakdown (PRD §7.5) */}
+                {selectedInvoiceForDetail.paymentSplit && selectedInvoiceForDetail.paymentSplit.length > 0 && (
+                  <div className="pt-2 mt-1 border-t border-dashed border-slate-200 space-y-1">
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">Settled Via</p>
+                    {selectedInvoiceForDetail.paymentSplit.map((entry, idx) => (
+                      <div key={idx} className="flex justify-between text-slate-500">
+                        <span>{entry.mode}</span>
+                        <span className="font-mono">₹{entry.amount.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Hallmark Warranty declaration */}
