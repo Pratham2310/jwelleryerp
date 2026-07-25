@@ -19,6 +19,7 @@ import {
 import { ItemDesign, Tag, ItemCategory, MetalStandard, StoneVariety } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { ALL_TAG_STATUSES, TAG_STATUS_LABEL, canTransition, nextLegalStatuses, type TagStatus } from '../lib/tagStateMachine';
+import { TagBarcode, TagQRCode } from './ui/TagCode';
 
 interface CatalogManagerProps {
   itemDesigns: ItemDesign[];
@@ -519,7 +520,7 @@ export default function CatalogManager({
                     <div className={`p-8 h-full flex items-center justify-center transition-colors duration-200 ${
                       theme === 'light' ? 'bg-amber-50/25' : 'bg-amber-950/5'
                     }`}>
-                      <div className={`w-64 border border-dashed p-4.5 rounded-lg shadow-sm font-mono text-[10px] select-none flex flex-col justify-between h-96 transition-colors duration-200 ${
+                      <div id="print-area" className={`w-64 border border-dashed p-4.5 rounded-lg shadow-sm font-mono text-[10px] select-none flex flex-col justify-between h-96 transition-colors duration-200 ${
                         theme === 'light'
                           ? 'bg-white border-amber-600/60 text-slate-800'
                           : 'bg-[#1a1a1c] border-amber-600/30 text-zinc-200'
@@ -583,10 +584,15 @@ export default function CatalogManager({
                           </div>
                         </div>
 
-                        {/* Barcode representation */}
-                        <div className={`text-center pt-2 border-t border-dashed ${theme === 'light' ? 'border-slate-200' : 'border-zinc-800'}`}>
-                          <Barcode className={`w-32 h-10 mx-auto ${theme === 'light' ? 'text-slate-800' : 'text-zinc-300'}`} />
-                          <p className={`text-[8px] mt-1 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>*{selectedTag.id}*</p>
+                        {/* Real, scannable QR + barcode (Milestone 5) — QR encodes the full Tag ID for lookup, barcode encodes the SKU for POS scan-to-bill */}
+                        <div className={`flex items-center justify-center gap-3 pt-2 border-t border-dashed ${theme === 'light' ? 'border-slate-200' : 'border-zinc-800'}`}>
+                          <div className="p-1 rounded bg-white">
+                            <TagQRCode value={selectedTag.id} size={44} />
+                          </div>
+                          <div className="text-center p-1 rounded bg-white">
+                            <TagBarcode value={selectedTag.sku} height={32} />
+                            <p className="text-[8px] mt-0.5 text-slate-500">{selectedTag.sku}</p>
+                          </div>
                         </div>
 
                         <p className={`text-[7px] text-center leading-none ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>DO NOT REMOVE FROM ORNAMENT</p>

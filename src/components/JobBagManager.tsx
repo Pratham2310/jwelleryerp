@@ -13,11 +13,11 @@ import {
   Printer,
   ArrowRight,
   TrendingUp,
-  AlertTriangle,
-  QrCode
+  AlertTriangle
 } from 'lucide-react';
 import { JobBag, Karigar } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { TagQRCode } from './ui/TagCode';
 
 interface JobBagManagerProps {
   karigars: Karigar[];
@@ -867,9 +867,9 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                 </div>
               </div>
 
-              {/* Barcode Mock & Verification */}
+              {/* Real, scannable QR (Milestone 5) & Verification */}
               <div className="border-t border-b border-dashed border-stone-300 py-4 flex flex-col items-center justify-center gap-1.5 bg-stone-50 rounded-xl">
-                <QrCode className="w-12 h-12 text-[#141416] stroke-[1.2]" />
+                <TagQRCode value={activeBagForTag.id} size={48} />
                 <span className="font-mono text-[9px] text-stone-400 uppercase font-bold">Verification ID: {activeBagForTag.id}</span>
               </div>
 
