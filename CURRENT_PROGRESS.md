@@ -10,7 +10,8 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 
 - **Documentation (Business/Domain Design):** PRD complete (v1.0, 19 sections). Developer Handbook fully drafted, all 14 phases.
 - **Backend / Database:** Not started (no server, no PostgreSQL database, no API endpoints) — this is a deliberate scope decision (see `.ai/PROJECT_OVERVIEW.md`), not a gap to close inside this repo. All persistent data relies on `localStorage`.
-- **Frontend Prototype ("Stitch UI"):** React 19 + Vite 6 + TypeScript SPA, 7 business screens + auth. **Milestones 1–10 are complete** — state unification/theme (M1), billing/GST calculation correctness (M2), Item Design vs. Tag split (M3), enforced Tag lifecycle state machine (M4), real scannable barcode/QR (M5), Stock Audit/reconciliation (M6), discount-before-GST fix (M7), PAN/Form 60 gate (M8), multi-tender payment split (M9), and manager-override reason logging (M10). Test suite: **76 passing tests across 5 suites** (`billingCalculations`, `tagStateMachine`, `stockAudit`, `statutoryChecks`, `priceOverrides`). Milestones 11–36 (the remaining PRD/Handbook functional depth, per the restructured `TODO.md` roadmap) are **not started**.
+- **Roadmap scope (revised 2026-07-26):** extended from 36 to **53 milestones** after a client module list was audited against the PRD — the original roadmap had omitted Procurement (PRD §6.1), the statutory financial statements, accounting vouchers, Stock Adjustment, Melting, Rate Master, User Management, Notification Center, System Health and the ITC/HSN reports. See `TODO.md`'s Coverage Audit table and Sequencing Note.
+- **Frontend Prototype ("Stitch UI"):** React 19 + Vite 6 + TypeScript SPA, 7 business screens + auth. **Milestones 1–13 are complete — Phases 1, 2 and 3 all done:** state unification/theme (M1), billing/GST calculation correctness (M2), Item Design vs. Tag split (M3), enforced Tag lifecycle state machine (M4), real scannable barcode/QR (M5), Stock Audit/reconciliation (M6), discount-before-GST fix (M7), PAN/Form 60 gate (M8), multi-tender payment split (M9), manager-override reason logging (M10), Estimate/Quotation mode (M11), Sales Return & Credit Note (M12), and the Dashboard real-data fix (M13). Test suite: **114 passing across 7 suites** (`billingCalculations`, `tagStateMachine`, `stockAudit`, `statutoryChecks`, `priceOverrides`, `salesReturn`, `dashboardAnalytics`). Milestones 14–53 are **not started**.
 - **Reference material discovered this audit:** `docs/stitch_jewelry_management_suite/stitch_jewelry_management_suite/` contains 22 AI-Studio-generated screen designs (`code.html` + `screen.png` each) for modules that do **not** exist in `src/` yet — e.g. `old_gold_purchase_voucher/`, `karigar_outstanding_ledger/`, `gst_compliance_dashboard/`, `scheme_management_dashboard/`, `branch_gstin_configuration/`, `daily_rate_master_hq/`, `tagging_inventory_entry/`, `stock_ageing_velocity_analysis/`, `owner_s_executive_dashboard/`. These are pre-made visual references for ~20 of the missing screens identified below — check here before designing a missing screen from scratch.
 - **Gap Analysis Result:** The billing calculation engine is correct and unit-tested (PRD §17 worked example passes, plus the Milestone 7 discount-before-GST correction), the Item Design vs. Tag split (the PRD's single most load-bearing structural requirement, per Handbook D-6) is done, and the Tag lifecycle is now genuinely *enforced* rather than advisory. Billing compliance has real teeth: PAN/Form 60 gate, multi-tender split validation, and a persisted override audit trail. Still missing across the remaining modules: no Tax/Branch/Rate-history/Stone-rate master, no accounting engine, no real GST compliance (HSN split, e-Invoice, GSTR exports), and no hallmarking/HUID *assignment workflow* — the field exists and displays correctly, but only manual entry populates it (Milestone 24).
 
@@ -21,8 +22,9 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 ### 2.1 Dashboard (`/dashboard`, `Dashboard.tsx`)
 - **What Exists:** KPI cards (Today's Sales Revenue, Showcase Inventory count, Active Artisan Jobwork, Karigar Outstanding Gold — all computed from real lifted state). Live metal-rate grid with inline edit and an 8-point sparkline. A category-weight doughnut chart computed from real `items` data. A recent-invoices table (real data).
 - **Missing / Fake:**
-  - The "Monthly Sales Revenue Trend" line chart is **entirely hardcoded SVG data** (`Feb 120k, Mar 180k...`), not derived from `invoices` — this reads as real but is decorative.
-  - The "ERP Action Log" panel is a **static hardcoded list** (4 fixed entries), not a real event/audit feed.
+  - ~~"Monthly Sales Revenue Trend" hardcoded SVG data~~ — ✅ Fixed, Milestone 13 (real 6-month trend, net of returns, estimates excluded, axis scaled to actual data).
+  - ~~"ERP Action Log" static hardcoded list~~ — ✅ Fixed, Milestone 13 (real activity feed with an honest empty state). Caveat: it reconstructs events from current records rather than logging them as they occur, so it can't show anything the state no longer contains — a real event store lands in Milestone 50.
+  - ~~Stone vault / Job Bag state lifted since M1 but never displayed~~ — ✅ Fixed, Milestone 13 (two new KPI cards).
   - No Branch selector (single implicit branch).
   - Rate edits mutate `metalRates` directly in place — no append-only rate history, no audit log, no fat-finger (>2–5%) change guard/approval, matching PRD §4.2's explicit requirement.
   - Does not reflect Stone vault balances or Job Bag stage counts (that state exists in `App.tsx` since Milestone 1, but Dashboard was never wired to consume it — see §4 "Missing Business Logic" wiring note below).
@@ -42,11 +44,10 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 ### 2.4 Billing Estimator & POS (`/billing`, `BillingEstimator.tsx`)
 - **What Exists (substantially corrected 2026-07-25, Milestone 2):** Multi-item invoicing with a real, unit-tested calculation engine (`src/lib/billingCalculations.ts`) — metal value, wastage value (per-item %), making charge (branches on `per-gram`/`flat`), stone charge, GST correctly computed on the full taxable subtotal. Old Gold trade-in is correctly netted only at the final settlement stage, never against the taxable base. Scheme Redemption validates against and debits the real customer balance. Invoice numbers are a gap-free per-year sequence. Printable receipt + searchable registry.
 - **Added since (Milestones 7–10):** discount now correctly reduces the taxable value **before** GST (PRD §7.4); **PAN/Form 60 gate** blocks checkout at ≥₹2,00,000 with a live requirement banner; **multi-tender payment split** validates that tendered amounts sum exactly to the amount due (Scheme Redemption is portion-aware — only the scheme-tendered amount is validated and debited); **manager-override reason log** blocks checkout when a line is edited away from its Tag's master values and persists the reasons onto the invoice as an audit trail.
+- **Added since (Milestones 11–12):** **Estimate/Quotation mode** (PRD §7.8) with its own non-fiscal `EST-` series, skipping the PAN gate, stock deduction and payment entirely, plus a rate-choice "Convert to Tax Invoice" that re-applies the PAN gate and prevents double-billing; **Sales Return & Credit Note** (CGST §34) with its own `CRN-` series, partial-return support, pro-rata discount reversal, and a `Sold → Returned → InStock` stock path. `SaleInvoice.panDeclaration` now records *which* PAN was captured (M8 gated on it but stored nothing).
 - **Missing:**
-  - **Estimate/Quotation mode** (PRD §7.8) — no non-fiscal toggle exists; every generated document is treated as a final tax invoice (Milestone 11, next up).
   - **Advance/Booking (token advance)** module (PRD §7.6) — entirely absent.
   - **Repair/Alteration billing sub-module** (PRD §7.9) — entirely absent.
-  - **Sales Return / Credit Note** flow — entirely absent.
   - **HUID printing per invoice line** (PRD §9.3) — no `huid` field exists on `InvoiceItem`.
   - **TCS/PMLA threshold logic** — no computation or flag anywhere (only the PAN threshold is implemented; TCS/PMLA arrive with Milestone 34's Statutory Parameters screen).
   - No barcode-scan-to-bill — item selection is a dropdown ("Pull Stock"), not a scanner input.
@@ -127,7 +128,7 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 1. ~~PAN Verification modal (Billing, ≥₹2L).~~ — ✅ Done, Milestone 8.
 2. ~~Multi-payment split panel (Billing).~~ — ✅ Done, Milestone 9.
 3. Manager/Supervisor approval modal — **reason-log ✅ done (Milestone 10)**; the Supervisor PIN gate layered on top is Milestone 33, and invoice cancellation is still unhandled.
-4. Sales Return / Credit Note modal.
+4. ~~Sales Return / Credit Note modal.~~ — ✅ Done, Milestone 12.
 5. Advance/Booking (token advance) modal.
 6. Old Gold standalone purchase-voucher modal (distinct from Billing's inline trade-in fields).
 7. Rate history/audit-trail modal.
@@ -210,13 +211,13 @@ This is a code-level read of Tailwind breakpoint usage, **not** a verified visua
 | **4. Master Data** | Partial (Party, MC/Wastage, Item Design) / Not Started (Tax, Branch, Stone-rate) | Tax Master, Branch Master, category-level MC/Wastage slabs |
 | **5. Inventory & Tagging** | Partial (Design/Tag split, enforced lifecycle, real barcode/QR, Stock Audit all done — M3–M6) | Memo-Out workflow screen; at-cost/at-market dual valuation |
 | **6. Karigar & Jobwork** | Partial | Ledger history, Fine Gold Equivalent, WorkOrder/JobBag unification |
-| **7. Billing & POS** | Partial (engine correct since M2; discount/GST order, PAN gate, split payment, override log all done — M7–M10) | Estimate mode (M11), Sales Return/Credit Note (M12) |
+| **7. Billing & POS** | Partial (engine correct since M2; discount/GST order, PAN gate, split payment, override log, Estimate mode and Sales Return/Credit Note all done — M7–M12) | Advance/Booking (PRD §7.6), Repair/Alteration billing (§7.9), barcode-scan-to-bill |
 | **8. Old Gold Buyback** | Partial (settlement math correct since M2) | Standalone purchase voucher, melt/touch valuation |
 | **9. GST Compliance** | Not Started | Tax Master, HSN split, e-Invoice/e-Way Bill |
 | **10. Accounting** | Not Started | Everything — no entity exists yet |
 | **11. BIS Hallmarking** | UI Mockup Only | Real HUID field/uniqueness, AHC workflow |
 | **12. Gold Savings Scheme** | Partial (redemption correct since M2) | Multi-scheme master, reminders, passbook |
 | **13. CRM & Alerts** | Partial | Reminders, preferences, rate alerts |
-| **14. Reports & Dashboards** | Partial (KPIs real, 2 widgets fake) | Entire `/reports` hub |
+| **14. Reports & Dashboards** | Partial (every Dashboard widget now real since M13) | Entire `/reports` hub (M30), Inventory Dashboard (M44), Buyback Dashboard (M53) |
 | **15. Security & Statutory** | Partial (PAN threshold enforced + override audit trail, M8/M10) | Statutory Parameters config screen (M34), RBAC enforcement, Supervisor PIN (M33) |
 | **16. Hardware & Offline** | UI Mockup Only (Simulation Desk) | Real peripheral integration (not expected in this frontend-only scope) |

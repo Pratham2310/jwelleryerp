@@ -4,6 +4,32 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-26 — Phase 3 Complete: Milestones 11–13, plus a Roadmap Coverage Audit
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`), roadmap, and tracking documentation. Completes Phase 3 (Billing Compliance & Correctness). No visual redesign — all new UI reuses the app's established patterns and colour tokens.
+
+**Milestone 11 — Estimate / Quotation Mode:** a non-fiscal Estimate document type (PRD §7.8) alongside the Tax Invoice. Estimates draw from their own `EST-<year>` sequence so they never consume a GST tax-invoice number (Rule 46 requires that series to contain only real supplies), deduct no stock, collect no payment, touch no scheme balance, and skip the PAN gate. "Convert to Tax Invoice" makes staff explicitly choose between honouring the quoted rate and re-pricing at today's rate — gold moves daily, so silently picking either would be wrong — and re-applies the PAN gate at conversion, stamping the source estimate so it can't be billed twice.
+
+**Milestone 12 — Sales Return & Credit Note:** GST credit notes against a prior invoice (CGST Act §34) with partial-return support and their own `CRN-<year>` series. `src/lib/salesReturn.ts` reverses a bill-level discount *proportionally* on a partial return — reversing the full discount would refund more than was ever collected, reversing none would refund less. Tests assert a full return nets exactly to zero against `calculateInvoiceTotals`, so the forward and reverse directions can't drift apart. Refunds against a Scheme Redemption sale credit the balance back; old gold is deliberately not unwound (separate purchase transaction, PRD §8.3/D-10).
+
+**Milestone 13 — Dashboard Real-Data Fix:** the Monthly Sales Revenue Trend was hardcoded SVG coordinates with invented values, and the ERP Action Log was four fabricated entries. Both now derive from real state via a new, unit-tested `dashboardAnalytics.ts`. Added the Stone Vault and Metal-On-Factory-Floor KPI cards for state that had been lifted to `App.tsx` since Milestone 1 but never displayed.
+
+**Design decision forced by Milestone 12 — `Sold` is no longer terminal.** Milestone 4 made `Sold` a terminal state, which would have meant a returned ornament could never be resold. Rather than opening `Sold` up, it now has exactly one outgoing edge to a new `Returned` state, reachable only via a credit note — so stock can never be un-sold without a fiscal document. `Returned` quarantines the piece for QC; only `Returned → InStock` makes it sellable again. `DamagedOrMelted` is now the only fully terminal state.
+
+**Correctness issues found and fixed beyond the milestone scope:**
+- Estimates and credit notes would both have corrupted revenue reporting. Every revenue figure (Dashboard "Today's Sales Revenue", "Completed Bills", the recent-invoices table, and all registry KPIs) now excludes estimates and nets credit notes.
+- The estimate receipt read "Invoice Total (**Tax Invoice**)" on a document stamped "NOT A TAX INVOICE", and carried the BIS Hallmark **certification** — a false declaration on a quotation. Both fixed; the certification block is now tax-invoice-only.
+- Milestone 8 gated on PAN but never recorded *which* PAN was collected, leaving no audit trail for the thing the law required. `SaleInvoice.panDeclaration` now stores it.
+- Negating zero produced `-0`, which would have rendered as "-₹0" on a zero-value credit line.
+- A second instance of `KNOWN_ISSUES.md` #12: SVG `fill-*` utilities aren't covered by `index.css`'s dark-mode repaint (which only remaps `text-*`), so the chart's current-month label rendered dark-on-dark.
+
+**Roadmap coverage audit (2026-07-26):** a client-supplied module list was checked line-by-line against this roadmap and the PRD. The PRD covers every item; the roadmap did not. The original 36 milestones omitted the entire Procurement chain (PRD §6.1), the three statutory financial statements (§10.5/§14.7), manual accounting vouchers, Stock Adjustment, the Melting workflow, the Rate Master screen, User Management, Notification Center, System Health, and the ITC/HSN reports. **Roadmap extended to 53 milestones** (new Phases 12–15, M37–M53), with a Coverage Audit table in `TODO.md` recording the full mapping. Note that the Rate Master gap (M48) means rates are currently edited in place on the Dashboard, which violates decision D-4 outright.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **114 tests passing across 7 suites** (up from 76); `npm run build` clean. Each milestone individually Playwright-verified against the running app. Full regression sweep across all 7 screens, both themes, and a 390×844 mobile viewport: **zero console errors**.
+
+---
+
 ## 2026-07-25 — Milestones 4–10 Implemented (Tagging Foundation + Billing Compliance)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

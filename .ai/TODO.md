@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-26 — **Milestones 1–12 complete** (see `CHANGELOG.md`); Milestone 13 (Dashboard Real-Data Fix) is next up, completing Phase 3. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-26 — **Milestones 1–13 complete; Phases 1, 2 and 3 all done** (see `CHANGELOG.md`). Milestone 14 (Old Gold Purchase Voucher) is next up by number, but see the Sequencing Note below — M48 (Rate Master) and M19 (Branch Master) both warrant pulling forward. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -23,14 +23,14 @@ Phase 2: Tagging & Inventory Foundation                   [DONE]
   ├── M5  Barcode/QR Tag Generation & Thermal Print Layout       [DONE]
   └── M6  Physical Stock Audit / Reconciliation UI               [DONE]
 
-Phase 3: Billing Compliance & Correctness (each independent of the others; all depend only on M2)
+Phase 3: Billing Compliance & Correctness                 [DONE]
   ├── M7  Discount-Before-GST Calculation Fix                    [DONE]
   ├── M8  Mandatory PAN Verification Modal                       [DONE]
   ├── M9  Multi-Payment Split UI                                 [DONE]
   ├── M10 Manager Override + Reason-Log Workflow                 [DONE]
   ├── M11 Estimate / Quotation Mode Toggle                       [DONE]
   ├── M12 Sales Return & Credit Note                             [DONE]
-  └── M13 Dashboard Real-Data Accuracy Fix                       <- next up
+  └── M13 Dashboard Real-Data Accuracy Fix                       [DONE]
 
 Phase 4: Old Gold Buyback
   ├── M14 Old Gold Purchase Voucher & Melt/Touch Valuation Engine
@@ -96,6 +96,27 @@ Phase 15: Masters & Admin Depth             [ADDED 2026-07-26]
   ├── M52 ITC Register & HSN Summary Reports
   └── M53 Old Gold Buyback Dashboard
 ```
+
+---
+
+## ⚠️ Sequencing Note (2026-07-26)
+
+Milestone numbers reflect the order features were *identified*, not the order they should be
+*built*. Two milestones warrant pulling forward ahead of their number:
+
+1. **M48 — Rate Master & append-only rate history.** Rates are currently edited in place on the
+   Dashboard, which violates decision D-4 (rate history must be append-only, never `UPDATE`d)
+   outright. Every invoice's rate provenance depends on this, and the longer it waits the more
+   historical data is written without it. This is a live compliance defect, not a missing feature.
+2. **M19 — Branch Master.** `DECISIONS.md` D-1 locks the target as a multi-branch chain, and
+   M21 (Tax Master) already cannot start without `Branch.stateCode`. Purchase (M38–M41) and the
+   Branch report family (M30) also depend on it. Anything built before M19 gets built
+   branch-unaware and needs retrofitting.
+
+Separately, **the money-as-float issue** (`CURRENT_PROGRESS.md` §3.7 item 7, PRD §16.2) should be
+cleared before the accounting phases (M28, M45–M47). Because all money math funnels through
+`billingCalculations.ts`, the migration is contained today; posting double-entry journals on top
+of float arithmetic would spread it.
 
 ---
 
