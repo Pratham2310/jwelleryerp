@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-25 — **Milestones 1–10 complete** (see `CHANGELOG.md`); Milestone 11 (Estimate/Quotation Mode Toggle) is next up. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-26 — **Milestones 1–12 complete** (see `CHANGELOG.md`); Milestone 13 (Dashboard Real-Data Fix) is next up, completing Phase 3. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -28,9 +28,9 @@ Phase 3: Billing Compliance & Correctness (each independent of the others; all d
   ├── M8  Mandatory PAN Verification Modal                       [DONE]
   ├── M9  Multi-Payment Split UI                                 [DONE]
   ├── M10 Manager Override + Reason-Log Workflow                 [DONE]
-  ├── M11 Estimate / Quotation Mode Toggle                       <- next up
-  ├── M12 Sales Return & Credit Note
-  └── M13 Dashboard Real-Data Accuracy Fix
+  ├── M11 Estimate / Quotation Mode Toggle                       [DONE]
+  ├── M12 Sales Return & Credit Note                             [DONE]
+  └── M13 Dashboard Real-Data Accuracy Fix                       <- next up
 
 Phase 4: Old Gold Buyback
   ├── M14 Old Gold Purchase Voucher & Melt/Touch Valuation Engine
@@ -70,7 +70,74 @@ Phase 11: Admin, Security & Hardware
   ├── M34 Statutory Parameters Configuration Screen
   ├── M35 Digital Scale & Hardware Connection UI (Simulated)
   └── M36 Offline POS Queue Sync UI (Simulated)
+
+Phase 12: Procurement & Supplier            [ADDED 2026-07-26 — gap found in coverage audit]
+  ├── M37 Supplier Master (Party Master extension)
+  ├── M38 Purchase Order
+  ├── M39 Goods Receipt (GRN)
+  ├── M40 Purchase Invoice & ITC Booking
+  └── M41 Purchase Return / Debit Note
+
+Phase 13: Inventory Operations              [ADDED 2026-07-26]
+  ├── M42 Stock Adjustment & Write-Off Voucher
+  ├── M43 Melting Workflow
+  └── M44 Inventory Dashboard
+
+Phase 14: Accounting Depth                  [ADDED 2026-07-26 — extends Phase 9]
+  ├── M45 Payment / Receipt / Contra Vouchers
+  ├── M46 Cash Book & Day Book
+  └── M47 Trial Balance, P&L & Balance Sheet
+
+Phase 15: Masters & Admin Depth             [ADDED 2026-07-26]
+  ├── M48 Rate Master Screen & Append-Only Rate History
+  ├── M49 User Management
+  ├── M50 Notification Center & Activity Feed
+  ├── M51 System Health & Diagnostics Panel
+  ├── M52 ITC Register & HSN Summary Reports
+  └── M53 Old Gold Buyback Dashboard
 ```
+
+---
+
+## 📋 Coverage Audit (2026-07-26)
+
+A module/screen list supplied by the client was checked line-by-line against this roadmap and
+`docs/Jewellery_Retail_Software_PRD.md`. **The PRD covers every item.** This roadmap did not —
+the original 36 milestones silently omitted several PRD modules, most significantly the entire
+Procurement chain (PRD §6.1) and the financial statements (PRD §10.5/§14.7). Milestones 37–53
+above close those gaps. Mapping of the client list:
+
+| Client item | Status |
+|---|---|
+| Inventory Dashboard | **Added — M44** |
+| Tag Master | ✅ Done (M3) |
+| Barcode Printing / QR Printing | ✅ Done (M5) |
+| HUID | Field done (M3); assignment workflow M24 |
+| Stock Adjustment | **Added — M42** |
+| Stock Transfer | Planned (M20 — IBST) |
+| Stock Audit / Physical Verification | ✅ Done (M6) — these are the same workflow |
+| Stock Ageing | Planned (inside M30) |
+| Purchase Orders / Receipt / Invoice / Return | **Added — M38, M39, M40, M41** |
+| Old Gold Buyback / Purity Testing | Planned (M14) |
+| Old Gold Melting | **Split out — M43** (M15 covers only the old-gold vault) |
+| Old Gold Exchange | ✅ Done (M2 inline); standalone voucher M14 |
+| Buyback Dashboard | **Added — M53** |
+| Accounting Ledger / Journal | Planned (M28) |
+| Payment / Receipt / Contra | **Added — M45** |
+| Cash Book | **Added — M46** |
+| Trial Balance / P&L / Balance Sheet | **Added — M47** |
+| GSTR1 / GSTR3B | Planned (M23) |
+| ITC / HSN Summary | **Added — M52** |
+| Gold Scheme Enrollment / Installments / Redemption | Redemption ✅ done (M2); rest M26/M27 |
+| Reports: Sales/Purchase/Inventory/Customer/Karigar/Branch/Stock | M30 — **task list expanded** to name all seven families |
+| Settings: RBAC / Permissions | Planned (M32) |
+| Settings: Rate Master | **Added — M48** (was only an inline Dashboard edit, no history — violates D-4) |
+| Settings: Tax Master | Planned (M21) |
+| Settings: User Management | **Added — M49** (distinct from role/permission definition) |
+| Settings: Branches | Planned (M19) |
+| Admin: Audit Logs | Planned (inside M30) |
+| Admin: Notification Center / Activity Feed | **Added — M50** |
+| Admin: System Health | **Added — M51** |
 
 ---
 
@@ -350,8 +417,18 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 - **Goal:** Central `/reports` route covering the PRD §14.2–14.9 catalog.
 - **Dependencies:** Milestone 28 (accounting-derived margin reports), Milestone 16 (Karigar Reconciliation), Milestone 3 (Inventory Ageing needs `Tag.createdAt`).
 - **Tasks:**
-  1. Build the Reports Hub: Daily Sales Summary, Inventory Ageing (>90/180 days), Karigar Reconciliation, Gross Margin Realization, Audit Log Viewer.
+  1. Build the Reports Hub shell plus all seven report families (PRD §14.2–14.9). **Expanded 2026-07-26** after the coverage audit — the original task list named only five reports and omitted the Purchase, Customer and Branch families entirely:
+     - **Sales** — Daily Sales Summary, Gross Margin Realization, Sales Register
+     - **Purchase** — Purchase Register, supplier-wise purchases, ITC-eligible summary (depends on Milestone 40)
+     - **Inventory** — Stock Summary (item/purity-wise, weight & value), Ageing (>90/180 days), Tag-wise Stock Ledger, Physical Stock Discrepancy (PRD §5.6)
+     - **Customer** — purchase history, Debtors Ageing, loyalty/tier distribution, PAN/Form-60 compliance exceptions
+     - **Karigar** — Karigar Reconciliation, outstanding metal & labour, wastage performance
+     - **Branch** — Branch Stock Comparison, Stock Transfer Register, branch-wise sales (depends on Milestone 19)
+     - **Stock** — Memo/Approval Outstanding, stock movement register
+     - **Audit** — Audit Log Viewer
+  2. Because this is a large surface, deliver it incrementally family-by-family; each family is independently testable and can ship on its own.
 - **Testable via:** Each report's totals reconcile against the underlying transactional state it's derived from.
+- **Note:** GST reports live separately — GSTR-1/3B in Milestone 23, ITC Register & HSN Summary in Milestone 52.
 
 ### 📍 Milestone 31: Customer 360 View
 - **Goal:** A single consolidated customer profile view.
@@ -398,3 +475,155 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 - **Tasks:**
   1. Add an Offline Queue Sync indicator + conflict-resolution drawer, driven by the existing `forceOffline` simulation toggle.
 - **Testable via:** Enabling Force Offline and completing a "sale" queues it visibly; disabling offline mode shows it "syncing" and clearing from the queue.
+
+---
+
+## 🏁 Phase 12: Procurement & Supplier (Milestones 37 – 41)
+
+_Added 2026-07-26. PRD §6.1 defines the full chain (Purchase Order → Goods Receipt → Purchase
+Invoice → stock update) and §9.6 requires a Purchase Register for ITC reconciliation, but the
+original roadmap never scheduled any of it. This was the largest coverage gap found._
+
+### 📍 Milestone 37: Supplier Master (Party Master extension)
+- **Goal:** Introduce Supplier as a real party type so purchases have someone to be booked against.
+- **Dependencies:** None beyond Milestone 1 (state-lifting pattern).
+- **Tasks:**
+  1. Extend the party model with `Supplier` (name, GSTIN, PAN, state code, opening balance, credit terms). Per Handbook D-5, Party Master is tenant-wide and must **never** carry a `branch_id`.
+  2. Add PAN/GSTIN/Aadhaar/KYC fields to `Customer` at the same time — PRD §4.3 requires them and they are currently absent from the type entirely.
+- **Testable via:** A supplier can be created and selected on a purchase document; a customer record round-trips its GSTIN/PAN.
+
+### 📍 Milestone 38: Purchase Order
+- **Goal:** Raise and track POs to bullion dealers / finished-goods suppliers.
+- **Dependencies:** Milestone 37.
+- **Tasks:**
+  1. PO entry (supplier, expected metal/purity/weight or design lines, rate basis, delivery date) with its own `PO-<FY>` sequence and a `Draft → Sent → PartiallyReceived → Closed → Cancelled` status.
+- **Testable via:** A PO can be raised, then referenced when receiving goods; receiving part of it moves it to PartiallyReceived rather than Closed.
+
+### 📍 Milestone 39: Goods Receipt (GRN)
+- **Goal:** Receive physical metal/goods against a PO (or without one), capturing real weight and tested purity.
+- **Dependencies:** Milestone 38; Milestone 3 (a finished-goods receipt must create real `Tag` records).
+- **Tasks:**
+  1. GRN entry capturing gross/net weight and **tested** purity per line, with a variance flag when received weight/purity differs from the PO.
+  2. On save: raw metal increments the metal register; finished goods create `Tag` records entering the lifecycle at the appropriate state via the Milestone 4 state machine.
+- **Testable via:** Receiving finished goods against a PO produces the right number of real Tags; a purity variance is surfaced, not silently accepted.
+
+### 📍 Milestone 40: Purchase Invoice & ITC Booking
+- **Goal:** Book the supplier's tax invoice and record claimable Input Tax Credit.
+- **Dependencies:** Milestone 39; Milestone 21 (needs the Tax Master for correct input-tax rates).
+- **Tasks:**
+  1. Purchase Invoice entry linked to a GRN, splitting taxable value and input CGST/SGST/IGST, stored as ITC receivable.
+  2. Add an **RCM (Reverse Charge)** flag for notified services from unregistered suppliers — PRD §9.7 requires this recorded separately, since the shop pays the GST itself and then claims it.
+- **Testable via:** A booked purchase invoice appears in the Purchase Register with its ITC split; an RCM-flagged invoice is distinguishable from a normal one.
+
+### 📍 Milestone 41: Purchase Return / Debit Note
+- **Goal:** Return goods to a supplier and issue a debit note reversing the purchase and its ITC.
+- **Dependencies:** Milestone 40; Milestone 12 (mirrors the credit-note reversal already built for sales).
+- **Tasks:**
+  1. Purchase Return against a booked purchase invoice, with its own `DBN-<FY>` sequence, reversing stock and ITC proportionally — reuse `salesReturn.ts`'s pro-rata approach rather than re-deriving it.
+- **Testable via:** A full purchase return nets the purchase and its ITC to zero; a partial return reverses proportionally.
+
+---
+
+## 🏁 Phase 13: Inventory Operations (Milestones 42 – 44)
+
+### 📍 Milestone 42: Stock Adjustment & Write-Off Voucher
+- **Goal:** A controlled, reason-logged way to correct stock or write off damaged/lost pieces.
+- **Dependencies:** Milestone 4 (drives the `DamagedOrMelted` transition), Milestone 10 (reuses the reason-log pattern).
+- **Tasks:**
+  1. Stock Adjustment voucher: select Tags, choose a reason (damaged / lost / shrinkage / correction), require a logged reason, and transition through the state machine — never by direct status assignment.
+- **Testable via:** Writing off a Tag requires a reason and moves it to `DamagedOrMelted`; it leaves sellable stock and stock valuation.
+
+### 📍 Milestone 43: Melting Workflow
+- **Goal:** Convert old gold and damaged/unsold tags back into raw metal stock (PRD §6.3).
+- **Dependencies:** Milestone 15 (old-gold lots), Milestone 42 (damaged tags).
+- **Tasks:**
+  1. Melting batch: select old-gold lots and/or damaged Tags, record input gross weight, expected vs. actual recovered fine weight, and melting loss; output increments raw metal stock.
+- **Testable via:** A melt batch's recovered fine weight plus recorded loss reconciles against the input weight; melted Tags leave sellable inventory permanently.
+
+### 📍 Milestone 44: Inventory Dashboard
+- **Goal:** A dedicated inventory-analytics landing screen, distinct from the main sales dashboard.
+- **Dependencies:** Milestone 4, Milestone 6, Milestone 13.
+- **Tasks:**
+  1. Stock-by-purity/category weight & value tiles, lifecycle-state distribution, ageing buckets (>90/180 days), GML/consignment exposure, and the last audit's discrepancy summary.
+- **Reference design:** `docs/stitch_jewelry_management_suite/.../inventory_valuation_summary/`, `.../stock_ageing_velocity_analysis/`.
+- **Testable via:** Every tile reconciles against the underlying `Tag[]` state; selling a piece updates it without a reload.
+
+---
+
+## 🏁 Phase 14: Accounting Depth (Milestones 45 – 47)
+
+_Added 2026-07-26. Milestone 28 covers auto-posted journals, the Chart of Accounts, the Ledger
+Statement and the Day Book — but PRD §10.5 and §14.7 also require manual voucher entry and the
+three statutory financial statements, which were never scheduled._
+
+### 📍 Milestone 45: Payment / Receipt / Contra Vouchers
+- **Goal:** Manual voucher entry for money movements that aren't a sale or a purchase.
+- **Dependencies:** Milestone 28 (posts through the same journal engine).
+- **Tasks:**
+  1. Payment (money out), Receipt (money in) and Contra (cash↔bank transfer) voucher screens, each posting a balanced double-entry pair via `journalPosting.ts`.
+  2. Support the contra-style "Stock with Karigar" sub-ledger treatment noted in PRD §10.3.
+- **Testable via:** Every voucher posts `Σdebit = Σcredit`; a contra entry moves value between cash and bank without touching P&L.
+
+### 📍 Milestone 46: Cash Book & Day Book
+- **Goal:** Chronological cash/bank movement views for daily closing.
+- **Dependencies:** Milestone 45.
+- **Tasks:**
+  1. Cash Book (cash/bank running balance) and Day Book (all vouchers for a date), both with opening/closing balance reconciliation.
+- **Testable via:** The Cash Book's closing balance equals opening plus the day's receipts minus payments; the Day Book total reconciles against the day's invoices.
+
+### 📍 Milestone 47: Trial Balance, P&L & Balance Sheet
+- **Goal:** The three statutory financial statements (PRD §10.5, §14.7).
+- **Dependencies:** Milestone 28, Milestone 45.
+- **Tasks:**
+  1. Trial Balance (all ledger balances, must tie), Profit & Loss, and Balance Sheet, all derived from posted journal entries — never hand-computed.
+  2. Use PRD §10.4's stock valuation basis (at-cost vs at-market) consistently for the closing-stock figure.
+- **Testable via:** The Trial Balance's debit and credit columns are equal; the Balance Sheet balances; P&L closing stock matches the inventory valuation on the same date.
+
+---
+
+## 🏁 Phase 15: Masters & Admin Depth (Milestones 48 – 53)
+
+### 📍 Milestone 48: Rate Master Screen & Append-Only Rate History
+- **Goal:** A real Rate Master with versioned history, replacing the Dashboard's in-place inline edit.
+- **Dependencies:** None beyond Milestone 1. **The current inline-edit behaviour violates decision D-4, so this is higher priority than its number suggests.**
+- **Tasks:**
+  1. Append-only `rate_versions` model (`effective_from`, `set_by`, `override_reason`) — no code path may ever mutate a historical rate row (D-4).
+  2. Rate Master screen: current rate per metal/purity, full history, and a fat-finger guard requiring confirmation when a new rate deviates >2–5% from the previous one (PRD §4.2).
+  3. Auto-derive 22K/18K from the 24K base rate, with a manual per-purity override.
+- **Testable via:** Editing a rate creates a new version rather than overwriting; an old invoice still resolves the rate version it was billed at; a 20% rate jump is blocked pending confirmation.
+
+### 📍 Milestone 49: User Management
+- **Goal:** Create/edit/deactivate operator accounts — distinct from *defining* roles (Milestone 32).
+- **Dependencies:** Milestone 32 (roles must exist before users can be assigned to them).
+- **Tasks:**
+  1. User list plus a create/edit drawer (name, role, branch, PIN, active flag), with deactivate-not-delete so audit history stays intact.
+- **Testable via:** A deactivated user can no longer be selected as an operator, but their past transactions still resolve their name.
+
+### 📍 Milestone 50: Notification Center & Activity Feed
+- **Goal:** Replace `Header.tsx`'s hardcoded notification dropdown with a real event-driven feed.
+- **Dependencies:** Milestone 13 (which establishes a real recent-events source).
+- **Tasks:**
+  1. An event/notification store any screen can push into, plus the `Toast` primitive flagged as missing in `CURRENT_PROGRESS.md` §3.6.
+  2. Notification Center (unread/read, per-category) and an Activity Feed of real state changes.
+- **Testable via:** Completing a sale, receiving stock, or writing off a Tag each push a real notification that appears without a reload.
+
+### 📍 Milestone 51: System Health & Diagnostics Panel
+- **Goal:** An honest status surface for a frontend-only prototype: storage, sync and peripheral state.
+- **Dependencies:** Milestone 35, Milestone 36 (extends the Simulation Desk).
+- **Tasks:**
+  1. `localStorage` usage/quota, last-backup timestamp, simulated API/offline state, peripheral connection status, and app/build version.
+- **Testable via:** Filling storage or toggling Force Offline is reflected accurately; nothing on the panel is a hardcoded placeholder.
+
+### 📍 Milestone 52: ITC Register & HSN Summary Reports
+- **Goal:** The two GST reports PRD §9.6 requires beyond GSTR-1/3B.
+- **Dependencies:** Milestone 40 (ITC is booked at purchase), Milestone 21 (HSN comes from the Tax Master).
+- **Tasks:**
+  1. ITC Register (input tax by supplier/invoice, for GSTR-2B reconciliation) and HSN Summary (GSTR-1 Table 12 shape), both CSV-exportable.
+- **Testable via:** The ITC Register total equals the sum of input tax on booked purchase invoices; the HSN Summary's taxable values reconcile against the sales register for the period.
+
+### 📍 Milestone 53: Old Gold Buyback Dashboard
+- **Goal:** An analytics view over old-gold intake, distinct from the transactional voucher.
+- **Dependencies:** Milestone 14, Milestone 15, Milestone 43.
+- **Tasks:**
+  1. Intake weight/value by period and purity band, average tested vs. claimed purity, melting-loss trend, and current vault holdings by state (`In Safe`/`Melted`/`Fine Gold Stock`).
+- **Testable via:** Every figure reconciles against the underlying old-gold lots; raising a new buyback voucher updates it without a reload.
