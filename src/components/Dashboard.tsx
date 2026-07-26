@@ -11,10 +11,18 @@ import {
   ChevronRight,
   Sparkles,
   RefreshCw,
-  Scale
+  Scale,
+  Gem,
+  Layers
 } from 'lucide-react';
 import { isSellable } from '../lib/tagStateMachine';
-import { Tag, SaleInvoice, Karigar, MetalRate } from '../types';
+import {
+  monthlyRevenueTrend,
+  buildTrendGeometry,
+  formatCompactINR,
+  buildActivityFeed,
+} from '../lib/dashboardAnalytics';
+import { Tag, SaleInvoice, Karigar, MetalRate, JobBag, LooseStone } from '../types';
 
 interface DashboardProps {
   metalRates: MetalRate[];
@@ -23,6 +31,9 @@ interface DashboardProps {
   customersCount: number;
   karigars: Karigar[];
   invoices: SaleInvoice[];
+  // Lifted to App.tsx back in Milestone 1 but never consumed here until Milestone 13
+  jobBags: JobBag[];
+  stones: LooseStone[];
   activeWorkOrdersCount: number;
   setActiveTab: (tab: string) => void;
   openAddModal: () => void;
@@ -34,8 +45,10 @@ export default function Dashboard({
   setMetalRates,
   tags,
   customersCount,
-  karigars, 
-  invoices, 
+  karigars,
+  invoices,
+  jobBags,
+  stones,
   activeWorkOrdersCount,
   setActiveTab,
   openAddModal,
@@ -55,6 +68,38 @@ export default function Dashboard({
   
   // Calculate total artisan gold balance outstanding
   const totalArtisanGoldOutstanding = karigars.reduce((sum, k) => sum + Math.max(0, k.metalBalance), 0);
+
+  // Real monthly revenue trend, replacing the hardcoded SVG coordinates (Milestone 13)
+  const revenueTrend = monthlyRevenueTrend(invoices, 6);
+  const trend = buildTrendGeometry(revenueTrend, {
+    width: 600, height: 220, padLeft: 46, padRight: 20, padTop: 24, padBottom: 26,
+  });
+  const latestMonthRevenue = revenueTrend[revenueTrend.length - 1]?.revenue ?? 0;
+  const previousMonthRevenue = revenueTrend[revenueTrend.length - 2]?.revenue ?? 0;
+  const trendPctChange = previousMonthRevenue > 0
+    ? ((latestMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100
+    : null;
+
+  // Real activity feed, replacing the static hardcoded list (Milestone 13)
+  const activityFeed = buildActivityFeed(invoices, tags, jobBags, stones, 6);
+
+  // Stone vault + job-bag KPIs. This state has been lifted to App.tsx since Milestone 1 but
+  // was never displayed anywhere on the Dashboard.
+  const vaultCarats = stones.reduce((sum, s) => sum + s.caratWeight, 0);
+  const vaultValue = stones.reduce((sum, s) => sum + s.totalValue, 0);
+  const stonesIssuedCount = stones.filter(s => s.status === 'Issued').length;
+  const activeJobBags = jobBags.filter(b => b.currentStage !== 'Completed');
+  const jobBagMetalInProduction = activeJobBags.reduce((sum, b) => sum + b.metalIssuedWeight, 0);
+  const urgentJobBags = activeJobBags.filter(b => b.priority === 'Urgent' || b.priority === 'Express').length;
+
+  const ACTIVITY_DOT: Record<string, string> = {
+    sale: 'bg-emerald-500',
+    credit_note: 'bg-rose-500',
+    estimate: 'bg-amber-500',
+    jobbag: 'bg-indigo-500',
+    stone: 'bg-purple-500',
+    stock: 'bg-slate-400',
+  };
 
   // Metal Rate Updater
   const handleStartEdit = (rate: MetalRate) => {
@@ -302,6 +347,49 @@ export default function Dashboard({
         </div>
       </div>
 
+      {/* Stone vault & production KPIs — this state has been lifted to App.tsx since Milestone 1
+          but was never surfaced on the Dashboard until Milestone 13. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="bg-white border border-slate-150 p-5 rounded-2xl shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 dashboard-card-glow rounded-full blur-2xl dashboard-card-glow-hover transition-all duration-300" />
+          <div className="flex items-center gap-2 mb-1">
+            <Gem className="w-3.5 h-3.5 text-purple-500" />
+            <p className="text-xs font-semibold text-slate-400 tracking-wider uppercase font-mono">Stone Vault Holdings</p>
+          </div>
+          <p className="text-2xl font-black font-mono text-slate-900 tracking-tight">
+            {vaultCarats.toFixed(2)} <span className="text-xs font-medium text-slate-400">ct</span>
+            <span className="text-sm font-bold text-slate-500 ml-2">₹{vaultValue.toLocaleString('en-IN')}</span>
+          </p>
+          <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+            <span className="text-slate-500 font-medium">
+              {stones.length} lots · {stonesIssuedCount} issued to karigars
+            </span>
+            <button onClick={() => setActiveTab('stones')} className="text-amber-600 hover:underline flex items-center gap-0.5 font-bold">
+              Vault <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-150 p-5 rounded-2xl shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 dashboard-card-glow rounded-full blur-2xl dashboard-card-glow-hover transition-all duration-300" />
+          <div className="flex items-center gap-2 mb-1">
+            <Layers className="w-3.5 h-3.5 text-indigo-500" />
+            <p className="text-xs font-semibold text-slate-400 tracking-wider uppercase font-mono">Metal On Factory Floor</p>
+          </div>
+          <p className="text-2xl font-black font-mono text-slate-900 tracking-tight">
+            {jobBagMetalInProduction.toFixed(3)} <span className="text-xs font-medium text-slate-400">g</span>
+          </p>
+          <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+            <span className="text-slate-500 font-medium">
+              {activeJobBags.length} active bags{urgentJobBags > 0 ? ` · ${urgentJobBags} urgent` : ''}
+            </span>
+            <button onClick={() => setActiveTab('jobbags')} className="text-amber-600 hover:underline flex items-center gap-0.5 font-bold">
+              Job Bags <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Trend Chart (2/3 width on large screens) */}
@@ -309,75 +397,74 @@ export default function Dashboard({
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div>
               <h3 className="font-sans font-bold text-slate-800 text-sm">Monthly Sales Revenue Trend</h3>
-              <p className="text-xs text-slate-400">Past 6 months cumulative jewelry turnover</p>
+              <p className="text-xs text-slate-400">Last 6 months, net of returns — excludes estimates</p>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Finished Goods
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-300 ml-2" /> Old Gold Scrap
-            </div>
+            {trendPctChange !== null && (
+              <div className={`flex items-center gap-1 text-xs font-bold ${trendPctChange >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {trendPctChange >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                {trendPctChange >= 0 ? '+' : ''}{trendPctChange.toFixed(1)}% vs last month
+              </div>
+            )}
           </div>
 
-          {/* SVG Custom Line Chart */}
+          {/* SVG line chart, plotted from real invoice data via buildTrendGeometry() */}
           <div className="h-60 relative w-full flex items-end">
             <svg viewBox="0 0 600 220" className="w-full h-full overflow-visible">
-              {/* Grid Lines */}
-              <line x1="40" y1="20" x2="580" y2="20" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3" />
-              <line x1="40" y1="70" x2="580" y2="70" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3" />
-              <line x1="40" y1="120" x2="580" y2="120" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3" />
-              <line x1="40" y1="170" x2="580" y2="170" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3" />
-              <line x1="40" y1="200" x2="580" y2="200" stroke="#e2e8f0" strokeWidth="1.5" />
+              {/* Gridlines + Y-axis, both derived from the actual data range */}
+              {trend.yTicks.map((tick, i) => (
+                <g key={`tick-${i}`}>
+                  <line
+                    x1="46" y1={tick.y} x2="580" y2={tick.y}
+                    stroke={i === 0 ? '#e2e8f0' : '#f1f5f9'}
+                    strokeWidth={i === 0 ? 1.5 : 1}
+                    strokeDasharray={i === 0 ? undefined : '3'}
+                  />
+                  <text x="38" y={tick.y + 4} textAnchor="end" className="text-[10px] font-mono font-medium fill-slate-400">
+                    {formatCompactINR(tick.value)}
+                  </text>
+                </g>
+              ))}
 
-              {/* Y-Axis Labels */}
-              <text x="30" y="24" textAnchor="end" className="text-[10px] font-mono font-medium fill-slate-400">₹6L</text>
-              <text x="30" y="74" textAnchor="end" className="text-[10px] font-mono font-medium fill-slate-400">₹4L</text>
-              <text x="30" y="124" textAnchor="end" className="text-[10px] font-mono font-medium fill-slate-400">₹2L</text>
-              <text x="30" y="174" textAnchor="end" className="text-[10px] font-mono font-medium fill-slate-400">₹50K</text>
-              <text x="30" y="204" textAnchor="end" className="text-[10px] font-mono font-medium fill-slate-400">₹0</text>
+              {/* Area under the line */}
+              <path d={trend.areaPath} fill="url(#goldGrad)" opacity="0.12" />
 
-              {/* Chart Line Path */}
-              {/* Data points: Feb 120k, Mar 180k, Apr 290k, May 240k, Jun 420k, Jul (today) 510k */}
-              {/* x-coords: 70, 160, 250, 340, 430, 520 */}
-              {/* y-coords: scale values from 200 (₹0) to 20 (₹6L) */}
-              <path
-                d="M 70 170 Q 115 155, 160 140 T 250 100 T 340 120 T 430 65 T 520 40"
-                fill="none"
-                stroke="#D4AF37"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
+              {/* Trend line */}
+              <path d={trend.linePath} fill="none" stroke="#D4AF37" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
 
-              {/* Area under the path */}
-              <path
-                d="M 70 170 Q 115 155, 160 140 T 250 100 T 340 120 T 430 65 T 520 40 L 520 200 L 70 200 Z"
-                fill="url(#goldGrad)"
-                opacity="0.12"
-              />
+              {/* Points, values and month labels */}
+              {trend.points.map((p, i) => {
+                const isLatest = i === trend.points.length - 1;
+                return (
+                  <g key={`pt-${i}`}>
+                    <circle
+                      cx={p.x} cy={p.y} r={isLatest ? 6 : 5}
+                      className={isLatest
+                        ? 'fill-slate-900 stroke-amber-500 stroke-2'
+                        : 'fill-amber-600 stroke-white stroke-2'}
+                    />
+                    {/* SVG `fill-*` utilities are NOT covered by index.css's dark-mode repaint
+                        (which only remaps `text-*`), so both themes need a colour that reads on
+                        either — amber doubles as the "current month" accent. KNOWN_ISSUES #12. */}
+                    <text
+                      x={p.x} y={p.y - 12} textAnchor="middle"
+                      className={isLatest
+                        ? 'text-[9px] font-mono font-black fill-amber-500'
+                        : 'text-[9px] font-mono font-bold fill-slate-500'}
+                    >
+                      {p.value === 0 ? '' : formatCompactINR(p.value)}
+                    </text>
+                    <text
+                      x={p.x} y="214" textAnchor="middle"
+                      className={isLatest
+                        ? 'text-[10px] font-black fill-amber-500 uppercase tracking-wider'
+                        : 'text-[10px] font-semibold fill-slate-400 uppercase tracking-wider'}
+                    >
+                      {p.label}
+                    </text>
+                  </g>
+                );
+              })}
 
-              {/* Dots on points */}
-              <circle cx="70" cy="170" r="5" className="fill-amber-600 stroke-white stroke-2 cursor-pointer hover:r-7 transition-all" />
-              <circle cx="160" cy="140" r="5" className="fill-amber-600 stroke-white stroke-2 cursor-pointer hover:r-7 transition-all" />
-              <circle cx="250" cy="100" r="5" className="fill-amber-600 stroke-white stroke-2 cursor-pointer hover:r-7 transition-all" />
-              <circle cx="340" cy="120" r="5" className="fill-amber-600 stroke-white stroke-2 cursor-pointer hover:r-7 transition-all" />
-              <circle cx="430" cy="65" r="5" className="fill-amber-600 stroke-white stroke-2 cursor-pointer hover:r-7 transition-all" />
-              <circle cx="520" cy="40" r="6" className="fill-slate-900 stroke-amber-500 stroke-2 cursor-pointer hover:r-8 transition-all" />
-
-              {/* Point Values tooltip-like annotations */}
-              <text x="70" y="152" textAnchor="middle" className="text-[9px] font-mono font-bold fill-slate-500">1.2L</text>
-              <text x="160" y="122" textAnchor="middle" className="text-[9px] font-mono font-bold fill-slate-500">1.8L</text>
-              <text x="250" y="82" textAnchor="middle" className="text-[9px] font-mono font-bold fill-slate-500">2.9L</text>
-              <text x="340" y="102" textAnchor="middle" className="text-[9px] font-mono font-bold fill-slate-500">2.4L</text>
-              <text x="430" y="47" textAnchor="middle" className="text-[9px] font-mono font-bold fill-slate-500">4.2L</text>
-              <text x="520" y="22" textAnchor="middle" className="text-[9px] font-mono font-black fill-amber-700 bg-amber-50">₹5.1L</text>
-
-              {/* X-Axis Labels */}
-              <text x="70" y="215" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400 uppercase tracking-wider">Feb</text>
-              <text x="160" y="215" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400 uppercase tracking-wider">Mar</text>
-              <text x="250" y="215" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400 uppercase tracking-wider">Apr</text>
-              <text x="340" y="215" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400 uppercase tracking-wider">May</text>
-              <text x="430" y="215" textAnchor="middle" className="text-[10px] font-semibold fill-slate-400 uppercase tracking-wider">Jun</text>
-              <text x="520" y="215" textAnchor="middle" className="text-[10px] font-black fill-slate-800 uppercase tracking-wider">Jul 20</text>
-
-              {/* Gradient definitions */}
               <defs>
                 <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#f59e0b" />
@@ -499,39 +586,32 @@ export default function Dashboard({
         <div className="bg-white border border-slate-150 p-5.5 rounded-2xl shadow-sm">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100 mb-4">
             <Activity className="w-5 h-5 text-amber-600" />
-            <h3 className="font-sans font-bold text-slate-800 text-sm">ERP Action Log</h3>
+            <h3 className="font-sans font-bold text-slate-800 text-sm">Recent Activity</h3>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex gap-3 text-xs leading-relaxed">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-              <div>
-                <p className="font-bold text-slate-800">Gold (22K) Rate updated to ₹6,650</p>
-                <p className="text-[10px] text-slate-400 font-mono">2 mins ago • Operator: Prathamesh</p>
-              </div>
+          {/* Derived from real state (Milestone 13). Replaces four hardcoded entries that
+              described events which had never actually happened. */}
+          {activityFeed.length === 0 ? (
+            <div className="py-8 text-center">
+              <Activity className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-500">No activity yet</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Bill a sale, issue a job bag, or process a return and it will appear here.</p>
             </div>
-            <div className="flex gap-3 text-xs leading-relaxed">
-              <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-              <div>
-                <p className="font-bold text-slate-800">Work Order WO-2026-003 Issued</p>
-                <p className="text-[10px] text-slate-400 font-mono">35 mins ago • Assigned to Karigar Ramesh</p>
-              </div>
+          ) : (
+            <div className="space-y-4">
+              {activityFeed.map(event => (
+                <div key={event.id} className="flex gap-3 text-xs leading-relaxed">
+                  <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${ACTIVITY_DOT[event.kind] || 'bg-slate-400'}`} />
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-800">{event.title}</p>
+                    <p className="text-[10px] text-slate-400 font-mono truncate">
+                      {event.detail}{event.date ? ` • ${event.date}` : ''}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex gap-3 text-xs leading-relaxed">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-              <div>
-                <p className="font-bold text-slate-800">Old gold trade-in invoice completed</p>
-                <p className="text-[10px] text-slate-400 font-mono">1 hr ago • 5g pure gold credited to counter scrap</p>
-              </div>
-            </div>
-            <div className="flex gap-3 text-xs leading-relaxed">
-              <span className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
-              <div>
-                <p className="font-bold text-slate-800">Monthly Audit Backup Created</p>
-                <p className="text-[10px] text-slate-400 font-mono">3 hrs ago • Status: Success</p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

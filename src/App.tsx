@@ -311,6 +311,8 @@ function AppContent() {
                     customersCount={customers.length}
                     karigars={karigars}
                     invoices={invoices}
+                    jobBags={jobBags}
+                    stones={stones}
                     activeWorkOrdersCount={activeWorkOrdersCount}
                     setActiveTab={(tab) => navigate('/' + tab)}
                     openAddModal={() => {
