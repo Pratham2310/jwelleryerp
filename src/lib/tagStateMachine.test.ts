@@ -29,6 +29,11 @@ describe('tagStateMachine.canTransition', () => {
     ['InStock', 'Sold'],
     ['InShowcase', 'Sold'],
     ['InStock', 'DamagedOrMelted'],
+    // Sales return path (Milestone 12): a sold piece comes back, is quarantined, then either
+    // re-enters sellable stock after QC or is written off.
+    ['Sold', 'Returned'],
+    ['Returned', 'InStock'],
+    ['Returned', 'DamagedOrMelted'],
   ];
 
   it.each(legalPairs)('allows %s -> %s', (from, to) => {
@@ -37,28 +42,38 @@ describe('tagStateMachine.canTransition', () => {
 
   const illegalPairs: [TagStatus, TagStatus][] = [
     ['InStock', 'RawMetal'],
+    // A sold piece can only come back via the credit-note path (Sold -> Returned), never
+    // straight into sellable stock — that would let stock be un-sold with no fiscal document.
     ['Sold', 'InStock'],
+    ['Sold', 'InShowcase'],
     ['DamagedOrMelted', 'InStock'],
     ['RawMetal', 'Hallmarked'],
     ['RawMetal', 'InStock'],
     ['PendingHallmark', 'InStock'],
+    // Not ours to write off while it belongs to the customer; it must be returned first.
     ['Sold', 'DamagedOrMelted'],
     ['InStock', 'InStock'],
     ['TransferInTransit', 'Sold'],
     ['OutForJobwork', 'Sold'],
+    // A quarantined return is not directly sellable and cannot be re-sold without QC.
+    ['Returned', 'Sold'],
+    ['Returned', 'InShowcase'],
   ];
 
   it.each(illegalPairs)('blocks %s -> %s', (from, to) => {
     expect(canTransition(from, to)).toBe(false);
   });
 
-  it('every status is reachable from RawMetal to a terminal state, and terminal states have no outgoing transitions', () => {
-    expect(nextLegalStatuses('Sold')).toEqual([]);
+  it('DamagedOrMelted is the only fully terminal state; every other status has a way forward', () => {
     expect(nextLegalStatuses('DamagedOrMelted')).toEqual([]);
     for (const s of ALL_TAG_STATUSES) {
-      if (s === 'Sold' || s === 'DamagedOrMelted') continue;
+      if (s === 'DamagedOrMelted') continue;
       expect(nextLegalStatuses(s).length).toBeGreaterThan(0);
     }
+  });
+
+  it('Sold has exactly one way out — the credit-note return path', () => {
+    expect(nextLegalStatuses('Sold')).toEqual(['Returned']);
   });
 
   it('isSellable is true only for InStock/InShowcase', () => {
@@ -66,6 +81,8 @@ describe('tagStateMachine.canTransition', () => {
     expect(isSellable('InShowcase')).toBe(true);
     expect(isSellable('RawMetal')).toBe(false);
     expect(isSellable('Sold')).toBe(false);
+    // A returned piece must pass QC back into InStock before it can be sold again
+    expect(isSellable('Returned')).toBe(false);
   });
 
   it('assertTransition throws IllegalTagTransitionError on an illegal move, and is silent on a legal one', () => {

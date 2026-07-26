@@ -117,7 +117,7 @@ export interface InvoiceItem {
  * no tax-invoice number, deducts no stock, and skips the statutory gates. A TAX_INVOICE is
  * the real, GST-compliant document. Estimates convert into tax invoices; never the reverse.
  */
-export type InvoiceType = 'ESTIMATE' | 'TAX_INVOICE';
+export type InvoiceType = 'ESTIMATE' | 'TAX_INVOICE' | 'CREDIT_NOTE';
 
 export interface SaleInvoice {
   id: string;
@@ -140,6 +140,15 @@ export interface SaleInvoice {
   panDeclaration?: PanDeclaration; // the PAN/Form 60 actually captured at/above the Rule 114B threshold
   convertedToInvoiceNumber?: string; // set on an ESTIMATE once it has been converted
   convertedFromEstimateNumber?: string; // set on a TAX_INVOICE created by converting an estimate
+
+  // Sales Return / Credit Note (CGST Act §34, Milestone 12). A CREDIT_NOTE carries negative
+  // figures throughout, so it can be summed alongside invoices to give net revenue directly.
+  creditNoteAgainstInvoice?: string; // on a CREDIT_NOTE: the original tax invoice number
+  creditNoteAgainstInvoiceDate?: string; // §34 requires the original invoice's date too
+  returnedLineIndexes?: number[]; // on a CREDIT_NOTE: which original lines it reverses
+  creditNoteNumbers?: string[]; // on a TAX_INVOICE: every credit note raised against it
+  returnedLineIndexesCovered?: number[]; // on a TAX_INVOICE: lines already credited, so they can't be returned twice
+  returnReason?: string;
 }
 
 export interface MetalRate {

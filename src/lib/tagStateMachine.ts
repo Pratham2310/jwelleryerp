@@ -14,6 +14,7 @@ export type TagStatus =
   | 'MemoOut'
   | 'TransferInTransit'
   | 'Sold'
+  | 'Returned'
   | 'DamagedOrMelted';
 
 export const ALL_TAG_STATUSES: TagStatus[] = [
@@ -28,6 +29,7 @@ export const ALL_TAG_STATUSES: TagStatus[] = [
   'MemoOut',
   'TransferInTransit',
   'Sold',
+  'Returned',
   'DamagedOrMelted',
 ];
 
@@ -43,6 +45,7 @@ export const TAG_STATUS_LABEL: Record<TagStatus, string> = {
   MemoOut: 'Memo Out',
   TransferInTransit: 'Transfer In Transit',
   Sold: 'Sold',
+  Returned: 'Returned (Pending QC)',
   DamagedOrMelted: 'Damaged / Melted',
 };
 
@@ -50,7 +53,11 @@ export const TAG_STATUS_LABEL: Record<TagStatus, string> = {
 export const SELLABLE_STATUSES: TagStatus[] = ['InStock', 'InShowcase'];
 
 // Terminal states — no legal outgoing transition.
-const TERMINAL: ReadonlySet<TagStatus> = new Set(['Sold', 'DamagedOrMelted']);
+// `Sold` is deliberately NOT terminal: a sales return (Milestone 12) brings the physical piece
+// back, and a permanently-terminal Sold would mean a returned ornament could never be resold.
+// It has exactly one outgoing edge, to `Returned`, which only a credit note may trigger —
+// so stock can never be silently "un-sold" without a corresponding fiscal document.
+const TERMINAL: ReadonlySet<TagStatus> = new Set(['DamagedOrMelted']);
 
 const TRANSITIONS: Record<TagStatus, TagStatus[]> = {
   RawMetal: ['IssuedToKarigar', 'DamagedOrMelted'],
@@ -63,7 +70,10 @@ const TRANSITIONS: Record<TagStatus, TagStatus[]> = {
   OutForJobwork: ['InStock', 'DamagedOrMelted'],
   MemoOut: ['InStock', 'Sold', 'DamagedOrMelted'],
   TransferInTransit: ['InStock', 'DamagedOrMelted'],
-  Sold: [],
+  Sold: ['Returned'],
+  // A returned piece is quarantined until staff decide: back to sellable stock after QC,
+  // or written off. It is deliberately not sellable directly from `Returned`.
+  Returned: ['InStock', 'DamagedOrMelted'],
   DamagedOrMelted: [],
 };
 

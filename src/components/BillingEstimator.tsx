@@ -27,6 +27,7 @@ import { isSellable, canTransition } from '../lib/tagStateMachine';
 import { validatePaymentSplit, type PaymentSplitEntry, type PaymentMode } from '../lib/billingCalculations';
 import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD, type PanDeclaration } from '../lib/statutoryChecks';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
+import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
 
 interface BillingEstimatorProps {
   tags: Tag[];
@@ -58,6 +59,18 @@ function nextEstimateNumber(): string {
   const next = Number(localStorage.getItem(key) || '500') + 1;
   localStorage.setItem(key, String(next));
   return `EST-${year}-${next}`;
+}
+
+/**
+ * Credit notes require their own consecutive series under CGST Act §34 / Rule 53 — they are
+ * distinct fiscal documents and must not share the tax-invoice numbering (Milestone 12).
+ */
+function nextCreditNoteNumber(): string {
+  const year = new Date().getFullYear();
+  const key = `stitch_credit_note_seq_${year}`;
+  const next = Number(localStorage.getItem(key) || '900') + 1;
+  localStorage.setItem(key, String(next));
+  return `CRN-${year}-${next}`;
 }
 
 export default function BillingEstimator({
@@ -138,6 +151,13 @@ export default function BillingEstimator({
   const [convertRateMode, setConvertRateMode] = useState<'ORIGINAL' | 'CURRENT'>('CURRENT');
   const [convertPanInput, setConvertPanInput] = useState('');
   const [convertError, setConvertError] = useState('');
+
+  // Sales Return / Credit Note (Milestone 12, CGST Act §34)
+  const [invoiceToReturn, setInvoiceToReturn] = useState<SaleInvoice | null>(null);
+  const [returnLineSelection, setReturnLineSelection] = useState<number[]>([]);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnError, setReturnError] = useState('');
+  const [restockReturnedTags, setRestockReturnedTags] = useState(true);
 
   // Success screen
   const [completedInvoice, setCompletedInvoice] = useState<SaleInvoice | null>(null);
@@ -539,6 +559,107 @@ export default function BillingEstimator({
     setSelectedInvoiceForDetail(taxInvoice);
   };
 
+  /**
+   * Raises a credit note against a prior tax invoice (Milestone 12, CGST Act §34). Supports
+   * partial returns: only the selected lines are reversed, and any bill-level discount is
+   * clawed back proportionally (see salesReturn.ts). The returned Tags move Sold -> Returned,
+   * which quarantines them for QC rather than putting them straight back on the shelf.
+   */
+  const handleCreateCreditNote = () => {
+    const original = invoiceToReturn;
+    if (!original) return;
+
+    const alreadyReturned = original.returnedLineIndexesCovered || [];
+    const selectionError = validateReturnSelection(returnLineSelection, alreadyReturned);
+    if (selectionError) {
+      setReturnError(selectionError);
+      return;
+    }
+    if (returnReason.trim().length < 5) {
+      setReturnError('Record a reason for the return (min. 5 characters) — it is part of the audit trail.');
+      return;
+    }
+
+    const totals = calculateReturnTotals(
+      original.items,
+      returnLineSelection,
+      original.subtotal,
+      original.discount
+    );
+
+    const returnedItems = returnLineSelection.map(i => original.items[i]);
+    const creditNoteNumber = nextCreditNoteNumber();
+
+    const creditNote: SaleInvoice = {
+      id: `crn-${Date.now()}`,
+      invoiceType: 'CREDIT_NOTE',
+      invoiceNumber: creditNoteNumber,
+      date: new Date().toISOString().split('T')[0],
+      customerId: original.customerId,
+      customerName: original.customerName,
+      customerPhone: original.customerPhone,
+      items: returnedItems,
+      // Old gold was a separate purchase transaction (PRD §8.3 / D-10) and is not unwound by
+      // a sales return — the shop already took the metal in and paid for it.
+      oldGoldWeight: 0,
+      oldGoldValue: 0,
+      subtotal: totals.returnedSubtotal,
+      tax: totals.returnedTax,
+      discount: totals.discountReversed,
+      grandTotal: totals.returnedTotal,
+      netAmountDue: totals.returnedTotal, // negative = refundable to the customer
+      paymentMethod: original.paymentMethod,
+      paymentSplit: undefined,
+      creditNoteAgainstInvoice: original.invoiceNumber,
+      creditNoteAgainstInvoiceDate: original.date,
+      returnedLineIndexes: [...returnLineSelection],
+      returnReason: returnReason.trim()
+    };
+
+    setInvoices(prev => [
+      creditNote,
+      ...prev.map(inv => inv.id === original.id
+        ? {
+            ...inv,
+            creditNoteNumbers: [...(inv.creditNoteNumbers || []), creditNoteNumber],
+            returnedLineIndexesCovered: [...alreadyReturned, ...returnLineSelection]
+          }
+        : inv)
+    ]);
+
+    // Physical pieces come back. Sold -> Returned is the only legal way out of Sold, and it
+    // exists precisely so stock can never be un-sold without a credit note (Milestone 4/12).
+    const returnedTagIds = returnedItems.map(i => i.itemId).filter(Boolean) as string[];
+    if (returnedTagIds.length > 0) {
+      setTags(prev => prev.map(tag => {
+        if (!returnedTagIds.includes(tag.id)) return tag;
+        if (!canTransition(tag.status, 'Returned')) return tag;
+        const returned: Tag = { ...tag, status: 'Returned' };
+        // Optional immediate QC pass straight back into sellable stock
+        if (restockReturnedTags && canTransition(returned.status, 'InStock')) {
+          return { ...returned, status: 'InStock' };
+        }
+        return returned;
+      }));
+    }
+
+    // Refunding against a scheme redemption credits the balance back
+    if (original.paymentMethod === 'Scheme Redemption' && original.customerId) {
+      const refund = Math.abs(totals.returnedTotal);
+      setCustomers(prev => prev.map(c =>
+        c.id === original.customerId
+          ? { ...c, savingsSchemeBalance: (c.savingsSchemeBalance || 0) + refund }
+          : c
+      ));
+    }
+
+    setInvoiceToReturn(null);
+    setReturnLineSelection([]);
+    setReturnReason('');
+    setReturnError('');
+    setSelectedInvoiceForDetail(creditNote);
+  };
+
   const handleConfirmPan = (type: PanDeclaration['type']) => {
     if (type === 'FORM_60') {
       setPanDeclaration({ type: 'FORM_60' });
@@ -560,12 +681,16 @@ export default function BillingEstimator({
   // Statistics for Registry
   // Registry KPIs count only real fiscal documents — an estimate is a quotation, not a sale,
   // and must never inflate revenue, old-gold intake, or billed-customer counts (Milestone 11).
+  // Credit notes carry negative figures, so summing them alongside invoices yields NET sales
+  // after returns without any special-casing (Milestone 12).
   const taxInvoices = invoices.filter(inv => inv.invoiceType === 'TAX_INVOICE');
-  const estimatesCount = invoices.length - taxInvoices.length;
+  const creditNotes = invoices.filter(inv => inv.invoiceType === 'CREDIT_NOTE');
+  const estimatesCount = invoices.filter(inv => inv.invoiceType === 'ESTIMATE').length;
   const totalInvoicesCount = taxInvoices.length;
-  const totalInvoicesValue = taxInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+  const totalInvoicesValue = [...taxInvoices, ...creditNotes].reduce((sum, inv) => sum + inv.grandTotal, 0);
   const totalOldGoldWeight = taxInvoices.reduce((sum, inv) => sum + inv.oldGoldWeight, 0);
   const uniqueCustomersCount = new Set(taxInvoices.map(inv => inv.customerName)).size;
+  const totalReturnedValue = creditNotes.reduce((sum, inv) => sum + Math.abs(inv.grandTotal), 0);
 
   const filteredInvoices = invoices.filter(inv => {
     const q = searchQuery.toLowerCase();
@@ -625,7 +750,7 @@ export default function BillingEstimator({
               onClick={() => window.print()}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg transition cursor-pointer"
             >
-              <Printer className="w-4 h-4" /> Print Invoice
+              <Printer className="w-4 h-4" /> Print {completedInvoice.invoiceType === 'ESTIMATE' ? 'Estimate' : completedInvoice.invoiceType === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}
             </button>
             <button
               onClick={handleResetBilling}
@@ -1514,8 +1639,11 @@ export default function BillingEstimator({
                 <Coins className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">Total Sales Value</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">Net Sales Value</p>
                 <p className="text-xl font-bold font-mono text-amber-400">₹{totalInvoicesValue.toLocaleString('en-IN')}</p>
+                {totalReturnedValue > 0 && (
+                  <p className="text-[10px] text-rose-400 font-mono">after ₹{totalReturnedValue.toLocaleString('en-IN')} returned</p>
+                )}
               </div>
             </div>
 
@@ -1578,9 +1706,11 @@ export default function BillingEstimator({
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                             inv.invoiceType === 'ESTIMATE'
                               ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/50'
-                              : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50'
+                              : inv.invoiceType === 'CREDIT_NOTE'
+                                ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/50'
+                                : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50'
                           }`}>
-                            {inv.invoiceType === 'ESTIMATE' ? 'Estimate' : 'Tax Invoice'}
+                            {inv.invoiceType === 'ESTIMATE' ? 'Estimate' : inv.invoiceType === 'CREDIT_NOTE' ? 'Credit Note' : 'Tax Invoice'}
                           </span>
                         </td>
                         <td className="font-mono text-slate-500 dark:text-slate-400">{inv.date}</td>
@@ -1591,8 +1721,10 @@ export default function BillingEstimator({
                             {inv.invoiceType === 'ESTIMATE' ? '—' : inv.paymentMethod}
                           </span>
                         </td>
-                        <td className="text-right font-mono font-bold text-slate-900 dark:text-slate-100">
-                          ₹{inv.grandTotal.toLocaleString('en-IN')}
+                        <td className={`text-right font-mono font-bold ${
+                          inv.grandTotal < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'
+                        }`}>
+                          {inv.grandTotal < 0 ? '-' : ''}₹{Math.abs(inv.grandTotal).toLocaleString('en-IN')}
                         </td>
                         <td className="text-center">
                           <div className="inline-flex items-center gap-1.5">
@@ -1619,6 +1751,27 @@ export default function BillingEstimator({
                             {inv.convertedToInvoiceNumber && (
                               <span className="text-[10px] font-mono text-slate-400">→ {inv.convertedToInvoiceNumber}</span>
                             )}
+                            {/* Sales return — only against a tax invoice with lines left to credit (Milestone 12) */}
+                            {inv.invoiceType === 'TAX_INVOICE' &&
+                              (inv.returnedLineIndexesCovered || []).length < inv.items.length && (
+                              <button
+                                onClick={() => {
+                                  setInvoiceToReturn(inv);
+                                  setReturnLineSelection([]);
+                                  setReturnReason('');
+                                  setReturnError('');
+                                  setRestockReturnedTags(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition cursor-pointer"
+                              >
+                                <TrendingDown className="w-3 h-3" /> Return
+                              </button>
+                            )}
+                            {inv.invoiceType === 'TAX_INVOICE' && (inv.creditNoteNumbers || []).length > 0 && (
+                              <span className="text-[10px] font-mono text-rose-500" title={(inv.creditNoteNumbers || []).join(', ')}>
+                                {(inv.returnedLineIndexesCovered || []).length === inv.items.length ? 'fully returned' : 'part returned'}
+                              </span>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1630,6 +1783,145 @@ export default function BillingEstimator({
           </div>
         </div>
       )}
+
+      {/* Sales Return → Credit Note modal (Milestone 12, CGST Act §34) */}
+      {invoiceToReturn && (() => {
+        const alreadyReturned = invoiceToReturn.returnedLineIndexesCovered || [];
+        const preview = calculateReturnTotals(
+          invoiceToReturn.items,
+          returnLineSelection,
+          invoiceToReturn.subtotal,
+          invoiceToReturn.discount
+        );
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className={`w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden ${
+              theme === 'light' ? 'bg-white border-zinc-200 text-slate-800' : 'bg-[#141416] border-zinc-800 text-zinc-100'
+            }`}>
+              <div className={`flex items-center justify-between p-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-zinc-800'}`}>
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-2"><TrendingDown className="w-4 h-4 text-rose-500" /> Sales Return — Credit Note</h3>
+                  <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                    Against {invoiceToReturn.invoiceNumber} dated {invoiceToReturn.date}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setInvoiceToReturn(null); setReturnError(''); }}
+                  className={`p-1.5 rounded-lg transition ${theme === 'light' ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-zinc-900 text-zinc-500'}`}
+                  aria-label="Close sales return"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+                <div>
+                  <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-2 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                    Items Being Returned
+                  </label>
+                  <div className="space-y-1.5">
+                    {invoiceToReturn.items.map((item, idx) => {
+                      const isCredited = alreadyReturned.includes(idx);
+                      const isChecked = returnLineSelection.includes(idx);
+                      return (
+                        <label
+                          key={idx}
+                          className={`flex items-center gap-3 text-xs border rounded-lg px-3 py-2 transition ${
+                            isCredited
+                              ? 'opacity-50 cursor-not-allowed ' + (theme === 'light' ? 'border-slate-150 bg-slate-50' : 'border-zinc-800 bg-zinc-900/40')
+                              : 'cursor-pointer ' + (isChecked
+                                  ? 'border-rose-300 bg-rose-50 dark:bg-rose-950/20'
+                                  : theme === 'light' ? 'border-slate-200 hover:bg-slate-50' : 'border-zinc-800 hover:bg-zinc-900')
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            disabled={isCredited}
+                            checked={isChecked}
+                            onChange={(e) => {
+                              setReturnError('');
+                              setReturnLineSelection(prev =>
+                                e.target.checked ? [...prev, idx] : prev.filter(i => i !== idx)
+                              );
+                            }}
+                            className="accent-rose-500"
+                          />
+                          <span className="flex-1">
+                            <span className={`font-bold block ${isChecked ? 'text-rose-900 dark:text-rose-300' : ''}`}>{item.name}</span>
+                            {item.sku && <span className={`font-mono text-[10px] ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>{item.sku}</span>}
+                            {isCredited && <span className="text-[10px] text-rose-500 font-semibold ml-1.5">already credited</span>}
+                          </span>
+                          <span className="font-mono font-bold">₹{item.subtotal.toLocaleString('en-IN')}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                    Reason for Return
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Size exchange requested by customer"
+                    className={`w-full text-xs px-3 py-2 rounded-lg border focus:outline-none focus:border-rose-400 ${
+                      theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                    }`}
+                    value={returnReason}
+                    onChange={(e) => { setReturnReason(e.target.value); setReturnError(''); }}
+                  />
+                </div>
+
+                <label className={`flex items-start gap-2.5 text-xs p-3 rounded-xl border cursor-pointer ${
+                  theme === 'light' ? 'border-slate-200 bg-slate-50/60' : 'border-zinc-800 bg-zinc-900/40'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={restockReturnedTags}
+                    onChange={(e) => setRestockReturnedTags(e.target.checked)}
+                    className="mt-0.5 accent-amber-500"
+                  />
+                  <span>
+                    <span className="font-bold block">Passed QC — return straight to sellable stock</span>
+                    <span className={theme === 'light' ? 'text-slate-500' : 'text-zinc-500'}>
+                      Leave unchecked to hold the piece as “Returned (Pending QC)” for inspection or re-polishing before it can be sold again.
+                    </span>
+                  </span>
+                </label>
+
+                {/* Live reversal preview */}
+                {returnLineSelection.length > 0 && (
+                  <div className={`rounded-xl border p-3 space-y-1.5 text-xs ${
+                    theme === 'light' ? 'border-rose-200 bg-rose-50/50' : 'border-rose-900/40 bg-rose-950/20'
+                  }`}>
+                    <div className="flex justify-between"><span>Returned value:</span><span className="font-mono">₹{Math.abs(preview.returnedSubtotal).toLocaleString('en-IN')}</span></div>
+                    {preview.discountReversed !== 0 && (
+                      <div className="flex justify-between"><span>Discount clawed back (pro-rata):</span><span className="font-mono">₹{Math.abs(preview.discountReversed).toLocaleString('en-IN')}</span></div>
+                    )}
+                    <div className="flex justify-between"><span>GST reversed:</span><span className="font-mono">₹{Math.abs(preview.returnedTax).toLocaleString('en-IN')}</span></div>
+                    <div className={`flex justify-between font-bold border-t pt-1.5 ${theme === 'light' ? 'border-rose-200' : 'border-rose-900/40'}`}>
+                      <span>Refund due to customer:</span>
+                      <span className="font-mono text-rose-600 dark:text-rose-400">₹{Math.abs(preview.returnedTotal).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                )}
+
+                {returnError && <p className="text-[11px] text-rose-500 font-semibold">{returnError}</p>}
+              </div>
+
+              <div className={`p-5 border-t ${theme === 'light' ? 'border-slate-100' : 'border-zinc-800'}`}>
+                <button
+                  onClick={handleCreateCreditNote}
+                  className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs py-2.5 rounded-xl transition"
+                >
+                  Raise Credit Note
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Estimate → Tax Invoice conversion modal (Milestone 11, PRD §7.8) */}
       {estimateToConvert && (
@@ -1726,7 +2018,7 @@ export default function BillingEstimator({
                 onClick={() => window.print()}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border border-slate-250 hover:bg-slate-50 text-slate-700 rounded-lg transition cursor-pointer"
               >
-                <Printer className="w-4 h-4" /> Print Invoice
+                <Printer className="w-4 h-4" /> Print {selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'Estimate' : selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'Credit Note' : 'Invoice'}
               </button>
               <button
                 onClick={() => setSelectedInvoiceForDetail(null)}
@@ -1746,17 +2038,39 @@ export default function BillingEstimator({
                 <h2 className={`text-xs uppercase font-bold py-1 tracking-widest rounded mt-3 ${
                   selectedInvoiceForDetail.invoiceType === 'ESTIMATE'
                     ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                    : 'bg-slate-100 text-slate-700'
+                    : selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE'
+                      ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                      : 'bg-slate-100 text-slate-700'
                 }`}>
-                  {selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'ESTIMATE — NOT A TAX INVOICE' : 'TAX INVOICE'}
+                  {selectedInvoiceForDetail.invoiceType === 'ESTIMATE'
+                    ? 'ESTIMATE — NOT A TAX INVOICE'
+                    : selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE'
+                      ? 'CREDIT NOTE (SALES RETURN)'
+                      : 'TAX INVOICE'}
                 </h2>
               </div>
+
+              {/* A credit note must reference the original invoice's number and date (CGST §34) */}
+              {selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-900 space-y-0.5">
+                  <p className="font-bold">
+                    Issued against Tax Invoice {selectedInvoiceForDetail.creditNoteAgainstInvoice} dated {selectedInvoiceForDetail.creditNoteAgainstInvoiceDate}
+                  </p>
+                  {selectedInvoiceForDetail.returnReason && (
+                    <p>Reason: <span className="italic">{selectedInvoiceForDetail.returnReason}</span></p>
+                  )}
+                </div>
+              )}
 
               {/* Info details */}
               <div className="grid grid-cols-2 text-xs font-medium text-slate-600 gap-y-2">
                 <div>
                   <p><span className="text-slate-400 uppercase tracking-wide text-[10px]">
-                    {selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'Estimate Number:' : 'Invoice Number:'}
+                    {selectedInvoiceForDetail.invoiceType === 'ESTIMATE'
+                      ? 'Estimate Number:'
+                      : selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE'
+                        ? 'Credit Note Number:'
+                        : 'Invoice Number:'}
                   </span></p>
                   <p className="font-mono font-bold text-slate-900 text-sm">{selectedInvoiceForDetail.invoiceNumber}</p>
                   {selectedInvoiceForDetail.convertedToInvoiceNumber && (
@@ -1764,6 +2078,11 @@ export default function BillingEstimator({
                   )}
                   {selectedInvoiceForDetail.convertedFromEstimateNumber && (
                     <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Converted from estimate {selectedInvoiceForDetail.convertedFromEstimateNumber}</p>
+                  )}
+                  {(selectedInvoiceForDetail.creditNoteNumbers || []).length > 0 && (
+                    <p className="text-[10px] text-rose-600 font-semibold mt-0.5">
+                      Credit note{(selectedInvoiceForDetail.creditNoteNumbers || []).length > 1 ? 's' : ''}: {(selectedInvoiceForDetail.creditNoteNumbers || []).join(', ')}
+                    </p>
                   )}
                 </div>
                 <div className="text-right">
@@ -1815,23 +2134,35 @@ export default function BillingEstimator({
 
               {/* Price Calculations breakdown */}
               <div className="w-1/2 ml-auto text-xs font-medium space-y-2">
+                {/* A credit note's stored figures are all negative; shown as positive amounts
+                    under reversal labels so staff aren't reading "₹-40,582" off a document. */}
                 <div className="flex justify-between text-slate-500">
-                  <span>Subtotal:</span>
-                  <span className="font-mono">₹{selectedInvoiceForDetail.subtotal.toLocaleString('en-IN')}</span>
+                  <span>{selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'Returned Value:' : 'Subtotal:'}</span>
+                  <span className="font-mono">₹{Math.abs(selectedInvoiceForDetail.subtotal).toLocaleString('en-IN')}</span>
                 </div>
-                {selectedInvoiceForDetail.discount > 0 && (
+                {selectedInvoiceForDetail.discount !== 0 && (
                   <div className="flex justify-between text-slate-500">
-                    <span>Discount Code Applied:</span>
-                    <span className="font-mono">-₹{selectedInvoiceForDetail.discount.toLocaleString('en-IN')}</span>
+                    <span>{selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'Discount Clawed Back (pro-rata):' : 'Discount Code Applied:'}</span>
+                    <span className="font-mono">-₹{Math.abs(selectedInvoiceForDetail.discount).toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
-                  <span>Jewelry GST (3% on taxable value):</span>
-                  <span className="font-mono">₹{selectedInvoiceForDetail.tax.toLocaleString('en-IN')}</span>
+                  <span>{selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'GST Reversed (3%):' : 'Jewelry GST (3% on taxable value):'}</span>
+                  <span className="font-mono">₹{Math.abs(selectedInvoiceForDetail.tax).toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                  <span>{selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'Estimate Total (Indicative):' : 'Invoice Total (Tax Invoice):'}</span>
-                  <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.grandTotal.toLocaleString('en-IN')}</span>
+                <div className={`flex justify-between font-black border-t-2 pt-2 text-sm px-2 py-1.5 rounded ${
+                  selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'bg-rose-50 text-rose-900' : 'bg-amber-50 text-slate-900'
+                }`}>
+                  <span>
+                    {selectedInvoiceForDetail.invoiceType === 'ESTIMATE'
+                      ? 'Estimate Total (Indicative):'
+                      : selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE'
+                        ? 'Total Credit Note Value:'
+                        : 'Invoice Total (Tax Invoice):'}
+                  </span>
+                  <span className={`font-mono font-bold ${selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'text-rose-700' : 'text-amber-800'}`}>
+                    ₹{Math.abs(selectedInvoiceForDetail.grandTotal).toLocaleString('en-IN')}
+                  </span>
                 </div>
                 {selectedInvoiceForDetail.oldGoldWeight > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
@@ -1839,9 +2170,19 @@ export default function BillingEstimator({
                     <span className="font-mono">-₹{selectedInvoiceForDetail.oldGoldValue.toLocaleString('en-IN')}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                  <span>{selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'Estimated Payable:' : 'Net Amount Due:'}</span>
-                  <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.netAmountDue.toLocaleString('en-IN')}</span>
+                <div className={`flex justify-between font-black border-t-2 pt-2 text-sm px-2 py-1.5 rounded ${
+                  selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'bg-rose-50 text-rose-900' : 'bg-amber-50 text-slate-900'
+                }`}>
+                  <span>
+                    {selectedInvoiceForDetail.invoiceType === 'ESTIMATE'
+                      ? 'Estimated Payable:'
+                      : selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE'
+                        ? 'Refund Due to Customer:'
+                        : 'Net Amount Due:'}
+                  </span>
+                  <span className={`font-mono font-bold ${selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'text-rose-700' : 'text-amber-800'}`}>
+                    ₹{Math.abs(selectedInvoiceForDetail.netAmountDue).toLocaleString('en-IN')}
+                  </span>
                 </div>
                 {selectedInvoiceForDetail.invoiceType === 'ESTIMATE' && (
                   <p className="text-[10px] text-amber-700 pt-1 leading-snug">

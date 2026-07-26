@@ -45,9 +45,11 @@ export default function Dashboard({
   const [tempRate, setTempRate] = useState<string>('');
 
   // Calculate KPIs. Estimates are non-fiscal quotations (Milestone 11) and are excluded from
-  // every revenue figure — only real tax invoices count as sales.
+  // every revenue figure — only real tax invoices count as sales. Credit notes (Milestone 12)
+  // carry negative figures, so including them yields revenue NET of returns.
   const taxInvoices = invoices.filter(inv => inv.invoiceType === 'TAX_INVOICE');
-  const totalSalesRevenue = taxInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+  const fiscalDocuments = invoices.filter(inv => inv.invoiceType === 'TAX_INVOICE' || inv.invoiceType === 'CREDIT_NOTE');
+  const totalSalesRevenue = fiscalDocuments.reduce((sum, inv) => sum + inv.grandTotal, 0);
   const totalItemsCount = tags.length;
   const inStockItemsCount = tags.filter(i => isSellable(i.status)).length;
   
