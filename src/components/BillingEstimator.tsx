@@ -20,7 +20,7 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { Tag, Customer, SaleInvoice, InvoiceItem } from '../types';
+import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 import { isSellable, canTransition } from '../lib/tagStateMachine';
@@ -45,6 +45,19 @@ function nextInvoiceNumber(): string {
   const next = Number(localStorage.getItem(key) || '1000') + 1;
   localStorage.setItem(key, String(next));
   return `INV-${year}-${next}`;
+}
+
+/**
+ * Estimates use their own, entirely separate sequence (Milestone 11, PRD §7.8) — a quotation
+ * must never consume a GST tax-invoice number, since Rule 46 requires that series to be
+ * gap-free and to contain only real supplies.
+ */
+function nextEstimateNumber(): string {
+  const year = new Date().getFullYear();
+  const key = `stitch_estimate_seq_${year}`;
+  const next = Number(localStorage.getItem(key) || '500') + 1;
+  localStorage.setItem(key, String(next));
+  return `EST-${year}-${next}`;
 }
 
 export default function BillingEstimator({
@@ -114,6 +127,17 @@ export default function BillingEstimator({
   // Reasons are keyed "<lineIndex>:<field>" so each line's overrides log independently.
   const [overrideReasons, setOverrideReasons] = useState<Record<string, string>>({});
   const [isOverrideModalOpen, setOverrideModalOpen] = useState(false);
+
+  // Estimate vs. Tax Invoice mode (Milestone 11, PRD §7.8). An estimate is non-fiscal:
+  // no tax-invoice number consumed, no stock deducted, statutory gates skipped.
+  const [invoiceType, setInvoiceType] = useState<InvoiceType>('TAX_INVOICE');
+  const isEstimate = invoiceType === 'ESTIMATE';
+
+  // Estimate -> Tax Invoice conversion (from the registry)
+  const [estimateToConvert, setEstimateToConvert] = useState<SaleInvoice | null>(null);
+  const [convertRateMode, setConvertRateMode] = useState<'ORIGINAL' | 'CURRENT'>('CURRENT');
+  const [convertPanInput, setConvertPanInput] = useState('');
+  const [convertError, setConvertError] = useState('');
 
   // Success screen
   const [completedInvoice, setCompletedInvoice] = useState<SaleInvoice | null>(null);
@@ -274,7 +298,8 @@ export default function BillingEstimator({
 
     // PAN / Form 60 is mandatory at or above Rs 2,00,000 (PRD §4.4/§15.3, Rule 114B).
     // The threshold applies to the tax invoice value, not the post-old-gold cash collected.
-    if (isPanRequired(invoiceTotal)) {
+    // Estimates are non-fiscal quotations and skip this gate — it re-applies on conversion.
+    if (!isEstimate && isPanRequired(invoiceTotal)) {
       const panError = validatePanDeclaration(invoiceTotal, panDeclaration);
       if (panError) {
         setPanModalOpen(true);
@@ -290,18 +315,22 @@ export default function BillingEstimator({
       return;
     }
 
-    // A multi-tender split must sum exactly to the amount due before checkout (PRD §7.5, Milestone 9)
-    if (isSplitPayment && !splitValidation.isValid) {
+    // A multi-tender split must sum exactly to the amount due before checkout (PRD §7.5, Milestone 9).
+    // Nothing is tendered against an estimate, so there is no split to validate.
+    if (!isEstimate && isSplitPayment && !splitValidation.isValid) {
       setValidationError(splitValidation.error || 'The payment split does not settle the amount due.');
       return;
     }
 
     // Scheme Redemption must validate against and deduct from the customer's actual savings
     // balance — previously a purely cosmetic label (KNOWN_ISSUES.md #5). With a split, only
-    // the portion actually tendered against the scheme is validated and debited.
-    const schemeRedeemedAmount = isSplitPayment
-      ? paymentSplit.filter(e => e.mode === 'Scheme Redemption').reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
-      : (paymentMethod === 'Scheme Redemption' ? finalGrandTotal : 0);
+    // the portion actually tendered against the scheme is validated and debited. An estimate
+    // collects nothing, so it must never touch the customer's scheme balance.
+    const schemeRedeemedAmount = isEstimate
+      ? 0
+      : isSplitPayment
+        ? paymentSplit.filter(e => e.mode === 'Scheme Redemption').reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+        : (paymentMethod === 'Scheme Redemption' ? finalGrandTotal : 0);
 
     if (schemeRedeemedAmount > 0) {
       if (!selectedCustomer || !selectedCustomer.savingsSchemeActive) {
@@ -348,8 +377,10 @@ export default function BillingEstimator({
     });
 
     const invoice: SaleInvoice = {
-      id: `inv-${Date.now()}`,
-      invoiceNumber: nextInvoiceNumber(),
+      id: `${isEstimate ? 'est' : 'inv'}-${Date.now()}`,
+      invoiceType,
+      // An estimate draws from its own sequence and never consumes a GST tax-invoice number (Rule 46)
+      invoiceNumber: isEstimate ? nextEstimateNumber() : nextInvoiceNumber(),
       date: new Date().toISOString().split('T')[0],
       customerId: selectedCustomer?.id,
       customerName,
@@ -363,14 +394,17 @@ export default function BillingEstimator({
       grandTotal: invoiceTotal,
       netAmountDue: finalGrandTotal,
       paymentMethod: isSplitPayment && paymentSplit.length > 1 ? 'Mixed' : (isSplitPayment ? paymentSplit[0]?.mode || paymentMethod : paymentMethod),
-      paymentSplit: isSplitPayment ? paymentSplit : [{ mode: paymentMethod, amount: finalGrandTotal }]
+      // An estimate records no tender and no PAN — both belong to the eventual tax invoice
+      paymentSplit: isEstimate ? undefined : (isSplitPayment ? paymentSplit : [{ mode: paymentMethod, amount: finalGrandTotal }]),
+      panDeclaration: isEstimate ? undefined : (panDeclaration || undefined)
     };
 
     // Update state
     setInvoices(prev => [invoice, ...prev]);
 
-    // Mark catalogue tags in stock as "Sold" — only ever via a legal state-machine transition (Milestone 4, Handbook D-7)
-    const soldTagIds = processedItems.map(i => i.itemId).filter(id => id !== undefined) as string[];
+    // Mark catalogue tags in stock as "Sold" — only ever via a legal state-machine transition
+    // (Milestone 4, Handbook D-7). An estimate reserves nothing and must not deduct stock.
+    const soldTagIds = isEstimate ? [] : processedItems.map(i => i.itemId).filter(id => id !== undefined) as string[];
     if (soldTagIds.length > 0) {
       setTags(prev => prev.map(tag => {
         if (soldTagIds.includes(tag.id) && canTransition(tag.status, 'Sold')) {
@@ -410,6 +444,101 @@ export default function BillingEstimator({
     setOverrideReasons({});
   };
 
+  /**
+   * Converts an ESTIMATE into a real TAX_INVOICE (Milestone 11, PRD §7.8). Staff explicitly
+   * choose whether to honor the rate quoted on the estimate or re-price at today's rate —
+   * gold moves daily, so silently picking either would be wrong. Statutory gates skipped at
+   * estimate time (PAN) re-apply here, since this is the point a fiscal document is created.
+   */
+  const handleConvertEstimate = () => {
+    const estimate = estimateToConvert;
+    if (!estimate) return;
+    setConvertError('');
+
+    let items = estimate.items;
+
+    if (convertRateMode === 'CURRENT') {
+      // Re-price every line against today's metal rate, reusing the shared calculation
+      // engine rather than re-deriving the formula (Handbook D-9).
+      items = estimate.items.map(item => {
+        const rate = metalRates.find(r => r.metalType === item.metalType)?.ratePerGram || 0;
+        const recalculated = calculateLineItem({
+          netWeight: item.netWeight,
+          metalRate: rate,
+          wastagePercent: item.wastagePercent,
+          makingChargeType: item.makingChargeType,
+          makingChargeValue: item.makingChargeValue,
+          stoneCharge: item.stoneCharge
+        });
+        return {
+          ...item,
+          goldPrice: recalculated.metalValue,
+          wastageValue: recalculated.wastageValue,
+          makingCharge: recalculated.makingCharge,
+          subtotal: recalculated.subtotal
+        };
+      });
+    }
+
+    const totals = calculateInvoiceTotals(items.map(i => i.subtotal), estimate.discount);
+    const convertedNetDue = settleOldGold(totals.grandTotal, estimate.oldGoldValue);
+
+    // PAN / Form 60 gate applies to the converted tax invoice's value (Rule 114B)
+    let declaration: PanDeclaration | undefined = estimate.panDeclaration;
+    if (isPanRequired(totals.grandTotal)) {
+      const typed = convertPanInput.trim().toUpperCase();
+      if (!declaration || (declaration.type === 'PAN' && declaration.panNumber !== typed)) {
+        declaration = typed === 'FORM60'
+          ? { type: 'FORM_60' }
+          : { type: 'PAN', panNumber: typed };
+      }
+      const panError = validatePanDeclaration(totals.grandTotal, declaration);
+      if (panError) {
+        setConvertError(`${panError} (Type FORM60 to record a Form 60 declaration instead.)`);
+        return;
+      }
+    }
+
+    const taxInvoice: SaleInvoice = {
+      ...estimate,
+      id: `inv-${Date.now()}`,
+      invoiceType: 'TAX_INVOICE',
+      invoiceNumber: nextInvoiceNumber(),
+      date: new Date().toISOString().split('T')[0],
+      items,
+      subtotal: totals.subtotal,
+      tax: totals.gstTax,
+      grandTotal: totals.grandTotal,
+      netAmountDue: convertedNetDue,
+      paymentSplit: [{ mode: estimate.paymentMethod === 'Mixed' ? 'Cash' : estimate.paymentMethod, amount: convertedNetDue }],
+      panDeclaration: declaration,
+      convertedFromEstimateNumber: estimate.invoiceNumber,
+      convertedToInvoiceNumber: undefined
+    };
+
+    setInvoices(prev => [
+      taxInvoice,
+      // Stamp the source estimate so it can never be silently converted twice
+      ...prev.map(inv => inv.id === estimate.id
+        ? { ...inv, convertedToInvoiceNumber: taxInvoice.invoiceNumber }
+        : inv)
+    ]);
+
+    // Only now does stock actually move (Milestone 4 / Handbook D-7)
+    const soldTagIds = items.map(i => i.itemId).filter(id => id !== undefined) as string[];
+    if (soldTagIds.length > 0) {
+      setTags(prev => prev.map(tag =>
+        soldTagIds.includes(tag.id) && canTransition(tag.status, 'Sold')
+          ? { ...tag, status: 'Sold' }
+          : tag
+      ));
+    }
+
+    setEstimateToConvert(null);
+    setConvertPanInput('');
+    setSelectedInvoiceForDetail(taxInvoice);
+  };
+
   const handleConfirmPan = (type: PanDeclaration['type']) => {
     if (type === 'FORM_60') {
       setPanDeclaration({ type: 'FORM_60' });
@@ -429,10 +558,14 @@ export default function BillingEstimator({
   };
 
   // Statistics for Registry
-  const totalInvoicesCount = invoices.length;
-  const totalInvoicesValue = invoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
-  const totalOldGoldWeight = invoices.reduce((sum, inv) => sum + inv.oldGoldWeight, 0);
-  const uniqueCustomersCount = new Set(invoices.map(inv => inv.customerName)).size;
+  // Registry KPIs count only real fiscal documents — an estimate is a quotation, not a sale,
+  // and must never inflate revenue, old-gold intake, or billed-customer counts (Milestone 11).
+  const taxInvoices = invoices.filter(inv => inv.invoiceType === 'TAX_INVOICE');
+  const estimatesCount = invoices.length - taxInvoices.length;
+  const totalInvoicesCount = taxInvoices.length;
+  const totalInvoicesValue = taxInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+  const totalOldGoldWeight = taxInvoices.reduce((sum, inv) => sum + inv.oldGoldWeight, 0);
+  const uniqueCustomersCount = new Set(taxInvoices.map(inv => inv.customerName)).size;
 
   const filteredInvoices = invoices.filter(inv => {
     const q = searchQuery.toLowerCase();
@@ -519,13 +652,22 @@ export default function BillingEstimator({
               <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">STITCH JEWELLERY HOUSE</h1>
               <p className="text-xs text-slate-500">102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002</p>
               <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: 27AACCS9948H1Z1</p>
-              <h2 className="text-xs uppercase font-bold bg-slate-100 py-1 tracking-widest text-slate-700 rounded mt-3">TAX INVOICE</h2>
+              {/* A quotation must be unmistakably marked as non-fiscal (PRD §7.8, Milestone 11) */}
+              <h2 className={`text-xs uppercase font-bold py-1 tracking-widest rounded mt-3 ${
+                completedInvoice.invoiceType === 'ESTIMATE'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                  : 'bg-slate-100 text-slate-700'
+              }`}>
+                {completedInvoice.invoiceType === 'ESTIMATE' ? 'ESTIMATE — NOT A TAX INVOICE' : 'TAX INVOICE'}
+              </h2>
             </div>
 
             {/* Info details */}
             <div className="grid grid-cols-2 text-xs font-medium text-slate-600 gap-y-2">
               <div>
-                <p><span className="text-slate-400 uppercase tracking-wide text-[10px]">Invoice Number:</span></p>
+                <p><span className="text-slate-400 uppercase tracking-wide text-[10px]">
+                  {completedInvoice.invoiceType === 'ESTIMATE' ? 'Estimate Number:' : 'Invoice Number:'}
+                </span></p>
                 <p className="font-mono font-bold text-slate-900 text-sm">{completedInvoice.invoiceNumber}</p>
               </div>
               <div className="text-right">
@@ -592,7 +734,7 @@ export default function BillingEstimator({
                 <span className="font-mono">₹{completedInvoice.tax.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                <span>Invoice Total (Tax Invoice):</span>
+                <span>{completedInvoice.invoiceType === 'ESTIMATE' ? 'Estimate Total (Indicative):' : 'Invoice Total (Tax Invoice):'}</span>
                 <span className="font-mono text-amber-800">₹{completedInvoice.grandTotal.toLocaleString('en-IN')}</span>
               </div>
               {completedInvoice.oldGoldWeight > 0 && (
@@ -602,9 +744,14 @@ export default function BillingEstimator({
                 </div>
               )}
               <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                <span>Net Amount Due:</span>
+                <span>{completedInvoice.invoiceType === 'ESTIMATE' ? 'Estimated Payable:' : 'Net Amount Due:'}</span>
                 <span className="font-mono text-amber-800">₹{completedInvoice.netAmountDue.toLocaleString('en-IN')}</span>
               </div>
+              {completedInvoice.invoiceType === 'ESTIMATE' && (
+                <p className="text-[10px] text-amber-700 pt-1 leading-snug">
+                  Indicative only, subject to the prevailing metal rate on the date of purchase. Not valid for GST input credit.
+                </p>
+              )}
 
               {/* Multi-tender breakdown (PRD §7.5) */}
               {completedInvoice.paymentSplit && completedInvoice.paymentSplit.length > 0 && (
@@ -634,13 +781,16 @@ export default function BillingEstimator({
               </div>
             )}
 
-            {/* Hallmark Warranty declaration */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-[10px] text-slate-500 space-y-1.5">
-              <p className="font-bold text-slate-700 flex items-center gap-1">
-                <FileCheck className="w-4 h-4 text-amber-600" /> BIS Hallmark & Quality Warranty
-              </p>
-              <p>Certified that all gold items listed are BIS Hallmarked with HUID values. Diamonds are verified with IGI/GIA certifications. Returns/Buybacks are accepted on prevailing market rates subject to standard melting purity tests.</p>
-            </div>
+            {/* Hallmark Warranty declaration — a certification belongs only on a real tax
+                invoice; asserting it on a non-fiscal quotation would be a false declaration. */}
+            {completedInvoice.invoiceType === 'TAX_INVOICE' && (
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-[10px] text-slate-500 space-y-1.5">
+                <p className="font-bold text-slate-700 flex items-center gap-1">
+                  <FileCheck className="w-4 h-4 text-amber-600" /> BIS Hallmark & Quality Warranty
+                </p>
+                <p>Certified that all gold items listed are BIS Hallmarked with HUID values. Diamonds are verified with IGI/GIA certifications. Returns/Buybacks are accepted on prevailing market rates subject to standard melting purity tests.</p>
+              </div>
+            )}
 
             {/* Signature fields */}
             <div className="grid grid-cols-2 pt-10 text-center text-[10px] font-semibold text-slate-400">
@@ -959,9 +1109,35 @@ export default function BillingEstimator({
           {/* Checkout Invoice calculations */}
           <div className="space-y-6">
             <div className="bg-white border border-slate-150 p-6 rounded-2xl shadow-sm space-y-5 sticky top-6">
-              <div className="pb-3 border-b border-slate-100 flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-slate-800" />
-                <h3 className="font-sans font-bold text-slate-800 text-sm">Invoice Calculation Sheet</h3>
+              <div className="pb-3 border-b border-slate-100 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Calculator className="w-5 h-5 text-slate-800" />
+                  <h3 className="font-sans font-bold text-slate-800 text-sm">
+                    {isEstimate ? 'Estimate Calculation Sheet' : 'Invoice Calculation Sheet'}
+                  </h3>
+                </div>
+
+                {/* Document type: non-fiscal Estimate vs. real Tax Invoice (Milestone 11, PRD §7.8) */}
+                <div className="grid grid-cols-2 gap-2">
+                  {(['TAX_INVOICE', 'ESTIMATE'] as InvoiceType[]).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => { setInvoiceType(type); setValidationError(null); }}
+                      className={`text-[11px] py-1.5 rounded-lg border text-center font-bold transition ${
+                        invoiceType === type
+                          ? 'border-amber-500 bg-amber-50 text-amber-800'
+                          : 'border-slate-200 hover:bg-slate-50 text-slate-500'
+                      }`}
+                    >
+                      {type === 'TAX_INVOICE' ? 'Tax Invoice' : 'Estimate'}
+                    </button>
+                  ))}
+                </div>
+                {isEstimate && (
+                  <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 leading-snug">
+                    Non-fiscal quotation — no invoice number is consumed, no stock is deducted, and no payment is collected. Convert it from the registry when the customer commits.
+                  </p>
+                )}
               </div>
 
               {/* Subtotal -> Discount -> GST (on the post-discount taxable value, PRD §7.4,
@@ -1039,8 +1215,9 @@ export default function BillingEstimator({
                 </button>
               )}
 
-              {/* PAN / Form 60 requirement (Milestone 8, PRD §4.4/§15.3 — Income Tax Rule 114B) */}
-              {isPanRequired(invoiceTotal) && (
+              {/* PAN / Form 60 requirement (Milestone 8, PRD §4.4/§15.3 — Income Tax Rule 114B).
+                  Not shown for estimates: the gate applies when the tax invoice is created. */}
+              {!isEstimate && isPanRequired(invoiceTotal) && (
                 <button
                   onClick={() => { setPanInput(panDeclaration?.panNumber || ''); setPanModalError(''); setPanModalOpen(true); }}
                   className={`w-full text-left p-3 rounded-xl border text-xs font-medium transition ${
@@ -1061,8 +1238,8 @@ export default function BillingEstimator({
                 </button>
               )}
 
-              {/* Payment selection */}
-              <div className="space-y-2">
+              {/* Payment selection — an estimate collects nothing, so this is hidden entirely */}
+              <div className={`space-y-2 ${isEstimate ? 'hidden' : ''}`}>
                 <div className="flex items-center justify-between">
                   <label className="block text-[10px] uppercase font-bold font-mono text-slate-400">Payment Channel</label>
                   <button
@@ -1159,7 +1336,8 @@ export default function BillingEstimator({
                 onClick={handleCheckout}
                 className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs py-3 rounded-2xl shadow-lg shadow-amber-500/10 transition duration-150 uppercase tracking-wider cursor-pointer"
               >
-                <Receipt className="w-4.5 h-4.5 text-slate-950" /> Generate Formal Invoice
+                <Receipt className="w-4.5 h-4.5 text-slate-950" />
+                {isEstimate ? 'Generate Estimate (Non-Fiscal)' : 'Generate Formal Invoice'}
               </button>
             </div>
           </div>
@@ -1323,8 +1501,11 @@ export default function BillingEstimator({
                 <Receipt className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">Total Invoices</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono">Tax Invoices</p>
                 <p className="text-xl font-bold font-mono text-amber-400">{totalInvoicesCount}</p>
+                {estimatesCount > 0 && (
+                  <p className="text-[10px] text-slate-500 font-mono">+ {estimatesCount} estimate{estimatesCount === 1 ? '' : 's'} (non-fiscal)</p>
+                )}
               </div>
             </div>
 
@@ -1372,7 +1553,8 @@ export default function BillingEstimator({
               <table className="w-full text-left text-xs font-medium">
                 <thead>
                   <tr className="text-slate-400 dark:text-slate-500 uppercase font-mono text-[9px] border-b border-slate-100 dark:border-slate-800 pb-2">
-                    <th className="py-3">Invoice Number</th>
+                    <th className="py-3">Document No.</th>
+                    <th>Type</th>
                     <th>Date</th>
                     <th>Customer Name</th>
                     <th>Phone</th>
@@ -1384,7 +1566,7 @@ export default function BillingEstimator({
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
                   {filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-400 font-mono">
+                      <td colSpan={8} className="py-8 text-center text-slate-400 font-mono">
                         No invoices found matching query.
                       </td>
                     </tr>
@@ -1392,30 +1574,144 @@ export default function BillingEstimator({
                     filteredInvoices.map((inv) => (
                       <tr key={inv.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
                         <td className="py-4 font-mono font-bold text-amber-600 dark:text-amber-500">{inv.invoiceNumber}</td>
+                        <td>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            inv.invoiceType === 'ESTIMATE'
+                              ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/50'
+                              : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50'
+                          }`}>
+                            {inv.invoiceType === 'ESTIMATE' ? 'Estimate' : 'Tax Invoice'}
+                          </span>
+                        </td>
                         <td className="font-mono text-slate-500 dark:text-slate-400">{inv.date}</td>
                         <td className="font-bold text-slate-900 dark:text-slate-100">{inv.customerName}</td>
                         <td className="font-mono text-slate-500 dark:text-slate-400">{inv.customerPhone}</td>
                         <td>
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                            {inv.paymentMethod}
+                            {inv.invoiceType === 'ESTIMATE' ? '—' : inv.paymentMethod}
                           </span>
                         </td>
                         <td className="text-right font-mono font-bold text-slate-900 dark:text-slate-100">
                           ₹{inv.grandTotal.toLocaleString('en-IN')}
                         </td>
                         <td className="text-center">
-                          <button
-                            onClick={() => setSelectedInvoiceForDetail(inv)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 dark:bg-amber-600/20 dark:hover:bg-amber-600/40 text-slate-950 dark:text-amber-400 rounded-lg transition cursor-pointer"
-                          >
-                            <Eye className="w-3 h-3" /> View Bill
-                          </button>
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              onClick={() => setSelectedInvoiceForDetail(inv)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 dark:bg-amber-600/20 dark:hover:bg-amber-600/40 text-slate-950 dark:text-amber-400 rounded-lg transition cursor-pointer"
+                            >
+                              <Eye className="w-3 h-3" /> View
+                            </button>
+                            {/* Estimates convert into a real tax invoice; already-converted ones can't be converted twice */}
+                            {inv.invoiceType === 'ESTIMATE' && !inv.convertedToInvoiceNumber && (
+                              <button
+                                onClick={() => {
+                                  setEstimateToConvert(inv);
+                                  setConvertRateMode('CURRENT');
+                                  setConvertPanInput(inv.panDeclaration?.panNumber || '');
+                                  setConvertError('');
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition cursor-pointer"
+                              >
+                                <FileCheck className="w-3 h-3" /> Convert
+                              </button>
+                            )}
+                            {inv.convertedToInvoiceNumber && (
+                              <span className="text-[10px] font-mono text-slate-400">→ {inv.convertedToInvoiceNumber}</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estimate → Tax Invoice conversion modal (Milestone 11, PRD §7.8) */}
+      {estimateToConvert && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden ${
+            theme === 'light' ? 'bg-white border-zinc-200 text-slate-800' : 'bg-[#141416] border-zinc-800 text-zinc-100'
+          }`}>
+            <div className={`flex items-center justify-between p-5 border-b ${theme === 'light' ? 'border-slate-100' : 'border-zinc-800'}`}>
+              <div>
+                <h3 className="font-bold text-sm flex items-center gap-2"><FileCheck className="w-4 h-4 text-amber-500" /> Convert to Tax Invoice</h3>
+                <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                  {estimateToConvert.invoiceNumber} → a new, sequential GST tax invoice.
+                </p>
+              </div>
+              <button
+                onClick={() => { setEstimateToConvert(null); setConvertError(''); }}
+                className={`p-1.5 rounded-lg transition ${theme === 'light' ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-zinc-900 text-zinc-500'}`}
+                aria-label="Close conversion"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-2 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                  Metal Rate to Apply
+                </label>
+                <div className="space-y-2">
+                  {([
+                    { mode: 'CURRENT' as const, label: "Re-price at today's rate", hint: "Recalculates every line against the current live rate." },
+                    { mode: 'ORIGINAL' as const, label: 'Honor the quoted rate', hint: 'Keeps the exact figures the customer was quoted.' }
+                  ]).map(opt => (
+                    <button
+                      key={opt.mode}
+                      onClick={() => setConvertRateMode(opt.mode)}
+                      className={`w-full text-left p-3 rounded-xl border text-xs transition ${
+                        convertRateMode === opt.mode
+                          ? 'border-amber-500 bg-amber-50 text-amber-900'
+                          : theme === 'light'
+                            ? 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                            : 'border-zinc-800 hover:bg-zinc-900 text-zinc-300'
+                      }`}
+                    >
+                      <span className="font-bold block">{opt.label}</span>
+                      <span className="block mt-0.5 opacity-75">{opt.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* The PAN gate skipped at estimate time applies now, against the converted value */}
+              {isPanRequired(estimateToConvert.grandTotal) && (
+                <div>
+                  <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                    Customer PAN (required at ₹{PAN_THRESHOLD.toLocaleString('en-IN')}+)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    placeholder="ABCDE1234F"
+                    className={`w-full text-sm font-mono uppercase px-3.5 py-2.5 rounded-xl border focus:outline-none focus:border-amber-500 ${
+                      theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                    }`}
+                    value={convertPanInput}
+                    onChange={(e) => { setConvertPanInput(e.target.value.toUpperCase()); setConvertError(''); }}
+                  />
+                </div>
+              )}
+
+              {convertError && <p className="text-[11px] text-rose-500 font-semibold">{convertError}</p>}
+
+              <p className={`text-[10px] leading-snug ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
+                On conversion the linked stock is marked Sold and the estimate is stamped as converted so it cannot be billed twice.
+              </p>
+
+              <button
+                onClick={handleConvertEstimate}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs py-2.5 rounded-xl transition"
+              >
+                Create Tax Invoice
+              </button>
             </div>
           </div>
         </div>
@@ -1447,14 +1743,28 @@ export default function BillingEstimator({
                 <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">STITCH JEWELLERY HOUSE</h1>
                 <p className="text-xs text-slate-500">102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002</p>
                 <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: 27AACCS9948H1Z1</p>
-                <h2 className="text-xs uppercase font-bold bg-slate-100 py-1 tracking-widest text-slate-700 rounded mt-3">TAX INVOICE</h2>
+                <h2 className={`text-xs uppercase font-bold py-1 tracking-widest rounded mt-3 ${
+                  selectedInvoiceForDetail.invoiceType === 'ESTIMATE'
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                    : 'bg-slate-100 text-slate-700'
+                }`}>
+                  {selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'ESTIMATE — NOT A TAX INVOICE' : 'TAX INVOICE'}
+                </h2>
               </div>
 
               {/* Info details */}
               <div className="grid grid-cols-2 text-xs font-medium text-slate-600 gap-y-2">
                 <div>
-                  <p><span className="text-slate-400 uppercase tracking-wide text-[10px]">Invoice Number:</span></p>
+                  <p><span className="text-slate-400 uppercase tracking-wide text-[10px]">
+                    {selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'Estimate Number:' : 'Invoice Number:'}
+                  </span></p>
                   <p className="font-mono font-bold text-slate-900 text-sm">{selectedInvoiceForDetail.invoiceNumber}</p>
+                  {selectedInvoiceForDetail.convertedToInvoiceNumber && (
+                    <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">Converted → {selectedInvoiceForDetail.convertedToInvoiceNumber}</p>
+                  )}
+                  {selectedInvoiceForDetail.convertedFromEstimateNumber && (
+                    <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Converted from estimate {selectedInvoiceForDetail.convertedFromEstimateNumber}</p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p><span className="text-slate-400 uppercase tracking-wide text-[10px]">Date:</span></p>
@@ -1520,7 +1830,7 @@ export default function BillingEstimator({
                   <span className="font-mono">₹{selectedInvoiceForDetail.tax.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                  <span>Invoice Total (Tax Invoice):</span>
+                  <span>{selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'Estimate Total (Indicative):' : 'Invoice Total (Tax Invoice):'}</span>
                   <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.grandTotal.toLocaleString('en-IN')}</span>
                 </div>
                 {selectedInvoiceForDetail.oldGoldWeight > 0 && (
@@ -1530,9 +1840,14 @@ export default function BillingEstimator({
                   </div>
                 )}
                 <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
-                  <span>Net Amount Due:</span>
+                  <span>{selectedInvoiceForDetail.invoiceType === 'ESTIMATE' ? 'Estimated Payable:' : 'Net Amount Due:'}</span>
                   <span className="font-mono text-amber-800 font-bold">₹{selectedInvoiceForDetail.netAmountDue.toLocaleString('en-IN')}</span>
                 </div>
+                {selectedInvoiceForDetail.invoiceType === 'ESTIMATE' && (
+                  <p className="text-[10px] text-amber-700 pt-1 leading-snug">
+                    Indicative only, subject to the prevailing metal rate on the date of purchase. Not valid for GST input credit.
+                  </p>
+                )}
 
                 {/* Multi-tender breakdown (PRD §7.5) */}
                 {selectedInvoiceForDetail.paymentSplit && selectedInvoiceForDetail.paymentSplit.length > 0 && (
@@ -1548,13 +1863,15 @@ export default function BillingEstimator({
                 )}
               </div>
 
-              {/* Hallmark Warranty declaration */}
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-[10px] text-slate-500 space-y-1.5">
-                <p className="font-bold text-slate-700 flex items-center gap-1">
-                  <FileCheck className="w-4 h-4 text-amber-600" /> BIS Hallmark & Quality Warranty
-                </p>
-                <p>Certified that all gold items listed are BIS Hallmarked with HUID values. Diamonds are verified with IGI/GIA certifications. Returns/Buybacks are accepted on prevailing market rates subject to standard melting purity tests.</p>
-              </div>
+              {/* Hallmark Warranty declaration — tax invoices only (see the receipt view above) */}
+              {selectedInvoiceForDetail.invoiceType === 'TAX_INVOICE' && (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-150 text-[10px] text-slate-500 space-y-1.5">
+                  <p className="font-bold text-slate-700 flex items-center gap-1">
+                    <FileCheck className="w-4 h-4 text-amber-600" /> BIS Hallmark & Quality Warranty
+                  </p>
+                  <p>Certified that all gold items listed are BIS Hallmarked with HUID values. Diamonds are verified with IGI/GIA certifications. Returns/Buybacks are accepted on prevailing market rates subject to standard melting purity tests.</p>
+                </div>
+              )}
 
               {/* Signature fields */}
               <div className="grid grid-cols-2 pt-10 text-center text-[10px] font-semibold text-slate-400">

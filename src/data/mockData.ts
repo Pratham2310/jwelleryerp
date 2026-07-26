@@ -481,6 +481,7 @@ export const initialWorkOrders: WorkOrder[] = [
 export const initialInvoices: SaleInvoice[] = [
   {
     id: 'inv-1',
+    invoiceType: 'TAX_INVOICE',
     invoiceNumber: 'INV-2026-1021',
     date: '2026-07-10',
     customerId: 'cust-1',
@@ -514,6 +515,7 @@ export const initialInvoices: SaleInvoice[] = [
   },
   {
     id: 'inv-2',
+    invoiceType: 'TAX_INVOICE',
     invoiceNumber: 'INV-2026-1022',
     date: '2026-07-18',
     customerId: 'cust-2',

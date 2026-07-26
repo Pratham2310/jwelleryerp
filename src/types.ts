@@ -1,6 +1,7 @@
 import type { TagStatus } from './lib/tagStateMachine';
 import type { PaymentSplitEntry } from './lib/billingCalculations';
 import type { OverrideRecord } from './lib/priceOverrides';
+import type { PanDeclaration } from './lib/statutoryChecks';
 
 export type ItemCategory = 'Rings' | 'Necklaces' | 'Earrings' | 'Bangles' | 'Bracelets' | 'Chains' | 'Coins';
 export type MetalStandard = 'Gold (24K)' | 'Gold (22K)' | 'Gold (18K)' | 'Silver (999)' | 'Platinum (950)';
@@ -111,9 +112,17 @@ export interface InvoiceItem {
   overrides?: OverrideRecord[]; // counter-level price overrides + logged reasons (PRD §7.1/§15.1)
 }
 
+/**
+ * An ESTIMATE is a non-fiscal quotation (PRD §7.8): same calculation engine, but it consumes
+ * no tax-invoice number, deducts no stock, and skips the statutory gates. A TAX_INVOICE is
+ * the real, GST-compliant document. Estimates convert into tax invoices; never the reverse.
+ */
+export type InvoiceType = 'ESTIMATE' | 'TAX_INVOICE';
+
 export interface SaleInvoice {
   id: string;
-  invoiceNumber: string;
+  invoiceType: InvoiceType;
+  invoiceNumber: string; // "INV-<FY>-n" for tax invoices, "EST-<FY>-n" for estimates (separate sequences)
   date: string;
   customerId?: string;
   customerName: string;
@@ -128,6 +137,9 @@ export interface SaleInvoice {
   netAmountDue: number; // grandTotal - oldGoldValue: actual cash/digital amount collected
   paymentMethod: 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Mixed';
   paymentSplit?: PaymentSplitEntry[]; // multi-tender breakdown (PRD §7.5); single-mode bills record one entry
+  panDeclaration?: PanDeclaration; // the PAN/Form 60 actually captured at/above the Rule 114B threshold
+  convertedToInvoiceNumber?: string; // set on an ESTIMATE once it has been converted
+  convertedFromEstimateNumber?: string; // set on a TAX_INVOICE created by converting an estimate
 }
 
 export interface MetalRate {

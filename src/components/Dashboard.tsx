@@ -44,8 +44,10 @@ export default function Dashboard({
   const [editingRateId, setEditingRateId] = useState<string | null>(null);
   const [tempRate, setTempRate] = useState<string>('');
 
-  // Calculate KPIs
-  const totalSalesRevenue = invoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
+  // Calculate KPIs. Estimates are non-fiscal quotations (Milestone 11) and are excluded from
+  // every revenue figure — only real tax invoices count as sales.
+  const taxInvoices = invoices.filter(inv => inv.invoiceType === 'TAX_INVOICE');
+  const totalSalesRevenue = taxInvoices.reduce((sum, inv) => sum + inv.grandTotal, 0);
   const totalItemsCount = tags.length;
   const inStockItemsCount = tags.filter(i => isSellable(i.status)).length;
   
@@ -254,7 +256,7 @@ export default function Dashboard({
           <p className="text-xs font-semibold text-slate-400 tracking-wider uppercase font-mono mb-1">Today's Sales Revenue</p>
           <p className="text-2xl font-black font-mono text-amber-400 tracking-tight">₹{totalSalesRevenue.toLocaleString('en-IN')}</p>
           <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center text-xs">
-            <span className="text-slate-400 font-medium">Completed Bills: {invoices.length}</span>
+            <span className="text-slate-400 font-medium">Completed Bills: {taxInvoices.length}</span>
             <button onClick={() => setActiveTab('billing?tab=history')} className="text-amber-400 hover:underline flex items-center gap-0.5 font-bold cursor-pointer">
               Invoices <ChevronRight className="w-3 h-3" />
             </button>
@@ -466,7 +468,7 @@ export default function Dashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {invoices.slice(0, 4).map((inv) => {
+                {taxInvoices.slice(0, 4).map((inv) => {
                   const itemsWeight = inv.items.reduce((sum, item) => sum + item.netWeight, 0);
                   return (
                     <tr key={inv.id} className="hover:bg-slate-50/50 transition">
