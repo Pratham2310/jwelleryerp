@@ -4,6 +4,28 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-27 — Phase 5 Complete: Milestones 16–18 (Karigar & Production)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign; all new UI is explicitly theme-aware per the `KNOWN_ISSUES.md` #12 working rule.
+
+**Milestone 16 — Karigar Append-Only Ledger & Fine Gold Equivalent.** Fixed two defects that were both silently understating what artisans owed the shop:
+
+1. **Wastage ignored purity entirely.** The old code computed loss as `issued − finishedWeight` in raw grams. Issue 100g of 22K, receive 95g of 18K back, and it reported a **5g** loss; in fine-gold terms that is 91.6g out against 71.25g back — a **20.35g** loss, four times larger. PRD §6.2 requires the comparison be in Fine Gold Equivalent (Gross × Purity%). `src/lib/fineGoldLedger.ts` implements it, and the receipt form now captures the *returned* purity, without which the comparison is meaningless.
+2. **Balances were mutable running totals.** `Karigar.metalBalance` / `laborChargesOwed` were overwritten on every transaction, so "how did we arrive at this balance" was unanswerable (`KNOWN_ISSUES.md` #10). Balances are now **derived** by folding an append-only `KarigarLedgerEntry` list; nothing is edited or deleted. A Ledger Statement modal shows every entry with its running balance.
+
+Decision **D-2** (Weight and Money are parallel ledgers that never net) is now enforced *structurally*: an entry carries either a `fineWeightDelta` or a `moneyDelta`, and `validateLedgerEntry()` rejects one carrying both.
+
+**Milestone 17 — WorkOrder / Job Bag Unification.** `WorkOrder` and `JobBag` were two disconnected models describing the same real thing. The seed data proved it: `wo-1` "Mayur Peacock Gold Jhumkas" and `bag-1` were one job (same karigar, 15g, same due date), as were `wo-3` and `bag-2` — three work orders plus four job bags were really **five jobs**. Now one `JobWork` aggregate with a financial dimension (feeding the M16 ledger) and a production dimension (driving the kanban). Consequences fixed: the ledger could previously mark a job Completed while the kanban still showed it at Casting (`canReceiveFinishedGoods()` now requires genuine floor completion and blocks double-booking); `JobBag` stored only a karigar *name* with no id, which is why the screens could never be joined; two number series (`WO-`/`BAG-`) became one `JOB-` series allocated from the highest existing number rather than array length; and stage advance now goes through `canAdvanceStage()`, so Hallmark cannot be skipped.
+
+**Milestone 18 — Wastage Cap Alerts & Scrap/Stone Return.** PRD §6.2 requires excess wastage to be "flagged for owner review (possible loss/theft indicator)"; the original code did the opposite, silently capping it away with `Math.min()`. An over-cap receipt now raises a Pending review; a banner lists the queue and names the **highest-exposure artisan, aggregated per karigar** — one over-cap job is usually a bad casting, but one artisan repeatedly topping the list is the pattern §6.2 actually wants surfaced. The owner resolves it with a mandatory note: *Shop Absorbs* appends a write-off entry clearing the excess from the balance, *Karigar Bears It* deliberately leaves the balance untouched. Also adds the Scrap & Unused Stone Return receipt, reusing StoneManager's existing Issued/In Vault states rather than inventing a parallel status.
+
+**Bug found in browser testing that typechecking could not catch:** after the M17 rename, the karigar `<select>` *read* `karigarName` but still *wrote* `assignedKarigarName`, so choosing a karigar silently never updated state and the form could not submit. Excess-property checking does not apply through a spread, so `tsc` was clean. This is precisely the class of defect the Playwright pass exists to catch.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **214 tests passing across 12 suites** (up from 155); `npm run build` clean. Playwright-verified end to end: a 15g 22K issue received back as 12g against a 3% cap flags exactly **2.336g** excess (13.740 fine issued, 10.992 returned, 2.748 lost, 0.412 allowed); the short-note guard fires; writing off clears the banner and posts a ledger entry; an empty scrap return is rejected before a real one posts; all five seed jobs appear on both screens under identical `JOB-` numbers with no legacy `BAG-` numbers. Full regression across all 8 screens, both themes and a 390×844 mobile viewport: **zero console errors**.
+
+---
+
 ## 2026-07-26 — Phase 4 Complete: Milestones 14–15 (Old Gold Buyback)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

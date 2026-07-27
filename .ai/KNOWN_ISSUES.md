@@ -65,8 +65,10 @@ See `FRONTEND_ARCHITECTURE.md` §3 and `DATABASE.md` §1.1. `LooseStone[]` and `
 
 **Resolved:** `Header.tsx` now takes `items`/`customers`/`karigars` as props, wired from `App.tsx`'s live state; the static `mockData` import was removed.
 
-### 10. Karigar ledger has no transaction history, only two mutable running totals
+### 10. ✅ RESOLVED (2026-07-27) — Karigar ledger has no transaction history, only two mutable running totals
 **File:** `src/types.ts` (`Karigar.metalBalance`, `Karigar.laborChargesOwed`) and `src/components/KarigarManager.tsx`. Every issue/receipt/payout directly mutates these two numbers in place. There is no append-only ledger of individual transactions, no way to reconstruct "how did we arrive at this balance," and no reconciliation report (PRD §10.5) is possible without one. This mirrors the same event-sourcing gap called out for Rate Master (`DATABASE.md` §2.3) but for the karigar domain.
+
+**Resolved (Milestone 16):** `KarigarLedgerEntry[]` is now an append-only ledger; balances are derived with `deriveKarigarBalance()` and a statement view shows every entry with its running balance. Weight and money are structurally separate per D-2 — `validateLedgerEntry()` rejects an entry carrying both. `Karigar.metalBalance`/`laborChargesOwed` remain on the type only for legacy seed compatibility and must not be read. **Note the same event-sourcing gap is still open for Rate Master** — that is Milestone 48, and it remains a live D-4 violation.
 
 ### 11. ⚠️ PARTIALLY RESOLVED (2026-07-25) — Invoice numbering is not GST-compliant
 **File:** `src/components/BillingEstimator.tsx`, `invoiceNumber: `INV-2026-${1000 + invoices.length + 1}`` (handleCheckout). This derives the "next" invoice number from the in-memory array length, which (a) isn't guaranteed gap-free or sequential once invoices can be deleted/filtered/multi-branch, and (b) has no per-GSTIN, per-financial-year scoping at all — a hard GST Rule 46 requirement (PRD §9.3, Handbook §2.9 for the Branch/GSTIN relationship this depends on).

@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-26 — **Milestones 1–15 complete; Phases 1–4 all done** (see `CHANGELOG.md`). Milestone 16 (Karigar Append-Only Ledger) is next up by number, but see the Sequencing Note below — M48 (Rate Master) and M19 (Branch Master) both warrant pulling forward. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-27 — **Milestones 1–18 complete; Phases 1–5 all done** (see `CHANGELOG.md`). Milestone 19 (Branch Master) is next up by number, but see the Sequencing Note below — M48 (Rate Master) and M19 (Branch Master) both warrant pulling forward. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -36,10 +36,10 @@ Phase 4: Old Gold Buyback                                 [DONE]
   ├── M14 Old Gold Purchase Voucher & Melt/Touch Valuation Engine [DONE]
   └── M15 Old Gold Vault Tracking                                 [DONE]
 
-Phase 5: Karigar & Production
-  ├── M16 Karigar Append-Only Ledger & Fine Gold Equivalent Engine
-  ├── M17 WorkOrder ↔ Job Bag Unification
-  └── M18 Karigar Wastage Cap Alerts & Scrap/Stone Return
+Phase 5: Karigar & Production                             [DONE]
+  ├── M16 Karigar Append-Only Ledger & Fine Gold Equivalent Engine [DONE]
+  ├── M17 WorkOrder ↔ Job Bag Unification                          [DONE]
+  └── M18 Karigar Wastage Cap Alerts & Scrap/Stone Return          [DONE]
 
 Phase 6: Multi-Branch
   ├── M19 Branch Master & Branch Switcher
@@ -311,7 +311,7 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ## 🏁 Phase 5: Karigar & Production (Milestones 16 – 18)
 
-### 📍 Milestone 16: Karigar Append-Only Ledger & Fine Gold Equivalent Engine
+### 📍 Milestone 16: Karigar Append-Only Ledger & Fine Gold Equivalent Engine — ✅ DONE (2026-07-27)
 - **Goal:** Replace the two mutable running totals (`metalBalance`/`laborChargesOwed`) with a real, append-only ledger, and implement the PRD §6.2 Fine Gold Equivalent formula.
 - **Dependencies:** Milestone 2.
 - **Tasks:**
@@ -319,14 +319,14 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
   2. Implement `src/lib/fineGoldLedger.ts` (unit-tested): `fineEquiv = grossWeight × purityFraction`, used for issue/receipt reconciliation instead of comparing raw grams regardless of purity.
 - **Testable via:** Unit tests on fine-gold-equivalent math across mixed purities; a karigar's displayed balance is now derivable by summing their ledger entries, not read from a single mutable field.
 
-### 📍 Milestone 17: WorkOrder ↔ Job Bag Unification
+### 📍 Milestone 17: WorkOrder ↔ Job Bag Unification — ✅ DONE (2026-07-27)
 - **Goal:** Merge `WorkOrder` (`KarigarManager.tsx`) and `JobBag` (`JobBagManager.tsx`) — currently two disconnected models describing the same real-world karigar job — into one shared data model.
 - **Dependencies:** Milestone 16, Milestone 3 (a completed job-work order should produce a real `Tag`, not a free-floating record).
 - **Tasks:**
   1. Unify the two data models and the two screens' workflows into a single Karigar Job-Work aggregate.
 - **Testable via:** Creating a job in either screen is visible and consistent in the other; completing a job produces one real `Tag` record.
 
-### 📍 Milestone 18: Karigar Wastage Cap Alerts & Scrap/Stone Return
+### 📍 Milestone 18: Karigar Wastage Cap Alerts & Scrap/Stone Return — ✅ DONE (2026-07-27)
 - **Goal:** Flag (not silently absorb) excess wastage, and support returning unused stones/scrap metal.
 - **Dependencies:** Milestone 16.
 - **Tasks:**
