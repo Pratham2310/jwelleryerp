@@ -89,6 +89,7 @@ export type KarigarLedgerEntryType =
   | 'METAL_RETURNED' // finished goods received back (−weight)
   | 'WASTAGE_ALLOWED' // agreed wastage the shop absorbs (−weight)
   | 'WASTAGE_EXCESS_WRITTEN_OFF' // excess written off after owner review (−weight)
+  | 'SCRAP_RETURNED' // unused metal / filings returned by the karigar (−weight)
   | 'LABOUR_CHARGED' // making charges the shop now owes (+money)
   | 'LABOUR_PAID'; // payout to the karigar (−money)
 
@@ -167,8 +168,31 @@ export interface JobWork {
   laborCharge?: number;
   producedTagId?: string; // the real Tag created when the job completes (Handbook D-6)
 
+  /** Set when actual wastage exceeded the agreed cap and needs owner sign-off (Milestone 18). */
+  wastageReview?: WastageReview;
+
   notes?: string;
   createdAt: string;
+}
+
+/**
+ * Excess-wastage review (PRD §6.2, Milestone 18). The PRD requires excess beyond the agreed
+ * slab to be "flagged for owner review (possible loss/theft indicator)" — not silently
+ * absorbed, which is what the code did before Milestone 16 via Math.min().
+ */
+export type WastageReviewStatus =
+  | 'Pending' // awaiting owner decision; the excess still sits on the karigar's balance
+  | 'WrittenOff' // shop absorbs it — a ledger entry clears it off the balance
+  | 'RecoveredFromKarigar'; // karigar bears it — the excess stays payable
+
+export interface WastageReview {
+  excessFineWeight: number;
+  wastagePercent: number;
+  allowedPercent: number;
+  flaggedOn: string;
+  status: WastageReviewStatus;
+  reviewedOn?: string;
+  reviewNote?: string;
 }
 
 /** @deprecated Replaced by `JobWork` in Milestone 17. Retained only for reference. */

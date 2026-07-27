@@ -389,6 +389,8 @@ function AppContent() {
                     setJobWorks={setJobWorks}
                     ledger={karigarLedger}
                     setLedger={setKarigarLedger}
+                    stones={stones}
+                    setStones={setStones}
                     isIssueModalOpen={isIssueModalOpen}
                     setIssueModalOpen={setIssueModalOpen}
                   />

@@ -13,7 +13,8 @@ import {
   History,
   Sparkles,
   RefreshCw,
-  Wallet
+  Wallet,
+  AlertTriangle
 } from 'lucide-react';
 import { Karigar, JobWork, KarigarLedgerEntry } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -26,6 +27,17 @@ import {
   LEDGER_ENTRY_LABEL,
 } from '../lib/fineGoldLedger';
 import { nextJobNumber, canReceiveFinishedGoods, receiptBlockedReason, STAGE_LABEL } from '../lib/jobWork';
+import {
+  buildWastageReview,
+  pendingReviews,
+  summariseReviewQueue,
+  reviewBlockedReason,
+  resolutionClearsBalance,
+  validateReviewNote,
+  validateScrapReturn,
+  REVIEW_STATUS_LABEL,
+} from '../lib/wastageReview';
+import type { WastageReviewStatus, LooseStone } from '../types';
 
 interface KarigarManagerProps {
   karigars: Karigar[];
@@ -34,6 +46,9 @@ interface KarigarManagerProps {
   setJobWorks: React.Dispatch<React.SetStateAction<JobWork[]>>;
   ledger: KarigarLedgerEntry[];
   setLedger: React.Dispatch<React.SetStateAction<KarigarLedgerEntry[]>>;
+  // Needed so unused stones issued to a karigar can be returned to the vault (Milestone 18)
+  stones: LooseStone[];
+  setStones: React.Dispatch<React.SetStateAction<LooseStone[]>>;
   isIssueModalOpen: boolean;
   setIssueModalOpen: (open: boolean) => void;
 }
@@ -45,6 +60,8 @@ export default function KarigarManager({
   setJobWorks,
   ledger,
   setLedger,
+  stones,
+  setStones,
   isIssueModalOpen,
   setIssueModalOpen
 }: KarigarManagerProps) {
@@ -91,6 +108,18 @@ export default function KarigarManager({
   // what makes the fine-gold comparison meaningful (PRD §6.2, Milestone 16).
   const [receivedMetalType, setReceivedMetalType] = useState('Gold (22K)');
   const [receiptError, setReceiptError] = useState('');
+
+  // Excess-wastage review + scrap/stone return (Milestone 18)
+  const [reviewJobId, setReviewJobId] = useState<string | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [scrapKarigarId, setScrapKarigarId] = useState<string | null>(null);
+  const [scrapWeight, setScrapWeight] = useState<number>(0);
+  const [scrapPurity, setScrapPurity] = useState<number>(91.6);
+  const [scrapStoneIds, setScrapStoneIds] = useState<string[]>([]);
+  const [scrapError, setScrapError] = useState('');
+
+  const reviewQueue = summariseReviewQueue(jobWorks);
 
   // Inline payout confirmation state
   const [payoutConfirmId, setPayoutConfirmId] = useState<string | null>(null);
@@ -188,6 +217,7 @@ export default function KarigarManager({
     const fineIssued = fineGoldEquivalent(order.goldIssued, issuedPurity);
     const fineReturned = fineGoldEquivalent(Number(finishedWeight), receivedPurity);
     const assessment = assessWastage(fineIssued, fineReturned, allowedWastage);
+    const today = new Date().toISOString().split('T')[0];
 
     setJobWorks(prev => prev.map(o => {
       if (o.id === receivingOrderId) {
@@ -197,13 +227,15 @@ export default function KarigarManager({
           finishedWeight: Number(finishedWeight),
           finishedMetalType: receivedMetalType,
           actualWastage: assessment.fineLost,
-          laborCharge: Number(laborCharge)
+          laborCharge: Number(laborCharge),
+          // Excess beyond the agreed cap is flagged for owner review rather than absorbed
+          // (PRD §6.2, Milestone 18) — a possible loss/theft indicator.
+          wastageReview: buildWastageReview(assessment, today) ?? undefined,
         };
       }
       return o;
     }));
 
-    const today = new Date().toISOString().split('T')[0];
     const entries: Omit<KarigarLedgerEntry, 'id' | 'sequence'>[] = [
       {
         karigarId: order.karigarId,
@@ -244,6 +276,92 @@ export default function KarigarManager({
     setReceivingOrderId(null);
   };
 
+  /**
+   * Owner decision on an over-cap wastage flag. Writing it off means the SHOP absorbs the
+   * loss, so a ledger entry clears it from the karigar's balance. Recovering means the
+   * KARIGAR bears it, so the balance is deliberately left alone — they still owe the metal.
+   */
+  const handleResolveReview = (status: WastageReviewStatus) => {
+    const job = jobWorks.find(j => j.id === reviewJobId);
+    if (!job || !job.wastageReview) return;
+
+    const blocked = reviewBlockedReason(job);
+    if (blocked) { setReviewError(blocked); return; }
+    const noteError = validateReviewNote(reviewNote);
+    if (noteError) { setReviewError(noteError); return; }
+
+    const today = new Date().toISOString().split('T')[0];
+    const excess = job.wastageReview.excessFineWeight;
+
+    setJobWorks(prev => prev.map(j => j.id === job.id
+      ? { ...j, wastageReview: { ...j.wastageReview!, status, reviewedOn: today, reviewNote: reviewNote.trim() } }
+      : j));
+
+    if (resolutionClearsBalance(status)) {
+      appendLedger([{
+        karigarId: job.karigarId,
+        date: today,
+        type: 'WASTAGE_EXCESS_WRITTEN_OFF',
+        workOrderId: job.id,
+        narration: `${job.jobNo} — excess wastage written off: ${reviewNote.trim()}`,
+        fineWeightDelta: -excess,
+      }]);
+    }
+
+    setReviewJobId(null);
+    setReviewNote('');
+    setReviewError('');
+  };
+
+  /**
+   * Scrap / unused stone return (PRD §6.2 workflow step 3). Returned filings reduce the
+   * karigar's fine-gold payable; returned stones go back to the vault, reusing StoneManager's
+   * existing Issued/In Vault states rather than inventing a parallel status.
+   */
+  const handleScrapReturn = () => {
+    const karigarId = scrapKarigarId;
+    if (!karigarId) return;
+    const karigar = karigars.find(k => k.id === karigarId);
+    if (!karigar) return;
+
+    const hasScrap = Number(scrapWeight) > 0;
+    const hasStones = scrapStoneIds.length > 0;
+    if (!hasScrap && !hasStones) {
+      setScrapError('Record returned scrap metal, unused stones, or both.');
+      return;
+    }
+    if (hasScrap) {
+      const err = validateScrapReturn({ grossWeight: scrapWeight, purityPercent: scrapPurity });
+      if (err) { setScrapError(err); return; }
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    if (hasScrap) {
+      const fine = fineGoldEquivalent(Number(scrapWeight), Number(scrapPurity));
+      appendLedger([{
+        karigarId,
+        date: today,
+        type: 'SCRAP_RETURNED',
+        narration: `Scrap / filings returned — ${Number(scrapWeight).toFixed(3)}g @ ${scrapPurity}%`,
+        fineWeightDelta: -fine,
+        grossWeight: Number(scrapWeight),
+        purityPercent: Number(scrapPurity),
+      }]);
+    }
+
+    if (hasStones) {
+      setStones(prev => prev.map(st => scrapStoneIds.includes(st.id)
+        ? { ...st, status: 'In Vault' as const, assignedKarigarName: undefined }
+        : st));
+    }
+
+    setScrapKarigarId(null);
+    setScrapWeight(0);
+    setScrapStoneIds([]);
+    setScrapError('');
+  };
+
   const handlePayoutKarigar = (id: string, amount: number) => {
     setKarigars(prev => prev.map(k => {
       if (k.id === id) {
@@ -267,6 +385,36 @@ export default function KarigarManager({
 
   return (
     <div className="space-y-6">
+      {/* Excess-wastage review queue (Milestone 18, PRD §6.2). Only rendered when something
+          is actually outstanding — an empty alert bar trains staff to ignore it. */}
+      {reviewQueue.pendingCount > 0 && (
+        <div className={`border rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+          dark ? 'border-rose-900/50 bg-rose-950/25 text-rose-300' : 'border-rose-200 bg-rose-50/70 text-rose-900'
+        }`}>
+          <div className="flex items-start gap-3 text-xs">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              <span className="font-bold block">
+                {reviewQueue.pendingCount} job{reviewQueue.pendingCount === 1 ? '' : 's'} exceeded the agreed wastage cap
+                — {reviewQueue.totalExcessFineWeight.toFixed(3)}g fine gold awaiting owner review
+              </span>
+              {reviewQueue.worstOffenderKarigarName && (
+                <span className="opacity-80">
+                  Highest exposure: {reviewQueue.worstOffenderKarigarName} ({reviewQueue.worstOffenderExcess.toFixed(3)}g).
+                  Repeated flags against one artisan are the pattern PRD §6.2 asks the system to surface.
+                </span>
+              )}
+            </span>
+          </div>
+          <button
+            onClick={() => setActiveSubTab('orders')}
+            className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white transition shrink-0"
+          >
+            Review Flagged Jobs
+          </button>
+        </div>
+      )}
+
       {/* Sub tabs */}
       <div className="flex border-b border-slate-150 gap-4">
         <button
@@ -342,13 +490,28 @@ export default function KarigarManager({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setStatementKarigarId(kar.id)}
-                    className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
-                  >
-                    <History className="w-3.5 h-3.5" />
-                    View Ledger Statement ({balance.entryCount} {balance.entryCount === 1 ? 'entry' : 'entries'})
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setStatementKarigarId(kar.id)}
+                      className="flex items-center justify-center gap-1.5 text-[11px] font-bold py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                    >
+                      <History className="w-3.5 h-3.5" />
+                      Ledger ({balance.entryCount})
+                    </button>
+                    <button
+                      onClick={() => {
+                        setScrapKarigarId(kar.id);
+                        setScrapWeight(0);
+                        setScrapPurity(91.6);
+                        setScrapStoneIds([]);
+                        setScrapError('');
+                      }}
+                      className="flex items-center justify-center gap-1.5 text-[11px] font-bold py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Return Scrap
+                    </button>
+                  </div>
 
                   {/* Active & Completed Orders Ledger List */}
                   <div className="border-t border-slate-100 pt-3.5 space-y-2.5">
@@ -512,6 +675,19 @@ export default function KarigarManager({
                         >
                           Receive Finished
                         </button>
+                      )}
+                      {order.wastageReview?.status === 'Pending' && (
+                        <button
+                          onClick={() => { setReviewJobId(order.id); setReviewNote(''); setReviewError(''); }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition"
+                        >
+                          <AlertTriangle className="w-3 h-3" /> Review {order.wastageReview.excessFineWeight.toFixed(3)}g
+                        </button>
+                      )}
+                      {order.wastageReview && order.wastageReview.status !== 'Pending' && (
+                        <span className="text-[10px] font-mono text-slate-400" title={order.wastageReview.reviewNote}>
+                          {REVIEW_STATUS_LABEL[order.wastageReview.status]}
+                        </span>
                       )}
                       {order.receiptStatus === 'Received' && (
                         <div className="text-[10px] text-slate-400 font-bold">
@@ -768,6 +944,199 @@ export default function KarigarManager({
           </div>
         </div>
       )}
+
+      {/* ---------- Excess Wastage Review (Milestone 18) ---------- */}
+      {reviewJobId && (() => {
+        const jr = jobWorks.find(j => j.id === reviewJobId);
+        if (!jr || !jr.wastageReview) return null;
+        const rv = jr.wastageReview;
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className={`w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden ${
+              dark ? 'bg-[#141416] border-zinc-800 text-zinc-100' : 'bg-white border-slate-150 text-slate-800'
+            }`}>
+              <div className={`flex items-center justify-between p-5 border-b ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-500" /> Excess Wastage Review
+                  </h3>
+                  <p className={`text-[11px] mt-0.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                    {jr.jobNo} - {jr.karigarName}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setReviewJobId(null); setReviewError(''); }}
+                  className={`p-1.5 rounded-lg transition ${dark ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-slate-100 text-slate-500'}`}
+                  aria-label="Close wastage review"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div className={`rounded-xl border p-3 space-y-1.5 text-xs ${
+                  dark ? 'border-rose-900/40 bg-rose-950/20' : 'border-rose-200 bg-rose-50/60'
+                }`}>
+                  <div className="flex justify-between"><span>Actual wastage</span><span className="font-mono font-bold">{rv.wastagePercent.toFixed(2)}%</span></div>
+                  <div className="flex justify-between"><span>Agreed cap</span><span className="font-mono">{rv.allowedPercent.toFixed(2)}%</span></div>
+                  <div className={`flex justify-between font-bold border-t pt-1.5 ${dark ? 'border-rose-900/40' : 'border-rose-200'}`}>
+                    <span>Excess fine gold</span>
+                    <span className="font-mono text-rose-500">{rv.excessFineWeight.toFixed(3)} g</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                    Owner Decision Note
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Bad casting batch, accepted by owner"
+                    className={`w-full text-xs px-3 py-2 rounded-lg border focus:outline-none focus:border-amber-500 ${
+                      dark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                    value={reviewNote}
+                    onChange={(e) => { setReviewNote(e.target.value); setReviewError(''); }}
+                  />
+                </div>
+
+                {reviewError && (
+                  <p className="text-[11px] text-rose-500 font-semibold">{reviewError}</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleResolveReview('WrittenOff')}
+                    className="text-xs font-bold py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black transition"
+                  >
+                    Shop Absorbs (Write Off)
+                  </button>
+                  <button
+                    onClick={() => handleResolveReview('RecoveredFromKarigar')}
+                    className={`text-xs font-bold py-2.5 rounded-xl border transition ${
+                      dark ? 'border-zinc-700 text-zinc-200 hover:bg-zinc-900' : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    Karigar Bears It
+                  </button>
+                </div>
+                <p className={`text-[10px] leading-snug ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                  Writing off appends a ledger entry clearing {rv.excessFineWeight.toFixed(3)}g from this artisan's balance.
+                  Recovering leaves the balance untouched - they still owe the metal.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ---------- Scrap & Unused Stone Return (Milestone 18) ---------- */}
+      {scrapKarigarId && (() => {
+        const kar = karigars.find(k => k.id === scrapKarigarId);
+        if (!kar) return null;
+        const issuedStones = stones.filter(st => st.status === 'Issued' && st.assignedKarigarName === kar.name);
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className={`w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden ${
+              dark ? 'bg-[#141416] border-zinc-800 text-zinc-100' : 'bg-white border-slate-150 text-slate-800'
+            }`}>
+              <div className={`flex items-center justify-between p-5 border-b ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-amber-500" /> Return Scrap & Unused Stones
+                  </h3>
+                  <p className={`text-[11px] mt-0.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>{kar.name}</p>
+                </div>
+                <button
+                  onClick={() => { setScrapKarigarId(null); setScrapError(''); }}
+                  className={`p-1.5 rounded-lg transition ${dark ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-slate-100 text-slate-500'}`}
+                  aria-label="Close scrap return"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>Scrap Weight (g)</label>
+                    <input
+                      type="number" step="0.001" placeholder="0.000"
+                      className={`w-full text-xs font-mono px-3 py-2 rounded-lg border focus:outline-none focus:border-amber-500 ${
+                        dark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                      value={scrapWeight || ''}
+                      onChange={(e) => { setScrapWeight(parseFloat(e.target.value) || 0); setScrapError(''); }}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>Scrap Purity (%)</label>
+                    <input
+                      type="number" step="0.1"
+                      className={`w-full text-xs font-mono px-3 py-2 rounded-lg border focus:outline-none focus:border-amber-500 ${
+                        dark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                      value={scrapPurity}
+                      onChange={(e) => { setScrapPurity(parseFloat(e.target.value) || 0); setScrapError(''); }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                    Unused Stones Issued to This Artisan
+                  </label>
+                  {issuedStones.length === 0 ? (
+                    <p className={`text-[11px] ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>No stone lots are currently issued to this artisan.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {issuedStones.map(st => (
+                        <label
+                          key={st.id}
+                          className={`flex items-center gap-3 text-xs border rounded-lg px-3 py-2 cursor-pointer transition ${
+                            scrapStoneIds.includes(st.id)
+                              ? 'border-amber-500 bg-amber-50 text-amber-900'
+                              : dark ? 'border-zinc-800 hover:bg-zinc-900' : 'border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-amber-500"
+                            checked={scrapStoneIds.includes(st.id)}
+                            onChange={(e) => {
+                              setScrapError('');
+                              setScrapStoneIds(prev => e.target.checked ? [...prev, st.id] : prev.filter(i => i !== st.id));
+                            }}
+                          />
+                          <span className="flex-1">
+                            <span className="font-bold block">{st.lotNo} - {st.stoneType}</span>
+                            <span className={dark ? 'text-zinc-500' : 'text-slate-400'}>{st.caratWeight}ct - {st.quantity} pcs</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {scrapError && <p className="text-[11px] text-rose-500 font-semibold">{scrapError}</p>}
+
+                <p className={`text-[10px] leading-snug ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                  Returned scrap reduces the artisan's fine-gold payable; selected stone lots go back to the vault as In Vault.
+                </p>
+              </div>
+
+              <div className={`p-5 border-t ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+                <button
+                  onClick={handleScrapReturn}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs py-2.5 rounded-xl transition"
+                >
+                  Record Return
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ---------- Append-Only Ledger Statement (Milestone 16) ---------- */}
       {statementKarigarId && (() => {

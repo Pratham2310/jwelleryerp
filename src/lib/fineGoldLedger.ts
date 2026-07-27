@@ -104,6 +104,7 @@ export const WEIGHT_ENTRY_TYPES: KarigarLedgerEntryType[] = [
   'METAL_RETURNED',
   'WASTAGE_ALLOWED',
   'WASTAGE_EXCESS_WRITTEN_OFF',
+  'SCRAP_RETURNED',
 ];
 
 /** Entry types that move the MONEY ledger (rupees owed BY the shop TO the karigar). */
@@ -114,6 +115,7 @@ export const LEDGER_ENTRY_LABEL: Record<KarigarLedgerEntryType, string> = {
   METAL_RETURNED: 'Finished Goods Received',
   WASTAGE_ALLOWED: 'Wastage Allowed',
   WASTAGE_EXCESS_WRITTEN_OFF: 'Excess Wastage Written Off',
+  SCRAP_RETURNED: 'Scrap / Filings Returned',
   LABOUR_CHARGED: 'Labour Charged',
   LABOUR_PAID: 'Labour Paid',
 };
