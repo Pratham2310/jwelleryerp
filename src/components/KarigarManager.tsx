@@ -15,13 +15,24 @@ import {
   RefreshCw,
   Wallet
 } from 'lucide-react';
-import { Karigar, WorkOrder } from '../types';
+import { Karigar, WorkOrder, KarigarLedgerEntry } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
+import {
+  fineGoldEquivalent,
+  purityPercentForMetal,
+  assessWastage,
+  deriveKarigarBalance,
+  buildLedgerStatement,
+  LEDGER_ENTRY_LABEL,
+} from '../lib/fineGoldLedger';
 
 interface KarigarManagerProps {
   karigars: Karigar[];
   setKarigars: React.Dispatch<React.SetStateAction<Karigar[]>>;
   workOrders: WorkOrder[];
   setWorkOrders: React.Dispatch<React.SetStateAction<WorkOrder[]>>;
+  ledger: KarigarLedgerEntry[];
+  setLedger: React.Dispatch<React.SetStateAction<KarigarLedgerEntry[]>>;
   isIssueModalOpen: boolean;
   setIssueModalOpen: (open: boolean) => void;
 }
@@ -31,9 +42,33 @@ export default function KarigarManager({
   setKarigars,
   workOrders,
   setWorkOrders,
+  ledger,
+  setLedger,
   isIssueModalOpen,
   setIssueModalOpen
 }: KarigarManagerProps) {
+  // Ledger statement viewer (Milestone 16). Explicitly theme-aware — index.css's dark-mode
+  // repaint only remaps a fixed list of classes, so anything new must branch itself
+  // (KNOWN_ISSUES #12; this bit the Stock Audit panel and the Dashboard chart before).
+  const { theme } = useTheme();
+  const dark = theme === 'dark';
+  const [statementKarigarId, setStatementKarigarId] = useState<string | null>(null);
+
+  /**
+   * Appends to the append-only ledger. Entries are never edited or deleted — this is the
+   * only write path for a karigar balance (KNOWN_ISSUES #10 / decision D-2).
+   */
+  const appendLedger = (entries: Omit<KarigarLedgerEntry, 'id' | 'sequence'>[]) => {
+    setLedger(prev => {
+      let seq = prev.length;
+      const created = entries.map((e, i) => ({
+        ...e,
+        id: `kle-${Date.now()}-${i}`,
+        sequence: ++seq,
+      }));
+      return [...prev, ...created];
+    });
+  };
   // Navigation tabs for Karigar Manager
   const [activeSubTab, setActiveSubTab] = useState<'artisans' | 'orders'>('artisans');
 
@@ -51,6 +86,9 @@ export default function KarigarManager({
   const [finishedWeight, setFinishedWeight] = useState<number>(0);
   const [allowedWastage, setAllowedWastage] = useState<number>(3); // 3%
   const [laborCharge, setLaborCharge] = useState<number>(0);
+  // A karigar can return a piece at a different purity than was issued — capturing this is
+  // what makes the fine-gold comparison meaningful (PRD §6.2, Milestone 16).
+  const [receivedMetalType, setReceivedMetalType] = useState('Gold (22K)');
 
   // Inline payout confirmation state
   const [payoutConfirmId, setPayoutConfirmId] = useState<string | null>(null);
@@ -83,16 +121,22 @@ export default function KarigarManager({
     // Update active orders
     setWorkOrders(prev => [newOrder, ...prev]);
 
-    // Update Karigar's outstanding raw metal balance
-    setKarigars(prev => prev.map(k => {
-      if (k.id === selectedKarigarId) {
-        return {
-          ...k,
-          metalBalance: Number((k.metalBalance + Number(goldIssued)).toFixed(3))
-        };
-      }
-      return k;
-    }));
+    // Metal issued is recorded in FINE gold equivalent, so a 22K issue and an 18K receipt
+    // are comparable later (PRD §6.2). The gross weight and purity are kept alongside so
+    // the maths stays auditable.
+    const purity = purityPercentForMetal(metalType);
+    const fineIssued = fineGoldEquivalent(Number(goldIssued), purity);
+
+    appendLedger([{
+      karigarId: selectedKarigarId,
+      date: newOrder.issueDate,
+      type: 'METAL_ISSUED',
+      workOrderId: newOrder.id,
+      narration: `${newOrder.orderNo} — ${designName} (${metalType})`,
+      fineWeightDelta: fineIssued,
+      grossWeight: Number(goldIssued),
+      purityPercent: purity,
+    }]);
 
     // Reset Form
     setSelectedKarigarId('');
@@ -107,6 +151,8 @@ export default function KarigarManager({
     // Suggest estimated labor charge
     setLaborCharge(Math.round(order.goldIssued * 450));
     setFinishedWeight(order.goldIssued);
+    // Default to the purity that was issued; staff change it if the piece came back different
+    setReceivedMetalType(order.metalType);
   };
 
   const handleCompleteReceipt = (e: React.FormEvent) => {
@@ -116,41 +162,66 @@ export default function KarigarManager({
     const order = workOrders.find(o => o.id === receivingOrderId);
     if (!order) return;
 
-    // wastage calculation
-    const loss = Number((order.goldIssued - Number(finishedWeight)).toFixed(3));
-    const allowedWeightLoss = Number((order.goldIssued * (allowedWastage / 100)).toFixed(3));
-    
-    // Update active orders
+    // Wastage is assessed in FINE gold, not raw grams (PRD §6.2). Comparing raw grams
+    // across different purities understates the loss badly — issuing 22K and receiving
+    // 18K back would otherwise look almost lossless.
+    const issuedPurity = purityPercentForMetal(order.metalType);
+    const receivedPurity = purityPercentForMetal(receivedMetalType);
+    const fineIssued = fineGoldEquivalent(order.goldIssued, issuedPurity);
+    const fineReturned = fineGoldEquivalent(Number(finishedWeight), receivedPurity);
+    const assessment = assessWastage(fineIssued, fineReturned, allowedWastage);
+
     setWorkOrders(prev => prev.map(o => {
       if (o.id === receivingOrderId) {
         return {
           ...o,
           status: 'Completed',
           finishedWeight: Number(finishedWeight),
-          actualWastage: loss,
+          actualWastage: assessment.fineLost,
           laborCharge: Number(laborCharge)
         };
       }
       return o;
     }));
 
-    // Update Karigar metal balances and labor payables
-    // Net metal returned to workshop = finishedWeight.
-    // Gold consumed from artisan balance = finishedWeight + allowed wastage.
-    // If they lost more than allowed, they pay/reconcile the excess.
-    const goldToDeduct = Number(finishedWeight) + Math.min(loss, allowedWeightLoss);
-    
-    setKarigars(prev => prev.map(k => {
-      if (k.id === order.karigarId) {
-        return {
-          ...k,
-          metalBalance: Number((k.metalBalance - goldToDeduct).toFixed(3)),
-          laborChargesOwed: k.laborChargesOwed + Number(laborCharge)
-        };
-      }
-      return k;
-    }));
+    const today = new Date().toISOString().split('T')[0];
+    const entries: Omit<KarigarLedgerEntry, 'id' | 'sequence'>[] = [
+      {
+        karigarId: order.karigarId,
+        date: today,
+        type: 'METAL_RETURNED',
+        workOrderId: order.id,
+        narration: `${order.orderNo} — received ${Number(finishedWeight).toFixed(3)}g ${receivedMetalType}`,
+        fineWeightDelta: -fineReturned,
+        grossWeight: Number(finishedWeight),
+        purityPercent: receivedPurity,
+      },
+      {
+        karigarId: order.karigarId,
+        date: today,
+        type: 'WASTAGE_ALLOWED',
+        workOrderId: order.id,
+        narration: `${order.orderNo} — wastage absorbed @ ${allowedWastage}% (${assessment.wastagePercent.toFixed(2)}% actual)`,
+        // Only the agreed portion is written off here. Anything beyond the cap stays on the
+        // karigar's balance for owner review rather than being silently absorbed — the
+        // previous code capped it away with Math.min(). The review workflow is Milestone 18.
+        fineWeightDelta: -Math.min(assessment.fineLost, assessment.allowedFineWeight),
+      },
+    ];
 
+    // Labour is a money liability and must never net against the weight ledger (D-2)
+    if (Number(laborCharge) > 0) {
+      entries.push({
+        karigarId: order.karigarId,
+        date: today,
+        type: 'LABOUR_CHARGED',
+        workOrderId: order.id,
+        narration: `${order.orderNo} — making charges`,
+        moneyDelta: Number(laborCharge),
+      });
+    }
+
+    appendLedger(entries);
     setReceivingOrderId(null);
   };
 
@@ -164,6 +235,14 @@ export default function KarigarManager({
       }
       return k;
     }));
+    // Money ledger only — a payout must never touch the weight ledger (D-2)
+    appendLedger([{
+      karigarId: id,
+      date: new Date().toISOString().split('T')[0],
+      type: 'LABOUR_PAID',
+      narration: 'Labour payout cleared',
+      moneyDelta: -Math.abs(amount),
+    }]);
     setPayoutConfirmId(null);
   };
 
@@ -200,7 +279,10 @@ export default function KarigarManager({
             {karigars.map((kar) => {
               const activeOrders = workOrders.filter(o => o.karigarId === kar.id && o.status === 'In Progress');
               const completedOrders = workOrders.filter(o => o.karigarId === kar.id && o.status === 'Completed');
-              
+              // Balances are DERIVED from the append-only ledger, never read from a stored
+              // running total (Milestone 16, KNOWN_ISSUES #10).
+              const balance = deriveKarigarBalance(ledger, kar.id);
+
               return (
                 <div 
                   key={kar.id}
@@ -219,23 +301,35 @@ export default function KarigarManager({
                     </div>
                   </div>
 
-                  {/* Ledger balances */}
+                  {/* Ledger balances — weight and money kept strictly separate (D-2) */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-3 bg-amber-50/40 rounded-xl border border-amber-100/50">
-                      <span className="text-[10px] text-slate-400 font-mono uppercase font-bold tracking-wider block">Outstanding Metal (g)</span>
-                      <span className="font-mono text-base font-black text-amber-800">
-                        {kar.metalBalance} grams
+                      <span className="text-[10px] text-slate-400 font-mono uppercase font-bold tracking-wider block">Fine Gold Payable</span>
+                      <span className={`font-mono text-base font-black ${balance.fineWeightPayable < 0 ? 'text-emerald-700' : 'text-amber-800'}`}>
+                        {balance.fineWeightPayable.toFixed(3)} g
                       </span>
-                      <span className="text-[9px] text-slate-400 block mt-1">Held by artisan in workshop</span>
+                      <span className="text-[9px] text-slate-400 block mt-1">
+                        {balance.fineWeightPayable < 0
+                          ? 'Shop owes artisan metal'
+                          : '24K equivalent held by artisan'}
+                      </span>
                     </div>
                     <div className="p-3 bg-indigo-50/30 rounded-xl border border-indigo-100/50">
                       <span className="text-[10px] text-slate-400 font-mono uppercase font-bold tracking-wider block">Labor Charges Due</span>
                       <span className="font-mono text-base font-black text-indigo-900">
-                        ₹{kar.laborChargesOwed.toLocaleString('en-IN')}
+                        ₹{balance.moneyPayable.toLocaleString('en-IN')}
                       </span>
                       <span className="text-[9px] text-slate-400 block mt-1">Pending approval payout</span>
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => setStatementKarigarId(kar.id)}
+                    className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    View Ledger Statement ({balance.entryCount} {balance.entryCount === 1 ? 'entry' : 'entries'})
+                  </button>
 
                   {/* Active & Completed Orders Ledger List */}
                   <div className="border-t border-slate-100 pt-3.5 space-y-2.5">
@@ -370,7 +464,7 @@ export default function KarigarManager({
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className={`divide-y ${dark ? 'divide-zinc-800 text-zinc-200' : 'divide-slate-100 text-slate-700'}`}>
                 {workOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50/30 transition">
                     <td className="p-4 font-mono font-bold text-slate-900">{order.orderNo}</td>
@@ -586,6 +680,20 @@ export default function KarigarManager({
                   />
                 </div>
                 <div>
+                  {/* Capturing the RETURNED purity is what makes the fine-gold comparison
+                      meaningful — a piece can come back at a different karat than was issued */}
+                  <label className="block text-[10px] uppercase font-bold font-mono text-slate-500 mb-1.5">Finished Purity *</label>
+                  <select
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none"
+                    value={receivedMetalType}
+                    onChange={(e) => setReceivedMetalType(e.target.value)}
+                  >
+                    {['Gold (24K)', 'Gold (22K)', 'Gold (18K)', 'Silver (999)', 'Platinum (950)'].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-[10px] uppercase font-bold font-mono text-slate-500 mb-1.5">Wastage Cap (%) *</label>
                   <input
                     type="number"
@@ -641,6 +749,96 @@ export default function KarigarManager({
           </div>
         </div>
       )}
+
+      {/* ---------- Append-Only Ledger Statement (Milestone 16) ---------- */}
+      {statementKarigarId && (() => {
+        const kar = karigars.find(k => k.id === statementKarigarId);
+        const rows = buildLedgerStatement(ledger, statementKarigarId);
+        const balance = deriveKarigarBalance(ledger, statementKarigarId);
+        if (!kar) return null;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className={`border rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden ${dark ? 'bg-[#141416] border-zinc-800 text-zinc-100' : 'bg-white border-slate-150 text-slate-800'}`}>
+              <div className={`flex items-center justify-between p-5 border-b ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+                <div>
+                  <h3 className="font-bold text-sm flex items-center gap-2">
+                    <History className="w-4 h-4 text-amber-500" /> Karigar Ledger Statement
+                  </h3>
+                  <p className={`text-[11px] mt-0.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                    {kar.name} · append-only, every balance is the sum of the rows below
+                  </p>
+                </div>
+                <button
+                  onClick={() => setStatementKarigarId(null)}
+                  className={`p-1.5 rounded-lg transition ${dark ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-slate-100 text-slate-500'}`}
+                  aria-label="Close ledger statement"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="max-h-[55vh] overflow-y-auto">
+                {rows.length === 0 ? (
+                  <div className="py-14 text-center">
+                    <History className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className={`text-xs font-bold ${dark ? 'text-zinc-400' : 'text-slate-500'}`}>No ledger entries yet</p>
+                    <p className={`text-[11px] mt-0.5 ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>Issue metal or book labour and it will appear here.</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-left text-xs font-medium">
+                    <thead className={`sticky top-0 ${dark ? 'bg-[#141416]' : 'bg-white'}`}>
+                      <tr className={`uppercase font-mono text-[9px] border-b ${dark ? 'text-zinc-500 border-zinc-800' : 'text-slate-400 border-slate-100'}`}>
+                        <th className="py-3 pl-5">Date</th>
+                        <th>Entry</th>
+                        <th className="text-right">Fine Wt (g)</th>
+                        <th className="text-right">Money (₹)</th>
+                        <th className="text-right">Bal. Fine</th>
+                        <th className="text-right pr-5">Bal. Money</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${dark ? 'divide-zinc-800 text-zinc-200' : 'divide-slate-100 text-slate-700'}`}>
+                      {rows.map(r => (
+                        <tr key={r.id} className={dark ? 'hover:bg-zinc-900/50' : 'hover:bg-slate-50/60'}>
+                          <td className={`py-3 pl-5 font-mono whitespace-nowrap ${dark ? 'text-zinc-500' : 'text-slate-500'}`}>{r.date}</td>
+                          <td>
+                            <span className="font-bold block">{LEDGER_ENTRY_LABEL[r.type]}</span>
+                            <span className={`text-[10px] ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>{r.narration}</span>
+                            {r.grossWeight !== undefined && r.purityPercent !== undefined && (
+                              <span className={`text-[10px] block font-mono ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                                {r.grossWeight.toFixed(3)}g × {r.purityPercent}%
+                              </span>
+                            )}
+                          </td>
+                          <td className={`text-right font-mono ${(r.fineWeightDelta || 0) < 0 ? 'text-emerald-500' : (dark ? 'text-zinc-200' : 'text-slate-800')}`}>
+                            {r.fineWeightDelta ? `${r.fineWeightDelta > 0 ? '+' : ''}${r.fineWeightDelta.toFixed(3)}` : '—'}
+                          </td>
+                          <td className={`text-right font-mono ${(r.moneyDelta || 0) < 0 ? 'text-emerald-500' : (dark ? 'text-zinc-200' : 'text-slate-800')}`}>
+                            {r.moneyDelta ? `${r.moneyDelta > 0 ? '+' : ''}${r.moneyDelta.toLocaleString('en-IN')}` : '—'}
+                          </td>
+                          <td className="text-right font-mono font-bold">{r.runningFineWeight.toFixed(3)}</td>
+                          <td className="text-right font-mono font-bold pr-5">{r.runningMoney.toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <div className={`p-5 border-t grid grid-cols-2 gap-4 ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+                <div className={`p-3 rounded-xl border ${dark ? 'bg-amber-950/25 border-amber-900/40' : 'bg-amber-50/50 border-amber-100'}`}>
+                  <span className={`text-[10px] font-mono uppercase font-bold tracking-wider block ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>Closing Fine Gold Payable</span>
+                  <span className={`font-mono text-base font-black ${dark ? 'text-amber-400' : 'text-amber-800'}`}>{balance.fineWeightPayable.toFixed(3)} g</span>
+                </div>
+                <div className={`p-3 rounded-xl border ${dark ? 'bg-indigo-950/25 border-indigo-900/40' : 'bg-indigo-50/40 border-indigo-100'}`}>
+                  <span className={`text-[10px] font-mono uppercase font-bold tracking-wider block ${dark ? 'text-zinc-500' : 'text-slate-400'}`}>Closing Labour Payable</span>
+                  <span className={`font-mono text-base font-black ${dark ? 'text-indigo-300' : 'text-indigo-900'}`}>₹{balance.moneyPayable.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

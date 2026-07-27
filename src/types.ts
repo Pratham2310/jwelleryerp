@@ -77,6 +77,41 @@ export interface Karigar {
   rating: number;
 }
 
+/**
+ * Append-only Karigar ledger (PRD §6.2, Milestone 16, closes KNOWN_ISSUES #10).
+ * Entries are never edited or deleted — a correction is a new, opposing entry.
+ *
+ * Decision D-2: Weight and Money are two parallel ledgers that never net against each other,
+ * so an entry carries EITHER `fineWeightDelta` OR `moneyDelta`, never both.
+ */
+export type KarigarLedgerEntryType =
+  | 'METAL_ISSUED' // fine grams the karigar now owes the shop (+weight)
+  | 'METAL_RETURNED' // finished goods received back (−weight)
+  | 'WASTAGE_ALLOWED' // agreed wastage the shop absorbs (−weight)
+  | 'WASTAGE_EXCESS_WRITTEN_OFF' // excess written off after owner review (−weight)
+  | 'LABOUR_CHARGED' // making charges the shop now owes (+money)
+  | 'LABOUR_PAID'; // payout to the karigar (−money)
+
+export interface KarigarLedgerEntry {
+  id: string;
+  karigarId: string;
+  date: string;
+  /** Tie-break for entries sharing a date, so statement order is deterministic. */
+  sequence: number;
+  type: KarigarLedgerEntryType;
+  narration: string;
+  workOrderId?: string;
+
+  // Weight ledger — fine (24K-equivalent) grams. Positive = karigar owes the shop more.
+  fineWeightDelta?: number;
+  /** Provenance for the weight figure, so the fine-gold maths is auditable (D-2). */
+  grossWeight?: number;
+  purityPercent?: number;
+
+  // Money ledger — rupees. Positive = the shop owes the karigar more.
+  moneyDelta?: number;
+}
+
 export interface WorkOrder {
   id: string;
   orderNo: string;

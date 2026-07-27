@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher, KarigarLedgerEntry } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -730,5 +730,53 @@ export const initialOldGoldVouchers: OldGoldVoucher[] = [
     buybackValue: 33186, // 6.624 × 5010
     settlementMode: 'CASH',
     status: 'InSafe'
+  }
+];
+
+// Append-only Karigar ledger (PRD §6.2, Milestone 16, closes KNOWN_ISSUES #10).
+// These are OPENING entries that reproduce the balances the old mutable `metalBalance` /
+// `laborChargesOwed` fields carried, converted to fine (24K-equivalent) grams at 22K purity.
+// From here on every movement appends a new entry — nothing is ever edited in place.
+export const initialKarigarLedger: KarigarLedgerEntry[] = [
+  {
+    id: 'kle-open-1', karigarId: 'kar-1', date: '2026-07-01', sequence: 1,
+    type: 'METAL_ISSUED', narration: 'Opening balance carried forward',
+    fineWeightDelta: 38.609, grossWeight: 42.15, purityPercent: 91.6
+  },
+  {
+    id: 'kle-open-2', karigarId: 'kar-1', date: '2026-07-01', sequence: 2,
+    type: 'LABOUR_CHARGED', narration: 'Opening labour payable carried forward',
+    moneyDelta: 14500
+  },
+  {
+    id: 'kle-open-3', karigarId: 'kar-2', date: '2026-07-01', sequence: 3,
+    type: 'METAL_ISSUED', narration: 'Opening balance carried forward',
+    fineWeightDelta: 11.725, grossWeight: 12.80, purityPercent: 91.6
+  },
+  {
+    id: 'kle-open-4', karigarId: 'kar-2', date: '2026-07-01', sequence: 4,
+    type: 'LABOUR_CHARGED', narration: 'Opening labour payable carried forward',
+    moneyDelta: 8200
+  },
+  {
+    id: 'kle-open-5', karigarId: 'kar-3', date: '2026-07-01', sequence: 5,
+    type: 'METAL_ISSUED', narration: 'Opening balance carried forward',
+    fineWeightDelta: 59.906, grossWeight: 65.40, purityPercent: 91.6
+  },
+  {
+    id: 'kle-open-6', karigarId: 'kar-3', date: '2026-07-01', sequence: 6,
+    type: 'LABOUR_CHARGED', narration: 'Opening labour payable carried forward',
+    moneyDelta: 22000
+  },
+  {
+    // Negative opening: this artisan returned more metal than was issued (advance credit)
+    id: 'kle-open-7', karigarId: 'kar-4', date: '2026-07-01', sequence: 7,
+    type: 'METAL_RETURNED', narration: 'Opening credit balance carried forward',
+    fineWeightDelta: -4.763, grossWeight: 5.20, purityPercent: 91.6
+  },
+  {
+    id: 'kle-open-8', karigarId: 'kar-4', date: '2026-07-01', sequence: 8,
+    type: 'LABOUR_CHARGED', narration: 'Opening labour payable carried forward',
+    moneyDelta: 3500
   }
 ];

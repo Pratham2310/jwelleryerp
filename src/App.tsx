@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialWorkOrders, initialInvoices, initialLooseStones, initialJobBags, initialOldGoldVouchers } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialWorkOrders, initialInvoices, initialLooseStones, initialJobBags, initialOldGoldVouchers, initialKarigarLedger } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher, KarigarLedgerEntry } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 // Custom layouts & Auth pages
@@ -91,6 +91,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialOldGoldVouchers;
   });
 
+  // Append-only Karigar ledger (Milestone 16) — the single source of truth for karigar
+  // balances, which are derived from it rather than stored (KNOWN_ISSUES #10 / D-2).
+  const [karigarLedger, setKarigarLedger] = useState<KarigarLedgerEntry[]>(() => {
+    const saved = localStorage.getItem('stitch_karigar_ledger');
+    return saved ? JSON.parse(saved) : initialKarigarLedger;
+  });
+
   // Global popup controllers
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
@@ -135,6 +142,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_old_gold_vouchers', JSON.stringify(oldGoldVouchers));
   }, [oldGoldVouchers]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_karigar_ledger', JSON.stringify(karigarLedger));
+  }, [karigarLedger]);
 
   // Trigger simulated API load on navigation
   useEffect(() => {
@@ -381,6 +392,8 @@ function AppContent() {
                     setKarigars={setKarigars}
                     workOrders={workOrders}
                     setWorkOrders={setWorkOrders}
+                    ledger={karigarLedger}
+                    setLedger={setKarigarLedger}
                     isIssueModalOpen={isIssueModalOpen}
                     setIssueModalOpen={setIssueModalOpen}
                   />
