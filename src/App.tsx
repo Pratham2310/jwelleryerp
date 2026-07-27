@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialWorkOrders, initialInvoices, initialLooseStones, initialJobBags } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialWorkOrders, initialInvoices, initialLooseStones, initialJobBags, initialOldGoldVouchers } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 // Custom layouts & Auth pages
@@ -18,6 +18,7 @@ import BillingEstimator from './components/BillingEstimator';
 import KarigarManager from './components/KarigarManager';
 import JobBagManager from './components/JobBagManager';
 import CustomerManager from './components/CustomerManager';
+import OldGoldManager from './components/OldGoldManager';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -85,6 +86,11 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialJobBags;
   });
 
+  const [oldGoldVouchers, setOldGoldVouchers] = useState<OldGoldVoucher[]>(() => {
+    const saved = localStorage.getItem('stitch_old_gold_vouchers');
+    return saved ? JSON.parse(saved) : initialOldGoldVouchers;
+  });
+
   // Global popup controllers
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isIssueModalOpen, setIssueModalOpen] = useState(false);
@@ -125,6 +131,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_job_bags', JSON.stringify(jobBags));
   }, [jobBags]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_old_gold_vouchers', JSON.stringify(oldGoldVouchers));
+  }, [oldGoldVouchers]);
 
   // Trigger simulated API load on navigation
   useEffect(() => {
@@ -389,11 +399,22 @@ function AppContent() {
               <Route 
                 path="/customers" 
                 element={
-                  <CustomerManager 
+                  <CustomerManager
                     customers={customers}
                     setCustomers={setCustomers}
                   />
-                } 
+                }
+              />
+              <Route
+                path="/oldgold"
+                element={
+                  <OldGoldManager
+                    vouchers={oldGoldVouchers}
+                    setVouchers={setOldGoldVouchers}
+                    customers={customers}
+                    metalRates={metalRates}
+                  />
+                }
               />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

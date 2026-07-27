@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -691,5 +691,44 @@ export const initialJobBags: JobBag[] = [
     notes: 'High mirror polish finish requested.',
     metalLossRecorded: 0.08,
     createdAt: '2026-07-21'
+  }
+];
+
+// Old Gold buyback vouchers (PRD §8, Milestone 14). Figures follow §8.2's formula:
+// Net Payable Weight = Gross × Purity% × (1 − Loss%), rounded to 3dp, then × buy-back rate.
+export const initialOldGoldVouchers: OldGoldVoucher[] = [
+  {
+    id: 'ogv-1',
+    voucherNumber: 'OGV-2026-301',
+    date: '2026-07-18',
+    customerId: 'cust-2',
+    customerName: 'Ananya Deshmukh',
+    customerPhone: '9812345678',
+    itemDescription: 'Old 22KT bangle pair, worn, one hinge broken',
+    grossWeight: 18.500,
+    testedPurityPercent: 91.6,
+    meltingLossPercent: 3,
+    netPayableWeight: 16.438, // 18.500 × 0.916 × 0.97 = 16.437800 -> 16.438
+    buybackRatePerGram: 6118,
+    buybackValue: 100568, // 16.438 × 6118 = 100,568.28
+    settlementMode: 'ADJUSTED_AGAINST_INVOICE',
+    linkedInvoiceNumber: 'INV-2026-1022',
+    status: 'InSafe'
+  },
+  {
+    id: 'ogv-2',
+    voucherNumber: 'OGV-2026-302',
+    date: '2026-07-22',
+    customerName: 'Walk-in Seller',
+    customerPhone: '9876500011',
+    itemDescription: 'Assorted 18KT scrap — 2 rings, 1 broken chain',
+    grossWeight: 9.200,
+    testedPurityPercent: 75.0,
+    meltingLossPercent: 4,
+    netPayableWeight: 6.624, // 9.200 × 0.75 × 0.96 = 6.624
+    buybackRatePerGram: 5010,
+    buybackValue: 33186, // 6.624 × 5010
+    settlementMode: 'CASH',
+    status: 'InSafe'
   }
 ];

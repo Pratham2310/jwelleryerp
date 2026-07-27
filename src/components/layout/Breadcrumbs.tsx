@@ -14,6 +14,7 @@ export default function Breadcrumbs() {
     karigar: 'Artisan Jobwork Ledger',
     jobbags: 'Job Bags Tracker',
     customers: 'Customer Accounts & Schemes',
+    oldgold: 'Old Gold Buyback Vault',
   };
 
   return (

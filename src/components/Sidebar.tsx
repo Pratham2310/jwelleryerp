@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   Layers,
   Award,
+  Coins,
   X
 } from 'lucide-react';
 import { MetalRate } from '../types';
@@ -36,6 +37,7 @@ export default function Sidebar({ metalRates, operatorName, sidebarOpen, setSide
     { id: '/billing', name: 'Billing Estimator', icon: ReceiptIndianRupee, desc: 'GST 3% sales invoicing' },
     { id: '/karigar', name: 'Karigar & Jobwork', icon: Hammer, desc: 'Gold manufacturing ledgers' },
     { id: '/jobbags', name: 'Job Bags Tracker', icon: Layers, desc: 'Visual factory floor workflow' },
+    { id: '/oldgold', name: 'Old Gold Buyback', icon: Coins, desc: 'Purity testing & melt valuation' },
     { id: '/customers', name: 'Customers & Schemes', icon: Users, desc: 'CRM Swarna Nidhi scheme' },
   ];
 

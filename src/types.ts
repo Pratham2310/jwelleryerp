@@ -151,6 +151,43 @@ export interface SaleInvoice {
   returnReason?: string;
 }
 
+/**
+ * Old Gold buyback (PRD §8, Milestone 14). This is a PURCHASE transaction, not a sale-side
+ * discount (§8.3 / decision D-10) — it gets its own OGV- voucher series and is netted against
+ * a linked invoice only at the settlement stage, if at all.
+ */
+export type OldGoldSettlementMode = 'CASH' | 'BANK' | 'ADJUSTED_AGAINST_INVOICE';
+
+/** Vault lifecycle for a received lot (PRD §8.2 step 7 / §6.3, Milestone 15). */
+export type OldGoldLotStatus = 'InSafe' | 'SentForMelting' | 'Melted' | 'FineGoldStock' | 'ResaleAsIs';
+
+export interface OldGoldVoucher {
+  id: string;
+  voucherNumber: string; // OGV-<year>-n, its own series (a purchase, not a sale)
+  date: string;
+  customerId?: string;
+  customerName: string;
+  customerPhone: string;
+  panNumber?: string; // §8.4 treats old-gold intake as a purchase requiring KYC
+  itemDescription: string;
+
+  // Valuation inputs and outputs (PRD §8.2 steps 2-4)
+  grossWeight: number;
+  testedPurityPercent: number;
+  meltingLossPercent: number;
+  netPayableWeight: number;
+  buybackRatePerGram: number;
+  buybackValue: number;
+
+  settlementMode: OldGoldSettlementMode;
+  linkedInvoiceNumber?: string; // set when adjusted against a sale (§8.4)
+
+  // Vault tracking (Milestone 15)
+  status: OldGoldLotStatus;
+  recoveredFineWeight?: number; // actual fine gold recovered once melted
+  meltedOn?: string;
+}
+
 export interface MetalRate {
   id: string;
   metalType: string;
