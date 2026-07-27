@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-26 — **Milestones 1–13 complete; Phases 1, 2 and 3 all done** (see `CHANGELOG.md`). Milestone 14 (Old Gold Purchase Voucher) is next up by number, but see the Sequencing Note below — M48 (Rate Master) and M19 (Branch Master) both warrant pulling forward. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-26 — **Milestones 1–15 complete; Phases 1–4 all done** (see `CHANGELOG.md`). Milestone 16 (Karigar Append-Only Ledger) is next up by number, but see the Sequencing Note below — M48 (Rate Master) and M19 (Branch Master) both warrant pulling forward. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -32,9 +32,9 @@ Phase 3: Billing Compliance & Correctness                 [DONE]
   ├── M12 Sales Return & Credit Note                             [DONE]
   └── M13 Dashboard Real-Data Accuracy Fix                       [DONE]
 
-Phase 4: Old Gold Buyback
-  ├── M14 Old Gold Purchase Voucher & Melt/Touch Valuation Engine
-  └── M15 Old Gold Vault Tracking
+Phase 4: Old Gold Buyback                                 [DONE]
+  ├── M14 Old Gold Purchase Voucher & Melt/Touch Valuation Engine [DONE]
+  └── M15 Old Gold Vault Tracking                                 [DONE]
 
 Phase 5: Karigar & Production
   ├── M16 Karigar Append-Only Ledger & Fine Gold Equivalent Engine
@@ -289,20 +289,23 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ## 🏁 Phase 4: Old Gold Buyback (Milestones 14 – 15)
 
-### 📍 Milestone 14: Old Gold Purchase Voucher & Melt/Touch Valuation Engine
+### 📍 Milestone 14: Old Gold Purchase Voucher & Melt/Touch Valuation Engine — ✅ DONE (2026-07-26)
 - **Goal:** A dedicated, standalone Old Gold purchase flow (buy outright, no linked sale required), with the real PRD §8.2 valuation formula.
 - **Dependencies:** Milestone 2.
 - **Tasks:**
   1. Implement `src/lib/oldGoldValuation.ts` (unit-tested): `Net Payable Weight = grossWeight × testedPurity% × (1 − meltingLoss%)`, `buybackValue = netPayableWeight × buybackRate`.
   2. Build a dedicated Old Gold Purchase Voucher modal (separate from Billing's inline trade-in quick-fields, which remain for the "adjust against a sale" path) capturing customer KYC, description/photo, and the valuation inputs above.
-- **Testable via:** Unit tests against the PRD §17 worked example's old-gold figures (12.740g net weight, ₹77,077 buyback value); creating a standalone voucher with no linked invoice succeeds.
+- **Testable via:** ✅ 16 unit tests; a standalone voucher with no linked invoice succeeds; Playwright-verified end to end.
+- **⚠️ PRD defect found:** §17's printed figures (12.740g / ₹77,077) do **not** follow from §8.2's own formula, which gives 12.731g / ₹77,023. The engine implements the formula and a test asserts it does *not* reproduce §17, so a future "fix" fails loudly. Needs client/CA confirmation — see `HANDOFF.md` §1a.
 
-### 📍 Milestone 15: Old Gold Vault Tracking
+### 📍 Milestone 15: Old Gold Vault Tracking — ✅ DONE (2026-07-26)
 - **Goal:** Track old gold inventory from intake through melting.
 - **Dependencies:** Milestone 14.
 - **Tasks:**
-  1. Add `OldGoldLot[]` state (lifted to `App.tsx`, same pattern as other entities): `In Safe → Melted → Fine Gold Stock`.
-- **Testable via:** A voucher from Milestone 14 creates a lot in "In Safe"; advancing its status is reflected in a vault summary view.
+  1. ✅ Vault lifecycle state machine in `src/lib/oldGoldVault.ts`: `InSafe → SentForMelting → Melted → FineGoldStock`, plus `InSafe → ResaleAsIs`. State lives on the voucher (one voucher = one lot); multi-item vouchers are a future refinement.
+  2. ✅ Vault summary with **refining variance** (recovered vs. predicted fine weight) and capital-tied-up reporting.
+- **Testable via:** ✅ 25 unit tests; Playwright-verified that only legal transitions are offered, an over-gross recovery is rejected, and a short recovery surfaces as negative variance.
+- **Note:** `InSafe → FineGoldStock` is deliberately illegal — a lot must pass through `Melted`, which is where recovered weight is captured.
 
 ---
 

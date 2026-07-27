@@ -14,6 +14,30 @@
 
 ---
 
+## 1a. 🚨 Open Item: PRD §17's Old-Gold Figures Don't Match PRD §8.2's Formula — Needs Confirmation
+
+**The problem:** §8.2 step 4 states the valuation formula normatively:
+`Net Payable Weight = Gross Weight × Tested Purity% × (1 − Deduction%)`.
+§17's worked example applies it to 15.000g at 875 touch with 3% melting loss and prints
+**12.740g / ₹77,077**. That arithmetic does not hold — the formula yields **12.73125g → 12.731g**
+and **₹77,023**. The printed 12.740g implies a tested purity of ~87.56%, not the 875 stated two
+lines above it in the same example.
+
+**What was done (Milestone 14):** `src/lib/oldGoldValuation.ts` implements the **formula**, on the
+reading that §8.2 is normative and §17 is an illustrative example containing an arithmetic slip.
+A test in `oldGoldValuation.test.ts` explicitly asserts the engine does *not* reproduce §17's
+figures, so anyone "fixing" the engine to match the PRD fails loudly instead of silently
+reintroducing the error.
+
+**Why it needs sign-off:** the PRD describes §17 as the canonical QA reference, so a tester
+working from it will flag the engine as wrong. Either §17 is corrected, or the client tells us
+the intended purity/deduction differs from what §8.2 says.
+
+**Not affected:** the Milestone 2 billing tests still use ₹77,077 as a *given* settlement input.
+That remains valid — they never claimed to derive it.
+
+---
+
 ## 1. 🚨 Open Item: Diamond HSN Classification Ambiguity — Needs CA Sign-Off
 
 **The problem:** The PRD is internally inconsistent about how diamond-studded gold jewellery should be taxed under GST.
@@ -63,7 +87,8 @@ The full 14-phase **Developer Implementation Handbook** (`docs/Jewellery_ERP_Dev
 - **✅ Done (2026-07-25): Milestones 4–10.** Phase 2 (Tagging Foundation) and Phase 3's first four billing-compliance milestones are complete — Tag lifecycle state machine, real barcode/QR generation, Stock Audit UI, discount-before-GST fix, PAN verification gate, multi-payment split, and the manager override reason log. Test suite grew from 10 to **76 passing tests across 5 suites**. See `CHANGELOG.md` for the full per-milestone detail.
 - **✅ Done (2026-07-26): Milestones 11–13 — Phase 3 complete.** Estimate/Quotation mode, Sales Return & Credit Note, and the Dashboard real-data fix. Test suite now **114 passing across 7 suites**. See `CHANGELOG.md`.
 - **✅ Done (2026-07-26): Roadmap coverage audit.** A client module list was checked against the PRD and this roadmap; the PRD covered everything, the roadmap didn't. **Extended to 53 milestones** (Phases 12–15, M37–M53) covering Procurement, financial statements, accounting vouchers, Stock Adjustment, Melting, Rate Master, User Management, Notification Center, System Health and the ITC/HSN reports. Full mapping is in `TODO.md`'s Coverage Audit table.
-- **Next Up:** **Milestone 14 — Old Gold Purchase Voucher & Melt/Touch Valuation** by number — but read `TODO.md`'s **Sequencing Note** first. M48 (Rate Master) is a live D-4 compliance defect and M19 (Branch Master) blocks Tax Master, Purchase and Branch reports; both warrant going earlier. The money-as-float fix should also land before the accounting phases.
+- **✅ Done (2026-07-26): Milestones 14–15 — Phase 4 complete.** Old Gold Buyback at `/oldgold`: melt/touch valuation engine (PRD §8.2), standalone purchase voucher with its own `OGV-` series, and an enforced vault lifecycle with refining-variance tracking. Surfaced a genuine arithmetic error in PRD §17 — see §1a above. Test suite now **155 passing across 9 suites**.
+- **Next Up:** **Milestone 16 — Karigar Append-Only Ledger & Fine Gold Equivalent** by number — but read `TODO.md`'s **Sequencing Note** first. M48 (Rate Master) is a live D-4 compliance defect and M19 (Branch Master) blocks Tax Master, Purchase and Branch reports; both warrant going earlier. The money-as-float fix should also land before the accounting phases.
 
 ### Notes for whoever picks this up
 

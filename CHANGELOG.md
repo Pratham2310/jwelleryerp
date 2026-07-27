@@ -4,6 +4,25 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-26 — Phase 4 Complete: Milestones 14–15 (Old Gold Buyback)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. Adds the Old Gold module at a new `/oldgold` route. No visual redesign — the screen reuses the app's established card/modal/filter-chip patterns and colour tokens, and is explicitly theme-aware per the working rule in `KNOWN_ISSUES.md` #12.
+
+**Milestone 14 — Old Gold Purchase Voucher & Melt/Touch Valuation Engine.** `src/lib/oldGoldValuation.ts` implements PRD §8.2 step 4 (`Net Payable Weight = Gross × Tested Purity% × (1 − Melting Loss%)`; `Buyback Value = Net Payable Weight × Buy-back Rate`). A standalone voucher flow now supports buying old jewellery outright with no linked sale — something the billing screen's inline trade-in fields never allowed. Captures everything §8.4 requires (seller KYC, description, gross weight, tested purity, deduction %, net weight, rate, value, settlement mode, linked invoice) and shows a live customer-facing valuation breakdown before confirmation (§8.2 step 5). Purity presets cover the common Indian touch standards; a guard catches the likeliest data-entry error, a millesimal `875` typed into a percentage field. The Milestone 8 PAN threshold is enforced on buybacks too. Vouchers use their own `OGV-` series — this is a purchase, not a sale, and must never consume tax-invoice numbering (§8.3 / D-10).
+
+**Milestone 15 — Old Gold Vault Tracking.** Lots move through an enforced lifecycle: `InSafe → SentForMelting → Melted → FineGoldStock`, plus `InSafe → ResaleAsIs` for the rare antique/investment piece retagged without melting (§8.2 step 7). Modelled as a state machine for the same reason `Tag.status` is — this is real metal in a safe. `InSafe → FineGoldStock` is deliberately not a legal shortcut, because `Melted` is where the recovered fine weight is captured; `SentForMelting → InSafe` is allowed, since refiners do return batches unmelted. The vault summary surfaces the **refining variance** (actual recovered weight vs. what the melt valuation predicted) — a persistently negative variance means the shop's melting-loss deduction is set too low and it is quietly losing metal on every buyback — alongside capital tied up in unconverted lots.
+
+**🚨 DISCREPANCY FOUND IN THE PRD — needs client/CA confirmation.** PRD §17's worked example prints `15.000g × 0.875 × (1 − 0.03) = 12.740g` and a buyback value of ₹77,077. That arithmetic does not hold: the formula stated in §8.2 gives **12.73125g → 12.731g** and **₹77,023**. The printed 12.740g implies a tested purity of ~87.56%, not the 875 stated two lines above it. The engine implements the **formula** (§8.2 is the normative statement; §17 is an illustrative example containing a slip), and a test asserts the engine does *not* reproduce the §17 figures so a future "fix" fails loudly rather than silently reintroducing the error. This matters because the PRD describes §17 as the canonical QA reference — see `HANDOFF.md` §1a. Note the pre-existing Milestone 2 billing test still uses ₹77,077 as a *given* input, which remains valid: it never claimed to derive it.
+
+**Rounding decision:** the 3dp-rounded net weight is what gets multiplied by the rate, not the unrounded value. This keeps the voucher internally consistent — the printed weight × printed rate must equal the printed value, or staff get challenged at the counter. (Multiplying the unrounded figure would give ₹77,024.)
+
+**Also fixed:** my own seed voucher data initially carried the same class of arithmetic inconsistency I had just flagged in the PRD (a net weight that didn't follow from its own inputs); corrected so the seed data reconciles with the formula.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **155 tests passing across 9 suites** (up from 114); `npm run build` clean. Playwright-verified: the PRD scenario reproduces 12.731g / ₹77,023 on screen; validation gates fire; only legal lot transitions are offered at each stage; an over-gross recovery is rejected; a short recovery of 16.100g against a 16.438g estimate surfaces as −0.338g variance. Full regression across all 8 screens, both themes and a 390×844 mobile viewport: **zero console errors**.
+
+---
+
 ## 2026-07-26 — Phase 3 Complete: Milestones 11–13, plus a Roadmap Coverage Audit
 
 **Author:** AI agent (Claude Code), pair programming with USER.

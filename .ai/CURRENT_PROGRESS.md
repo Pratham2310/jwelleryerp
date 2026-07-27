@@ -1,6 +1,6 @@
 # CURRENT_PROGRESS.md
 
-_Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_Retail_Software_PRD.md`, `docs/Jewellery_ERP_Developer_Handbook (1).md`, and the `.ai/` knowledge base), refreshed after Milestones 4–10. **Milestones 1 through 10 are implemented** (state unification, critical billing/GST fixes, Item Design vs. Tag split, Tag lifecycle state machine, real barcode/QR, Stock Audit, discount-before-GST fix, PAN gate, multi-payment split, manager override reason log) — see `CHANGELOG.md`. This audit is code-verified (every claim below was checked against the actual source in `src/`), not carried forward from prior narrative._
+_Last updated: 2026-07-26 — Full project audit (codebase vs. `docs/Jewellery_Retail_Software_PRD.md`, `docs/Jewellery_ERP_Developer_Handbook (1).md`, and the `.ai/` knowledge base), refreshed after Milestones 14–15. **Milestones 1 through 15 are implemented (Phases 1–4 complete)** — see `CHANGELOG.md` for the per-milestone detail. This audit is code-verified (every claim below was checked against the actual source in `src/`), not carried forward from prior narrative._
 
 ⚠️ **Doc-sync note:** `.ai/ARCHITECTURE.md`, `.ai/DATABASE.md`, `.ai/FRONTEND_ARCHITECTURE.md`, `.ai/COMPONENT_LIBRARY.md`, `.ai/ROUTING.md`, `.ai/API_REFERENCE.md`, `.ai/CODING_RULES.md`, and `.ai/DECISIONS.md` were **not** part of this audit's requested update scope, but this audit discovered they still describe the **pre-Milestone-1/2 codebase** (e.g. they say Stone/JobBag state isn't lifted, theme detection is duplicated six times, and GST is computed on the wrong base — all fixed on 2026-07-25). They should be refreshed in a follow-up pass; treat their current content as stale where it conflicts with this file.
 
@@ -11,7 +11,7 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 - **Documentation (Business/Domain Design):** PRD complete (v1.0, 19 sections). Developer Handbook fully drafted, all 14 phases.
 - **Backend / Database:** Not started (no server, no PostgreSQL database, no API endpoints) — this is a deliberate scope decision (see `.ai/PROJECT_OVERVIEW.md`), not a gap to close inside this repo. All persistent data relies on `localStorage`.
 - **Roadmap scope (revised 2026-07-26):** extended from 36 to **53 milestones** after a client module list was audited against the PRD — the original roadmap had omitted Procurement (PRD §6.1), the statutory financial statements, accounting vouchers, Stock Adjustment, Melting, Rate Master, User Management, Notification Center, System Health and the ITC/HSN reports. See `TODO.md`'s Coverage Audit table and Sequencing Note.
-- **Frontend Prototype ("Stitch UI"):** React 19 + Vite 6 + TypeScript SPA, 7 business screens + auth. **Milestones 1–13 are complete — Phases 1, 2 and 3 all done:** state unification/theme (M1), billing/GST calculation correctness (M2), Item Design vs. Tag split (M3), enforced Tag lifecycle state machine (M4), real scannable barcode/QR (M5), Stock Audit/reconciliation (M6), discount-before-GST fix (M7), PAN/Form 60 gate (M8), multi-tender payment split (M9), manager-override reason logging (M10), Estimate/Quotation mode (M11), Sales Return & Credit Note (M12), and the Dashboard real-data fix (M13). Test suite: **114 passing across 7 suites** (`billingCalculations`, `tagStateMachine`, `stockAudit`, `statutoryChecks`, `priceOverrides`, `salesReturn`, `dashboardAnalytics`). Milestones 14–53 are **not started**.
+- **Frontend Prototype ("Stitch UI"):** React 19 + Vite 6 + TypeScript SPA, 7 business screens + auth. **Milestones 1–15 are complete — Phases 1, 2, 3 and 4 all done:** state unification/theme (M1), billing/GST calculation correctness (M2), Item Design vs. Tag split (M3), enforced Tag lifecycle state machine (M4), real scannable barcode/QR (M5), Stock Audit/reconciliation (M6), discount-before-GST fix (M7), PAN/Form 60 gate (M8), multi-tender payment split (M9), manager-override reason logging (M10), Estimate/Quotation mode (M11), Sales Return & Credit Note (M12), the Dashboard real-data fix (M13), the Old Gold melt/touch valuation engine and purchase voucher (M14), and Old Gold vault tracking (M15). Test suite: **155 passing across 9 suites** (`billingCalculations`, `tagStateMachine`, `stockAudit`, `statutoryChecks`, `priceOverrides`, `salesReturn`, `dashboardAnalytics`, `oldGoldValuation`, `oldGoldVault`). Milestones 16–53 are **not started**.
 - **Reference material discovered this audit:** `docs/stitch_jewelry_management_suite/stitch_jewelry_management_suite/` contains 22 AI-Studio-generated screen designs (`code.html` + `screen.png` each) for modules that do **not** exist in `src/` yet — e.g. `old_gold_purchase_voucher/`, `karigar_outstanding_ledger/`, `gst_compliance_dashboard/`, `scheme_management_dashboard/`, `branch_gstin_configuration/`, `daily_rate_master_hq/`, `tagging_inventory_entry/`, `stock_ageing_velocity_analysis/`, `owner_s_executive_dashboard/`. These are pre-made visual references for ~20 of the missing screens identified below — check here before designing a missing screen from scratch.
 - **Gap Analysis Result:** The billing calculation engine is correct and unit-tested (PRD §17 worked example passes, plus the Milestone 7 discount-before-GST correction), the Item Design vs. Tag split (the PRD's single most load-bearing structural requirement, per Handbook D-6) is done, and the Tag lifecycle is now genuinely *enforced* rather than advisory. Billing compliance has real teeth: PAN/Form 60 gate, multi-tender split validation, and a persisted override audit trail. Still missing across the remaining modules: no Tax/Branch/Rate-history/Stone-rate master, no accounting engine, no real GST compliance (HSN split, e-Invoice, GSTR exports), and no hallmarking/HUID *assignment workflow* — the field exists and displays correctly, but only manual entry populates it (Milestone 24).
 
@@ -27,7 +27,6 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
   - ~~Stone vault / Job Bag state lifted since M1 but never displayed~~ — ✅ Fixed, Milestone 13 (two new KPI cards).
   - No Branch selector (single implicit branch).
   - Rate edits mutate `metalRates` directly in place — no append-only rate history, no audit log, no fat-finger (>2–5%) change guard/approval, matching PRD §4.2's explicit requirement.
-  - Does not reflect Stone vault balances or Job Bag stage counts (that state exists in `App.tsx` since Milestone 1, but Dashboard was never wired to consume it — see §4 "Missing Business Logic" wiring note below).
 
 ### 2.2 Catalog & Showcase (`/catalog`, `CatalogManager.tsx`)
 - **What Exists:** **(2026-07-25, Milestone 3)** Rebuilt with a two-tab interface — **Tag Inventory** (grid view, category/status/stock-ownership filters, search by SKU/name/certificate/HUID; detail modal with a "Tag Preview" printable label showing the piece's *real* `huid` field, or "Not Yet Hallmarked" if unset) and **Item Design Templates** (a grid of design cards showing category/metal/default wastage/making-charge/HSN and a live tagged-stock count per design, with its own Add Design modal). `ItemDesign`/`Tag` are now genuinely separate types (`types.ts`), resolving PRD §5.1/Handbook D-6. Adding a new Tag requires selecting its parent Item Design, which pre-fills defaults (still editable). Each Tag shows a Stock Ownership badge (`OWNED`/`GML_FINANCED`/`CONSIGNMENT`).
@@ -79,7 +78,12 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
   - No birthday/anniversary reminder fields or WhatsApp/SMS rate-alert subscription UI.
   - No Customer 360 view (purchase-history timeline, preferences).
 
-### 2.8 Auth & RBAC (`/login`, `/register`, `LoginPage.tsx`, `RegisterPage.tsx`)
+### 2.8 Old Gold Buyback (`/oldgold`, `OldGoldManager.tsx`) — **new, Milestone 14/15**
+- **What Exists:** Standalone old-gold purchase flow, independent of any sale. Melt/touch valuation engine (`src/lib/oldGoldValuation.ts`) implementing PRD §8.2 step 4, with purity presets for the common Indian touch standards and a guard against typing a millesimal (875) into the percentage field. Purchase voucher captures everything §8.4 requires and shows a live customer-facing valuation breakdown before confirmation (§8.2 step 5). Own `OGV-` number series (a purchase, never the sales series — §8.3/D-10). PAN threshold enforced on buybacks. Enforced vault lifecycle (`src/lib/oldGoldVault.ts`): `InSafe → SentForMelting → Melted → FineGoldStock`, plus `InSafe → ResaleAsIs`; recovered fine weight captured on the melt transition, with refining-variance and capital-deployed reporting. Printable voucher with a purchase declaration.
+- **Missing:** No item photo capture (§8.4 lists it). No Margin Scheme (Rule 32(5)) transaction mode — deliberately off, per the PRD's own guidance that it should be enabled only on CA advice. One voucher currently equals one lot; multi-item vouchers are a future refinement. Not yet wired to the accounting engine (M28) or to a Buyback Dashboard (M53).
+- **⚠️ Open:** PRD §17's worked old-gold figures don't reconcile with §8.2's formula — see `HANDOFF.md` §1a.
+
+### 2.9 Auth & RBAC (`/login`, `/register`, `LoginPage.tsx`, `RegisterPage.tsx`)
 - **What Exists:** Mock login/registration (any input accepted), role-selection dropdown (cosmetic), Guest login button.
 - **Missing:** No real RBAC route/component protection anywhere — once `user` is truthy, every route is accessible regardless of `user.role`. No Admin Role/Permission Management screen. No Supervisor PIN/Authorization modal for sensitive actions. No PAN/Aadhaar encryption (no such fields exist to encrypt). No audit logging of logins/sensitive actions.
 
@@ -105,7 +109,7 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 2. ~~Tag/Physical Stock Audit & Reconciliation screen.~~ — ✅ Done, Milestone 6 (Catalog → Stock Audit tab).
 3. Procurement / Goods Receipt entry screen.
 4. Melting workflow screen.
-5. Standalone Old Gold Purchase Voucher screen (buy outright, no linked sale) — reference design exists: `docs/stitch_jewelry_management_suite/.../old_gold_purchase_voucher/`.
+5. ~~Standalone Old Gold Purchase Voucher screen (buy outright, no linked sale).~~ — ✅ Done, Milestone 14 (`/oldgold`).
 6. AHC Hallmarking dispatch/receipt batch screen.
 7. Branch Management + Branch Switcher + Inter-Branch Stock Transfer screen — reference design: `.../branch_gstin_configuration/`.
 8. Tax Master (HSN/GST rate management) screen — reference design: `.../gst_compliance_dashboard/`.
@@ -130,7 +134,7 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 3. Manager/Supervisor approval modal — **reason-log ✅ done (Milestone 10)**; the Supervisor PIN gate layered on top is Milestone 33, and invoice cancellation is still unhandled.
 4. ~~Sales Return / Credit Note modal.~~ — ✅ Done, Milestone 12.
 5. Advance/Booking (token advance) modal.
-6. Old Gold standalone purchase-voucher modal (distinct from Billing's inline trade-in fields).
+6. ~~Old Gold standalone purchase-voucher modal.~~ — ✅ Done, Milestone 14.
 7. Rate history/audit-trail modal.
 8. Fat-finger rate-change confirmation (Dashboard rate edit has zero deviation validation today).
 9. Karigar excess-wastage review/flag modal (currently silently capped, never surfaced).
@@ -184,7 +188,7 @@ _Last updated: 2026-07-25 — Full project audit (codebase vs. `docs/Jewellery_R
 7. Fixed-point/decimal arithmetic — the app still uses plain JS floating-point + `Math.round`, not a decimal library (PRD §16.2 explicitly warns against float arithmetic for money).
 8. ~~Tag state-machine transition validation.~~ — ✅ Done, Milestone 4 (`canTransition()`).
 9. HUID uniqueness enforcement (no `huid` field exists to enforce uniqueness on).
-10. Old Gold melt/touch valuation as a reusable function (`Net Payable Weight = grossWeight × testedPurity% × (1 − meltingLoss%)`) — the PRD §8.2 formula exists nowhere in code; Billing's inline trade-in fields take a flat rate/weight input with no purity-test/melting-loss step.
+10. ~~Old Gold melt/touch valuation as a reusable function.~~ — ✅ Done, Milestone 14 (`src/lib/oldGoldValuation.ts`). Billing's inline trade-in quick-fields still take a flat rate/weight for the adjust-against-a-sale path; the full purity-test/melting-loss workflow lives on `/oldgold`.
 11. Double-entry journal posting.
 12. ~~Discount-before-GST calculation (PRD §7.4).~~ — ✅ Done, Milestone 7 (`calculateInvoiceTotals()` now exposes an explicit `taxableValue` and computes GST from it).
 13. Dashboard's "ERP Action Log" and "Monthly Sales Revenue Trend" are not wired to real state (see §2.1) — the underlying business logic to derive a real trend line from `invoices` (grouped by month) doesn't exist yet.
@@ -212,7 +216,7 @@ This is a code-level read of Tailwind breakpoint usage, **not** a verified visua
 | **5. Inventory & Tagging** | Partial (Design/Tag split, enforced lifecycle, real barcode/QR, Stock Audit all done — M3–M6) | Memo-Out workflow screen; at-cost/at-market dual valuation |
 | **6. Karigar & Jobwork** | Partial | Ledger history, Fine Gold Equivalent, WorkOrder/JobBag unification |
 | **7. Billing & POS** | Partial (engine correct since M2; discount/GST order, PAN gate, split payment, override log, Estimate mode and Sales Return/Credit Note all done — M7–M12) | Advance/Booking (PRD §7.6), Repair/Alteration billing (§7.9), barcode-scan-to-bill |
-| **8. Old Gold Buyback** | Partial (settlement math correct since M2) | Standalone purchase voucher, melt/touch valuation |
+| **8. Old Gold Buyback** | Partial (valuation engine, purchase voucher and vault lifecycle all done — M14/M15) | Item photo capture, Margin Scheme mode, damaged-tag melting loop (M43) |
 | **9. GST Compliance** | Not Started | Tax Master, HSN split, e-Invoice/e-Way Bill |
 | **10. Accounting** | Not Started | Everything — no entity exists yet |
 | **11. BIS Hallmarking** | UI Mockup Only | Real HUID field/uniqueness, AHC workflow |
