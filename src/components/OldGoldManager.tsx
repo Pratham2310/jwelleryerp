@@ -20,6 +20,15 @@ import {
   PURITY_PRESETS,
 } from '../lib/oldGoldValuation';
 import { isPanRequired, isValidPanFormat, PAN_THRESHOLD } from '../lib/statutoryChecks';
+import {
+  canTransitionLot,
+  nextLotStatuses,
+  summariseVault,
+  validateRecoveredWeight,
+  LOT_STATUS_LABEL,
+  ALL_LOT_STATUSES,
+} from '../lib/oldGoldVault';
+import type { OldGoldLotStatus } from '../types';
 
 interface OldGoldManagerProps {
   vouchers: OldGoldVoucher[];
@@ -46,14 +55,67 @@ const SETTLEMENT_LABEL: Record<OldGoldSettlementMode, string> = {
   ADJUSTED_AGAINST_INVOICE: 'Adjusted Against Sale',
 };
 
+const LOT_STATUS_BADGE: Record<OldGoldLotStatus, string> = {
+  InSafe: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50',
+  SentForMelting: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/50',
+  Melted: 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-900/50',
+  FineGoldStock: 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/50',
+  ResaleAsIs: 'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900/50',
+};
+
 export default function OldGoldManager({ vouchers, setVouchers, customers, metalRates }: OldGoldManagerProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'All' | OldGoldLotStatus>('All');
   const [isVoucherModalOpen, setVoucherModalOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<OldGoldVoucher | null>(null);
   const [formError, setFormError] = useState('');
+
+  // Vault lifecycle (Milestone 15) — moving a lot on, and capturing what the refiner returned
+  const [lotToAdvance, setLotToAdvance] = useState<OldGoldVoucher | null>(null);
+  const [targetStatus, setTargetStatus] = useState<OldGoldLotStatus | ''>('');
+  const [recoveredWeightInput, setRecoveredWeightInput] = useState('');
+  const [advanceError, setAdvanceError] = useState('');
+
+  const vault = summariseVault(vouchers);
+
+  const handleAdvanceLot = () => {
+    if (!lotToAdvance || !targetStatus) return;
+    if (!canTransitionLot(lotToAdvance.status, targetStatus)) {
+      setAdvanceError(`A lot cannot move from ${LOT_STATUS_LABEL[lotToAdvance.status]} to ${LOT_STATUS_LABEL[targetStatus]}.`);
+      return;
+    }
+
+    // Recovered fine weight is captured exactly once, on the melt confirmation — this is why
+    // InSafe -> FineGoldStock is not a legal shortcut.
+    let recovered: number | undefined;
+    if (targetStatus === 'Melted') {
+      const parsed = parseFloat(recoveredWeightInput);
+      const err = validateRecoveredWeight(lotToAdvance, parsed);
+      if (err) {
+        setAdvanceError(err);
+        return;
+      }
+      recovered = Number(parsed.toFixed(3));
+    }
+
+    setVouchers(prev => prev.map(v => v.id === lotToAdvance.id
+      ? {
+          ...v,
+          status: targetStatus,
+          ...(recovered !== undefined
+            ? { recoveredFineWeight: recovered, meltedOn: new Date().toISOString().split('T')[0] }
+            : {}),
+        }
+      : v));
+
+    setLotToAdvance(null);
+    setTargetStatus('');
+    setRecoveredWeightInput('');
+    setAdvanceError('');
+  };
 
   // A buy-back rate is deliberately BELOW the prevailing sale rate (PRD §4.2/§8.2 step 4).
   // Seed it from the live 22K rate less a typical margin so staff aren't typing it blind.
@@ -154,12 +216,13 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
 
   const filtered = vouchers.filter(v => {
     const q = searchTerm.toLowerCase();
-    return (
+    const matchesSearch =
       v.voucherNumber.toLowerCase().includes(q) ||
       v.customerName.toLowerCase().includes(q) ||
       v.itemDescription.toLowerCase().includes(q) ||
-      v.customerPhone.toLowerCase().includes(q)
-    );
+      v.customerPhone.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === 'All' || v.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   // KPIs
@@ -206,20 +269,47 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
         <div className={`border p-5 rounded-2xl shadow-sm ${cardCls}`}>
           <p className={`text-[10px] uppercase font-bold tracking-wider font-mono mb-1 ${mutedCls}`}>Vouchers Raised</p>
           <p className="text-2xl font-black font-mono">{vouchers.length}</p>
+          <p className={`text-[10px] font-mono mt-1 ${mutedCls}`}>₹{totalPaidOut.toLocaleString('en-IN')} paid out lifetime</p>
         </div>
         <div className={`border p-5 rounded-2xl shadow-sm ${cardCls}`}>
           <p className={`text-[10px] uppercase font-bold tracking-wider font-mono mb-1 ${mutedCls}`}>Gross Weight Received</p>
           <p className="text-2xl font-black font-mono">{totalGrossHeld.toFixed(3)} <span className={`text-xs font-medium ${mutedCls}`}>g</span></p>
+          <p className={`text-[10px] font-mono mt-1 ${mutedCls}`}>{totalNetPayable.toFixed(3)}g net payable</p>
         </div>
         <div className={`border p-5 rounded-2xl shadow-sm ${cardCls}`}>
-          <p className={`text-[10px] uppercase font-bold tracking-wider font-mono mb-1 ${mutedCls}`}>Net Payable Weight</p>
-          <p className="text-2xl font-black font-mono text-amber-500">{totalNetPayable.toFixed(3)} <span className={`text-xs font-medium ${mutedCls}`}>g</span></p>
+          <p className={`text-[10px] uppercase font-bold tracking-wider font-mono mb-1 ${mutedCls}`}>Metal Held In Vault</p>
+          <p className="text-2xl font-black font-mono text-amber-500">{vault.grossWeightHeld.toFixed(3)} <span className={`text-xs font-medium ${mutedCls}`}>g</span></p>
+          <p className={`text-[10px] font-mono mt-1 ${mutedCls}`}>
+            {vault.lotsInSafe} in safe · {vault.lotsAtRefiner} at refiner · {vault.lotsMelted} melted
+          </p>
         </div>
         <div className={`border p-5 rounded-2xl shadow-sm ${cardCls}`}>
-          <p className={`text-[10px] uppercase font-bold tracking-wider font-mono mb-1 ${mutedCls}`}>Total Paid to Customers</p>
-          <p className="text-2xl font-black font-mono">₹{totalPaidOut.toLocaleString('en-IN')}</p>
+          <p className={`text-[10px] uppercase font-bold tracking-wider font-mono mb-1 ${mutedCls}`}>Fine Gold Recovered</p>
+          <p className="text-2xl font-black font-mono">{vault.recoveredFineWeight.toFixed(3)} <span className={`text-xs font-medium ${mutedCls}`}>g</span></p>
+          {/* A persistently negative variance means the melting-loss deduction is set too low */}
+          {vault.refiningVariance !== 0 ? (
+            <p className={`text-[10px] font-mono mt-1 font-bold ${vault.refiningVariance < 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+              {vault.refiningVariance > 0 ? '+' : ''}{vault.refiningVariance.toFixed(3)}g vs melt estimate
+            </p>
+          ) : (
+            <p className={`text-[10px] font-mono mt-1 ${mutedCls}`}>no refining variance yet</p>
+          )}
         </div>
       </div>
+
+      {/* Capital tied up in old gold not yet converted */}
+      {vault.capitalDeployed > 0 && (
+        <div className={`border rounded-2xl p-4 flex items-center gap-3 text-xs ${
+          dark ? 'border-amber-900/40 bg-amber-950/20 text-amber-300' : 'border-amber-200 bg-amber-50/60 text-amber-900'
+        }`}>
+          <TrendingDown className="w-4 h-4 shrink-0" />
+          <span>
+            <span className="font-bold">₹{vault.capitalDeployed.toLocaleString('en-IN')}</span> of capital is tied up in{' '}
+            {vault.lotsInSafe + vault.lotsAtRefiner + vault.lotsMelted} old-gold lot(s) not yet converted to sellable stock
+            ({vault.expectedFineWeight.toFixed(3)}g fine gold expected).
+          </span>
+        </div>
+      )}
 
       {/* Register */}
       <div className={`border p-5 rounded-2xl shadow-sm space-y-4 ${cardCls}`}>
@@ -240,6 +330,28 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
           </div>
         </div>
 
+        {/* Vault stage filter (Milestone 15) */}
+        <div className={`flex flex-wrap items-center gap-1.5 pt-3 border-t ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+          <span className={`text-[10px] uppercase font-bold font-mono tracking-wider mr-2 flex items-center gap-1 ${mutedCls}`}>
+            <Filter className="w-3 h-3" /> Vault Stage:
+          </span>
+          {(['All', ...ALL_LOT_STATUSES] as ('All' | OldGoldLotStatus)[]).map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`text-xs px-2.5 py-1 rounded-lg font-medium transition border ${
+                statusFilter === s
+                  ? 'bg-amber-500 text-black font-semibold border-amber-500'
+                  : dark
+                    ? 'bg-zinc-950 text-zinc-400 hover:bg-zinc-900 border-zinc-800'
+                    : 'bg-white text-slate-700 hover:bg-amber-50/50 border-slate-200'
+              }`}
+            >
+              {s === 'All' ? 'All' : LOT_STATUS_LABEL[s]}
+            </button>
+          ))}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-medium">
             <thead>
@@ -253,13 +365,14 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
                 <th className="text-right">Net Payable</th>
                 <th className="text-right">Value Paid</th>
                 <th className="text-center">Settlement</th>
+                <th className="text-center">Vault Stage</th>
                 <th className="text-center">Action</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${dark ? 'divide-zinc-800 text-zinc-200' : 'divide-slate-100 text-slate-700'}`}>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className={`py-10 text-center font-mono ${mutedCls}`}>
+                  <td colSpan={11} className={`py-10 text-center font-mono ${mutedCls}`}>
                     {vouchers.length === 0
                       ? 'No old gold received yet. Raise a buyback voucher when a customer brings in old jewellery.'
                       : 'No vouchers match that search.'}
@@ -286,12 +399,41 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
                       </span>
                     </td>
                     <td className="text-center">
-                      <button
-                        onClick={() => setSelectedVoucher(v)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-black rounded-lg transition"
-                      >
-                        <Eye className="w-3 h-3" /> View
-                      </button>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${LOT_STATUS_BADGE[v.status]}`}>
+                        {LOT_STATUS_LABEL[v.status]}
+                      </span>
+                      {v.recoveredFineWeight !== undefined && (
+                        <span className={`block text-[10px] font-mono mt-0.5 ${mutedCls}`}>
+                          {v.recoveredFineWeight.toFixed(3)}g recovered
+                        </span>
+                      )}
+                    </td>
+                    <td className="text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          onClick={() => setSelectedVoucher(v)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-black rounded-lg transition"
+                        >
+                          <Eye className="w-3 h-3" /> View
+                        </button>
+                        {nextLotStatuses(v.status).length > 0 && (
+                          <button
+                            onClick={() => {
+                              setLotToAdvance(v);
+                              setTargetStatus('');
+                              setRecoveredWeightInput(v.netPayableWeight.toFixed(3));
+                              setAdvanceError('');
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold border rounded-lg transition ${
+                              dark
+                                ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-900'
+                                : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            Move
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -300,6 +442,84 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
           </table>
         </div>
       </div>
+
+      {/* ---------- Move Lot Through the Vault (Milestone 15) ---------- */}
+      {lotToAdvance && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden ${cardCls}`}>
+            <div className={`flex items-center justify-between p-5 border-b ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+              <div>
+                <h3 className="font-bold text-sm flex items-center gap-2"><Scale className="w-4 h-4 text-amber-500" /> Move Lot Through Vault</h3>
+                <p className={`text-[11px] mt-0.5 ${mutedCls}`}>
+                  {lotToAdvance.voucherNumber} · currently {LOT_STATUS_LABEL[lotToAdvance.status]}
+                </p>
+              </div>
+              <button
+                onClick={() => { setLotToAdvance(null); setAdvanceError(''); }}
+                className={`p-1.5 rounded-lg transition ${dark ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-slate-100 text-slate-500'}`}
+                aria-label="Close move lot"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className={labelCls}>Move To</label>
+                <div className="space-y-2">
+                  {nextLotStatuses(lotToAdvance.status).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setTargetStatus(s); setAdvanceError(''); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl border text-xs font-bold transition ${
+                        targetStatus === s
+                          ? 'border-amber-500 bg-amber-50 text-amber-800'
+                          : dark
+                            ? 'border-zinc-800 text-zinc-300 hover:bg-zinc-900'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {LOT_STATUS_LABEL[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recovered weight is captured exactly once, on the melt confirmation */}
+              {targetStatus === 'Melted' && (
+                <div>
+                  <label className={labelCls}>Fine Gold Recovered From Refiner (g)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    className={`w-full text-xs font-mono px-3 py-2 rounded-lg border focus:outline-none focus:border-amber-500 ${inputCls}`}
+                    value={recoveredWeightInput}
+                    onChange={(e) => { setRecoveredWeightInput(e.target.value); setAdvanceError(''); }}
+                  />
+                  <p className={`text-[10px] mt-1 ${mutedCls}`}>
+                    Melt valuation predicted {lotToAdvance.netPayableWeight.toFixed(3)}g. Recording what actually came
+                    back is what reveals whether the shop's melting-loss deduction is set correctly.
+                  </p>
+                </div>
+              )}
+
+              {advanceError && (
+                <div className="flex items-center gap-2 text-[11px] text-rose-500 font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {advanceError}
+                </div>
+              )}
+
+              <button
+                onClick={handleAdvanceLot}
+                disabled={!targetStatus}
+                className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs py-2.5 rounded-xl transition"
+              >
+                Confirm Movement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------- New Voucher Modal ---------- */}
       {isVoucherModalOpen && (
