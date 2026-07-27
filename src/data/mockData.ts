@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher, KarigarLedgerEntry } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -430,51 +430,114 @@ export const initialKarigars: Karigar[] = [
   }
 ];
 
-export const initialWorkOrders: WorkOrder[] = [
+// Unified Karigar Job-Work (Milestone 17). This replaces `initialWorkOrders` and
+// `initialJobBags`, which described the SAME jobs twice with no shared identity:
+//   wo-1 "Mayur Peacock Gold Jhumkas" and bag-1 were one job (same karigar, 15g, same due date)
+//   wo-3 "Imperial Nizam Jadau Choker" and bag-2 were likewise one job
+// Three work orders plus four job bags therefore merge into five real jobs.
+export const initialJobWorks: JobWork[] = [
   {
-    id: 'wo-1',
-    orderNo: 'WO-2026-001',
+    id: 'job-1',
+    jobNo: 'JOB-2026-001',
     karigarId: 'kar-1',
     karigarName: 'Ramesh Lohar (Bengal Artisan)',
+    clientName: 'Sharda Sharma',
     designName: 'Mayur Peacock Gold Jhumkas',
     category: 'Earrings',
-    goldIssued: 15.00,
     metalType: 'Gold (22K)',
+    goldIssued: 15.00,
     issueDate: '2026-07-15',
     dueDate: '2026-07-25',
-    status: 'In Progress',
-    notes: 'Incorporate delicate red enamel detailing on the eyes'
+    stage: 'Filing',
+    priority: 'Urgent',
+    stonesIssued: '2 Rubies (0.40ct total)',
+    metalLossRecorded: 0.05,
+    receiptStatus: 'Pending',
+    notes: 'Incorporate delicate red enamel detailing on the eyes. Keep filigree extra sharp per client.',
+    createdAt: '2026-07-15'
   },
   {
-    id: 'wo-2',
-    orderNo: 'WO-2026-002',
+    id: 'job-2',
+    jobNo: 'JOB-2026-002',
     karigarId: 'kar-2',
     karigarName: 'Hariprasad Soni',
     designName: 'Infinity Diamond Tennis Bracelet',
     category: 'Bracelets',
-    goldIssued: 18.50,
     metalType: 'Gold (18K)',
+    goldIssued: 18.50,
     issueDate: '2026-07-10',
     dueDate: '2026-07-20',
-    status: 'Completed',
+    stage: 'Completed',
+    priority: 'Normal',
+    stonesIssued: '24 Solitaire stones',
+    metalLossRecorded: 0.20,
+    receiptStatus: 'Received',
     finishedWeight: 18.25,
+    finishedMetalType: 'Gold (18K)',
     actualWastage: 0.20,
     laborCharge: 9500,
-    notes: 'Excellent prongs setting for the 24 solitaire stones'
+    notes: 'Excellent prongs setting for the 24 solitaire stones',
+    createdAt: '2026-07-10'
   },
   {
-    id: 'wo-3',
-    orderNo: 'WO-2026-003',
+    id: 'job-3',
+    jobNo: 'JOB-2026-003',
     karigarId: 'kar-3',
     karigarName: 'Mohammad Ali (Zardozi Art)',
+    clientName: 'Priyanka Sen',
     designName: 'Imperial Nizam Jadau Choker',
     category: 'Necklaces',
-    goldIssued: 55.00,
     metalType: 'Gold (22K)',
+    goldIssued: 55.00,
     issueDate: '2026-07-18',
     dueDate: '2026-08-05',
-    status: 'Assigned',
-    notes: 'Client requested green emerald emerald drop bead hooks'
+    stage: 'Casting',
+    priority: 'Normal',
+    stonesIssued: '6 Zambian Emeralds, 12 Kundan plates',
+    metalLossRecorded: 0.12,
+    receiptStatus: 'Pending',
+    notes: 'Client requested green emerald drop bead hooks',
+    createdAt: '2026-07-18'
+  },
+  {
+    id: 'job-4',
+    jobNo: 'JOB-2026-004',
+    karigarId: 'kar-2',
+    karigarName: 'Hariprasad Soni',
+    clientName: 'Rajesh Mehta',
+    designName: 'Solitaire Halo Diamond Studs',
+    category: 'Earrings',
+    metalType: 'Gold (18K)',
+    goldIssued: 3.80,
+    issueDate: '2026-07-10',
+    dueDate: '2026-07-20',
+    stage: 'Setting',
+    priority: 'Express',
+    stonesIssued: '2 Solitaire Diamonds (1.20ct), 32 Halo Diamonds',
+    metalLossRecorded: 0.02,
+    receiptStatus: 'Pending',
+    notes: 'Halo alignment must be perfectly concentric.',
+    createdAt: '2026-07-10'
+  },
+  {
+    id: 'job-5',
+    jobNo: 'JOB-2026-005',
+    karigarId: 'kar-4',
+    karigarName: 'Gopal Patwardhan',
+    clientName: 'Ananya Deshmukh',
+    designName: 'Classic Vintage Marquise Silver Ring',
+    category: 'Rings',
+    metalType: 'Silver (999)',
+    goldIssued: 6.50,
+    issueDate: '2026-07-21',
+    dueDate: '2026-07-28',
+    stage: 'Polishing',
+    priority: 'Normal',
+    stonesIssued: 'None',
+    metalLossRecorded: 0.08,
+    receiptStatus: 'Pending',
+    notes: 'High mirror polish finish requested.',
+    createdAt: '2026-07-21'
   }
 ];
 
@@ -627,72 +690,6 @@ export const initialLooseStones: LooseStone[] = [
   }
 ];
 
-export const initialJobBags: JobBag[] = [
-  {
-    id: 'bag-1',
-    bagNo: 'BAG-2026-901',
-    clientName: 'Sharda Sharma',
-    designName: 'Mayur Peacock Gold Jhumkas',
-    currentStage: 'Filing',
-    priority: 'Urgent',
-    metalType: 'Gold (22K)',
-    metalIssuedWeight: 15.00,
-    stonesIssued: '2 Rubies (0.40ct total)',
-    assignedKarigarName: 'Ramesh Lohar (Bengal Artisan)',
-    dueDate: '2026-07-25',
-    notes: 'Please keep the filigree details extra sharp as requested by client.',
-    metalLossRecorded: 0.05,
-    createdAt: '2026-07-15'
-  },
-  {
-    id: 'bag-2',
-    bagNo: 'BAG-2026-902',
-    clientName: 'Priyanka Sen',
-    designName: 'Imperial Nizam Jadau Choker',
-    currentStage: 'Casting',
-    priority: 'Normal',
-    metalType: 'Gold (22K)',
-    metalIssuedWeight: 55.00,
-    stonesIssued: '6 Zambian Emeralds, 12 Kundan plates',
-    assignedKarigarName: 'Mohammad Ali (Zardozi Art)',
-    dueDate: '2026-08-05',
-    notes: 'Emerald drop beads should have tight wire binding.',
-    metalLossRecorded: 0.12,
-    createdAt: '2026-07-18'
-  },
-  {
-    id: 'bag-3',
-    bagNo: 'BAG-2026-903',
-    clientName: 'Rajesh Mehta',
-    designName: 'Solitaire Halo Diamond Studs',
-    currentStage: 'Setting',
-    priority: 'Express',
-    metalType: 'Gold (18K)',
-    metalIssuedWeight: 3.80,
-    stonesIssued: '2 Solitaire Diamonds (1.20ct), 32 Halo Diamonds',
-    assignedKarigarName: 'Hariprasad Soni',
-    dueDate: '2026-07-20',
-    notes: 'Perfect prong tension is critical. Avoid scratching the girdle.',
-    metalLossRecorded: 0.02,
-    createdAt: '2026-07-10'
-  },
-  {
-    id: 'bag-4',
-    bagNo: 'BAG-2026-904',
-    clientName: 'Ananya Deshmukh',
-    designName: 'Classic Vintage Marquise Silver Ring',
-    currentStage: 'Polishing',
-    priority: 'Normal',
-    metalType: 'Silver (999)',
-    metalIssuedWeight: 6.50,
-    stonesIssued: 'None',
-    assignedKarigarName: 'Gopal Patwardhan',
-    dueDate: '2026-07-28',
-    notes: 'High mirror polish finish requested.',
-    metalLossRecorded: 0.08,
-    createdAt: '2026-07-21'
-  }
-];
 
 // Old Gold buyback vouchers (PRD §8, Milestone 14). Figures follow §8.2's formula:
 // Net Payable Weight = Gross × Purity% × (1 − Loss%), rounded to 3dp, then × buy-back rate.

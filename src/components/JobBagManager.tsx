@@ -15,17 +15,18 @@ import {
   TrendingUp,
   AlertTriangle
 } from 'lucide-react';
-import { JobBag, Karigar } from '../types';
+import { JobWork, Karigar } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { TagQRCode } from './ui/TagCode';
+import { BOARD_STAGES, canAdvanceStage, nextStage, nextJobNumber, STAGE_LABEL } from '../lib/jobWork';
 
 interface JobBagManagerProps {
   karigars: Karigar[];
-  jobBags: JobBag[];
-  setJobBags: React.Dispatch<React.SetStateAction<JobBag[]>>;
+  jobWorks: JobWork[];
+  setJobWorks: React.Dispatch<React.SetStateAction<JobWork[]>>;
 }
 
-export default function JobBagManager({ karigars, jobBags: bags, setJobBags: setBags }: JobBagManagerProps) {
+export default function JobBagManager({ karigars, jobWorks: bags, setJobWorks: setBags }: JobBagManagerProps) {
   const { theme } = useTheme();
 
   // UI state
@@ -33,57 +34,67 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
   const [selectedPriority, setSelectedPriority] = useState<string>('All');
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [isAdvanceModalOpen, setAdvanceModalOpen] = useState(false);
-  const [activeBagForAdvance, setActiveBagForAdvance] = useState<JobBag | null>(null);
+  const [activeBagForAdvance, setActiveBagForAdvance] = useState<JobWork | null>(null);
   const [isTagPreviewOpen, setTagPreviewOpen] = useState(false);
-  const [activeBagForTag, setActiveBagForTag] = useState<JobBag | null>(null);
+  const [activeBagForTag, setActiveBagForTag] = useState<JobWork | null>(null);
 
   // Advance Stage Form state
   const [stageLoss, setStageLoss] = useState<number>(0);
 
   // Add Job Bag Form state
-  const [newBag, setNewBag] = useState<Partial<JobBag>>({
+  const [newBag, setNewBag] = useState<Partial<JobWork>>({
     clientName: '',
     designName: '',
     metalType: 'Gold (22K)',
-    metalIssuedWeight: 0,
+    goldIssued: 0,
     stonesIssued: 'None',
-    assignedKarigarName: '',
+    karigarName: '',
     dueDate: '',
     priority: 'Normal',
     notes: ''
   });
 
   // Stages definition
-  const stages: JobBag['currentStage'][] = ['Casting', 'Filing', 'Setting', 'Polishing', 'Hallmark', 'Completed'];
+  // Board columns come from the shared pipeline so both screens agree on stage order
+  const stages = BOARD_STAGES;
 
   // Calculations
   const totalBags = bags.length;
   const urgentCount = bags.filter(b => b.priority === 'Urgent' || b.priority === 'Express').length;
   const averageLoss = bags.reduce((sum, b) => sum + b.metalLossRecorded, 0) / (bags.filter(b => b.metalLossRecorded > 0).length || 1);
-  const totalWeightInProduction = bags.filter(b => b.currentStage !== 'Completed').reduce((sum, b) => sum + b.metalIssuedWeight, 0);
+  const totalWeightInProduction = bags.filter(b => b.stage !== 'Completed').reduce((sum, b) => sum + b.goldIssued, 0);
 
   const handleLaunchBag = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBag.clientName || !newBag.designName || !newBag.metalIssuedWeight || !newBag.dueDate || !newBag.assignedKarigarName) {
+    if (!newBag.clientName || !newBag.designName || !newBag.goldIssued || !newBag.dueDate || !newBag.karigarName) {
       alert('Please fill in all required fields.');
       return;
     }
 
-    const added: JobBag = {
-      id: `bag-${Date.now()}`,
-      bagNo: `BAG-2026-9${String(bags.length + 1).padStart(2, '0')}`,
+    // Resolve the karigar to a real id — the old JobBag stored only a name, which is why
+    // the two screens could never be joined (Milestone 17).
+    const karigar = karigars.find(k => k.name === newBag.karigarName);
+    const today = new Date().toISOString().split('T')[0];
+
+    const added: JobWork = {
+      id: `job-${Date.now()}`,
+      jobNo: nextJobNumber(bags),
+      karigarId: karigar?.id || '',
+      karigarName: newBag.karigarName!,
       clientName: newBag.clientName,
-      designName: newBag.designName,
-      currentStage: 'Casting',
-      priority: newBag.priority as any,
+      designName: newBag.designName!,
+      category: newBag.category || 'Rings',
       metalType: newBag.metalType || 'Gold (22K)',
-      metalIssuedWeight: Number(newBag.metalIssuedWeight),
+      goldIssued: Number(newBag.goldIssued),
+      issueDate: today,
+      dueDate: newBag.dueDate!,
+      stage: 'Casting',
+      priority: (newBag.priority as JobWork['priority']) || 'Normal',
       stonesIssued: newBag.stonesIssued || 'None',
-      assignedKarigarName: newBag.assignedKarigarName,
-      dueDate: newBag.dueDate,
-      notes: newBag.notes || '',
       metalLossRecorded: 0,
-      createdAt: new Date().toISOString().split('T')[0]
+      receiptStatus: 'Pending',
+      notes: newBag.notes || '',
+      createdAt: today
     };
 
     setBags(prev => [added, ...prev]);
@@ -94,16 +105,16 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
       clientName: '',
       designName: '',
       metalType: 'Gold (22K)',
-      metalIssuedWeight: 0,
+      goldIssued: 0,
       stonesIssued: 'None',
-      assignedKarigarName: '',
+      karigarName: '',
       dueDate: '',
       priority: 'Normal',
       notes: ''
     });
   };
 
-  const handleOpenAdvanceModal = (bag: JobBag) => {
+  const handleOpenAdvanceModal = (bag: JobWork) => {
     setActiveBagForAdvance(bag);
     setStageLoss(0);
     setAdvanceModalOpen(true);
@@ -113,16 +124,16 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
     e.preventDefault();
     if (!activeBagForAdvance) return;
 
-    const currentIdx = stages.indexOf(activeBagForAdvance.currentStage);
-    if (currentIdx === stages.length - 1) return; // Already completed
-
-    const nextStage = stages[currentIdx + 1];
+    // Advance through the shared pipeline rather than an ad hoc array index, so a stage
+    // can never be skipped (notably Hallmark) — see lib/jobWork.ts.
+    const target = nextStage(activeBagForAdvance.stage);
+    if (!target || !canAdvanceStage(activeBagForAdvance.stage, target)) return;
 
     setBags(prev => prev.map(b => {
       if (b.id === activeBagForAdvance.id) {
         return {
           ...b,
-          currentStage: nextStage,
+          stage: target,
           metalLossRecorded: Number((b.metalLossRecorded + Number(stageLoss)).toFixed(3))
         };
       }
@@ -133,7 +144,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
     setActiveBagForAdvance(null);
   };
 
-  const handleOpenTagPreview = (bag: JobBag) => {
+  const handleOpenTagPreview = (bag: JobWork) => {
     setActiveBagForTag(bag);
     setTagPreviewOpen(true);
   };
@@ -141,10 +152,10 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
   // Filter bags
   const filteredBags = bags.filter(bag => {
     const matchesSearch = 
-      bag.bagNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bag.jobNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bag.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bag.designName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bag.assignedKarigarName.toLowerCase().includes(searchTerm.toLowerCase());
+      bag.karigarName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesPriority = selectedPriority === 'All' || bag.priority === selectedPriority;
 
@@ -216,7 +227,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
           </div>
           <p className={`text-[10px] font-mono tracking-wider uppercase font-bold ${theme === 'light' ? 'text-stone-500' : 'text-zinc-500'}`}>Total Active Bags</p>
           <h3 className={`text-2xl font-black mt-1.5 font-mono ${theme === 'light' ? 'text-stone-900' : 'text-white'}`}>
-            {bags.filter(b => b.currentStage !== 'Completed').length} / {totalBags}
+            {bags.filter(b => b.stage !== 'Completed').length} / {totalBags}
           </h3>
           <p className={`text-[11px] mt-2 font-medium ${theme === 'light' ? 'text-stone-600' : 'text-zinc-500'}`}>
             Active bags currently in factory floor
@@ -324,7 +335,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
       {/* Visual Kanban Board */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stages.map((stage) => {
-          const stageBags = filteredBags.filter(b => b.currentStage === stage);
+          const stageBags = filteredBags.filter(b => b.stage === stage);
           return (
             <div 
               key={stage}
@@ -370,7 +381,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                       <div className="flex justify-between items-start mb-2.5">
                         <span className={`text-[9px] font-mono font-bold ${
                           theme === 'light' ? 'text-stone-500' : 'text-zinc-400'
-                        }`}>{bag.bagNo}</span>
+                        }`}>{bag.jobNo}</span>
                         <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${getPriorityColor(bag.priority)}`}>
                           {bag.priority}
                         </span>
@@ -398,12 +409,12 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                       }`}>
                         <div className="flex justify-between items-center">
                           <span className={`font-mono ${theme === 'light' ? 'text-stone-500' : 'text-zinc-400'}`}>Metal Issued:</span>
-                          <span className={`font-mono font-bold ${theme === 'light' ? 'text-stone-900' : 'text-white'}`}>{bag.metalIssuedWeight.toFixed(2)}g</span>
+                          <span className={`font-mono font-bold ${theme === 'light' ? 'text-stone-900' : 'text-white'}`}>{bag.goldIssued.toFixed(2)}g</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className={`font-mono ${theme === 'light' ? 'text-stone-500' : 'text-zinc-400'}`}>Artisan:</span>
-                          <span className={`font-bold truncate max-w-[80px] ${theme === 'light' ? 'text-stone-900' : 'text-white'}`} title={bag.assignedKarigarName}>
-                            {bag.assignedKarigarName.split(' ')[0]}
+                          <span className={`font-bold truncate max-w-[80px] ${theme === 'light' ? 'text-stone-900' : 'text-white'}`} title={bag.karigarName}>
+                            {bag.karigarName.split(' ')[0]}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -592,8 +603,8 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                         ? 'bg-white border-stone-200 text-stone-900 placeholder-stone-400 focus:border-stone-500 focus:ring-[#C5A059]/25'
                         : 'bg-[#141416] border-[#262626] text-white placeholder-zinc-600 focus:border-[#C5A059] focus:ring-[#C5A059]/20'
                     }`}
-                    value={newBag.metalIssuedWeight || ''}
-                    onChange={(e) => setNewBag(prev => ({ ...prev, metalIssuedWeight: parseFloat(e.target.value) }))}
+                    value={newBag.goldIssued || ''}
+                    onChange={(e) => setNewBag(prev => ({ ...prev, goldIssued: parseFloat(e.target.value) }))}
                   />
                 </div>
 
@@ -641,8 +652,8 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                         ? 'bg-white border-stone-200 text-stone-900 focus:border-stone-500 focus:ring-[#C5A059]/25'
                         : 'bg-[#141416] border-[#262626] text-white focus:border-[#C5A059] focus:ring-[#C5A059]/20'
                     }`}
-                    value={newBag.assignedKarigarName}
-                    onChange={(e) => setNewBag(prev => ({ ...prev, assignedKarigarName: e.target.value }))}
+                    value={newBag.karigarName}
+                    onChange={(e) => setNewBag(prev => ({ ...prev, karigarName: e.target.value }))}
                   >
                     <option value="">-- Choose Karigar --</option>
                     {karigars.map(k => (
@@ -733,15 +744,15 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                 theme === 'light' ? 'bg-stone-50 border-stone-150 text-stone-900' : 'bg-[#1C1917]/50 border-[#262626]/80 text-zinc-300'
               }`}>
                 <div className="flex justify-between items-center">
-                  <span className={`text-[10px] font-mono uppercase font-bold ${theme === 'light' ? 'text-stone-500' : 'text-[#C5A059]'}`}>Job Bag No:</span>
-                  <span className={`font-mono font-bold ${theme === 'light' ? 'text-stone-900' : 'text-white'}`}>{activeBagForAdvance.bagNo}</span>
+                  <span className={`text-[10px] font-mono uppercase font-bold ${theme === 'light' ? 'text-stone-500' : 'text-[#C5A059]'}`}>Job No:</span>
+                  <span className={`font-mono font-bold ${theme === 'light' ? 'text-stone-900' : 'text-white'}`}>{activeBagForAdvance.jobNo}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className={`text-[10px] font-mono uppercase font-bold ${theme === 'light' ? 'text-stone-500' : 'text-[#C5A059]'}`}>Current Stage:</span>
                   <span className={`px-2 py-0.5 rounded border text-[10px] font-mono uppercase font-bold ${
                     theme === 'light' ? 'bg-white border-stone-300 text-stone-800' : 'bg-stone-900 border-[#262626] text-white'
                   }`}>
-                    {activeBagForAdvance.currentStage}
+                    {activeBagForAdvance.stage}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -751,7 +762,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                       ? 'bg-[#C5A059]/15 border-[#C5A059]/30 text-amber-900'
                       : 'bg-[#C5A059]/15 border-[#C5A059]/30 text-[#C5A059]'
                   }`}>
-                    {stages[stages.indexOf(activeBagForAdvance.currentStage) + 1]}
+                    {stages[stages.indexOf(activeBagForAdvance.stage) + 1]}
                   </span>
                 </div>
               </div>
@@ -835,7 +846,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                   <p className="text-[9px] text-stone-500 font-mono">LOCKED MANUFACTURING JOB</p>
                 </div>
                 <div className="bg-stone-100 border border-stone-200 px-2.5 py-1 rounded font-mono font-black text-xs text-stone-800">
-                  {activeBagForTag.bagNo}
+                  {activeBagForTag.jobNo}
                 </div>
               </div>
 
@@ -855,7 +866,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                 </div>
                 <div>
                   <span className="text-[9px] text-stone-400 uppercase font-mono block">Issued Weight</span>
-                  <span className="font-bold text-xs text-stone-950 block leading-tight font-mono">{activeBagForTag.metalIssuedWeight.toFixed(2)} Grams</span>
+                  <span className="font-bold text-xs text-stone-950 block leading-tight font-mono">{activeBagForTag.goldIssued.toFixed(2)} Grams</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-stone-400 uppercase font-mono block">Attached Loose Stones</span>
@@ -863,7 +874,7 @@ export default function JobBagManager({ karigars, jobBags: bags, setJobBags: set
                 </div>
                 <div>
                   <span className="text-[9px] text-stone-400 uppercase font-mono block">Assigned Artisan</span>
-                  <span className="font-bold text-xs text-stone-950 block leading-tight">{activeBagForTag.assignedKarigarName}</span>
+                  <span className="font-bold text-xs text-stone-950 block leading-tight">{activeBagForTag.karigarName}</span>
                 </div>
               </div>
 

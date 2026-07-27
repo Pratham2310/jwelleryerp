@@ -5,7 +5,7 @@ import {
   formatCompactINR,
   buildActivityFeed,
 } from './dashboardAnalytics';
-import type { SaleInvoice, Tag, JobBag, LooseStone } from '../types';
+import type { SaleInvoice, Tag, JobWork, LooseStone } from '../types';
 
 function inv(partial: Partial<SaleInvoice>): SaleInvoice {
   return {
@@ -179,10 +179,12 @@ describe('buildActivityFeed', () => {
   });
 
   it('includes job bags and issued stones, but not vaulted stones', () => {
-    const bags: JobBag[] = [{
-      id: 'b1', bagNo: 'BAG-1', clientName: 'C', designName: 'D', currentStage: 'Casting',
-      priority: 'Normal', metalType: 'Gold (22K)', metalIssuedWeight: 12, stonesIssued: '-',
-      assignedKarigarName: 'Ramesh', dueDate: '2026-08-01', metalLossRecorded: 0, createdAt: '2026-07-15',
+    const bags: JobWork[] = [{
+      id: 'b1', jobNo: 'JOB-2026-001', karigarId: 'kar-1', karigarName: 'Ramesh',
+      clientName: 'C', designName: 'D', category: 'Rings', metalType: 'Gold (22K)',
+      goldIssued: 12, issueDate: '2026-07-15', dueDate: '2026-08-01', stage: 'Casting',
+      priority: 'Normal', stonesIssued: '-', metalLossRecorded: 0,
+      receiptStatus: 'Pending', createdAt: '2026-07-15',
     }];
     const stones: LooseStone[] = [
       { id: 's1', lotNo: 'LOT-1', stoneType: 'Diamond', cut: 'Oval', color: 'G', clarity: 'VS1', caratWeight: 2, quantity: 1, valuePerCarat: 1000, totalValue: 2000, certification: 'GIA', status: 'Issued', assignedKarigarName: 'Ramesh' },

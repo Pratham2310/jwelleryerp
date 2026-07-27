@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Wallet
 } from 'lucide-react';
-import { Karigar, WorkOrder, KarigarLedgerEntry } from '../types';
+import { Karigar, JobWork, KarigarLedgerEntry } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   fineGoldEquivalent,
@@ -25,12 +25,13 @@ import {
   buildLedgerStatement,
   LEDGER_ENTRY_LABEL,
 } from '../lib/fineGoldLedger';
+import { nextJobNumber, canReceiveFinishedGoods, receiptBlockedReason, STAGE_LABEL } from '../lib/jobWork';
 
 interface KarigarManagerProps {
   karigars: Karigar[];
   setKarigars: React.Dispatch<React.SetStateAction<Karigar[]>>;
-  workOrders: WorkOrder[];
-  setWorkOrders: React.Dispatch<React.SetStateAction<WorkOrder[]>>;
+  jobWorks: JobWork[];
+  setJobWorks: React.Dispatch<React.SetStateAction<JobWork[]>>;
   ledger: KarigarLedgerEntry[];
   setLedger: React.Dispatch<React.SetStateAction<KarigarLedgerEntry[]>>;
   isIssueModalOpen: boolean;
@@ -40,8 +41,8 @@ interface KarigarManagerProps {
 export default function KarigarManager({
   karigars,
   setKarigars,
-  workOrders,
-  setWorkOrders,
+  jobWorks,
+  setJobWorks,
   ledger,
   setLedger,
   isIssueModalOpen,
@@ -89,6 +90,7 @@ export default function KarigarManager({
   // A karigar can return a piece at a different purity than was issued — capturing this is
   // what makes the fine-gold comparison meaningful (PRD §6.2, Milestone 16).
   const [receivedMetalType, setReceivedMetalType] = useState('Gold (22K)');
+  const [receiptError, setReceiptError] = useState('');
 
   // Inline payout confirmation state
   const [payoutConfirmId, setPayoutConfirmId] = useState<string | null>(null);
@@ -103,23 +105,30 @@ export default function KarigarManager({
     const karigar = karigars.find(k => k.id === selectedKarigarId);
     if (!karigar) return;
 
-    const newOrder: WorkOrder = {
-      id: `wo-${Date.now()}`,
-      orderNo: `WO-2026-00${workOrders.length + 1}`,
+    const today = new Date().toISOString().split('T')[0];
+    const newOrder: JobWork = {
+      id: `job-${Date.now()}`,
+      jobNo: nextJobNumber(jobWorks),
       karigarId: selectedKarigarId,
       karigarName: karigar.name,
       designName,
       category,
-      goldIssued: Number(goldIssued),
       metalType,
-      issueDate: new Date().toISOString().split('T')[0],
+      goldIssued: Number(goldIssued),
+      issueDate: today,
       dueDate,
-      status: 'In Progress',
-      notes
+      // A newly issued job starts off the board until the karigar begins casting
+      stage: 'Issued',
+      priority: 'Normal',
+      stonesIssued: 'None',
+      metalLossRecorded: 0,
+      receiptStatus: 'Pending',
+      notes,
+      createdAt: today,
     };
 
-    // Update active orders
-    setWorkOrders(prev => [newOrder, ...prev]);
+    // One unified record — this same job is now immediately visible on the Job Bags board
+    setJobWorks(prev => [newOrder, ...prev]);
 
     // Metal issued is recorded in FINE gold equivalent, so a 22K issue and an 18K receipt
     // are comparable later (PRD §6.2). The gross weight and purity are kept alongside so
@@ -132,7 +141,7 @@ export default function KarigarManager({
       date: newOrder.issueDate,
       type: 'METAL_ISSUED',
       workOrderId: newOrder.id,
-      narration: `${newOrder.orderNo} — ${designName} (${metalType})`,
+      narration: `${newOrder.jobNo} — ${designName} (${metalType})`,
       fineWeightDelta: fineIssued,
       grossWeight: Number(goldIssued),
       purityPercent: purity,
@@ -146,21 +155,30 @@ export default function KarigarManager({
     setIssueModalOpen(false);
   };
 
-  const handleReceiveOrderDetails = (order: WorkOrder) => {
+  const handleReceiveOrderDetails = (order: JobWork) => {
     setReceivingOrderId(order.id);
     // Suggest estimated labor charge
     setLaborCharge(Math.round(order.goldIssued * 450));
     setFinishedWeight(order.goldIssued);
     // Default to the purity that was issued; staff change it if the piece came back different
     setReceivedMetalType(order.metalType);
+    setReceiptError('');
   };
 
   const handleCompleteReceipt = (e: React.FormEvent) => {
     e.preventDefault();
     if (!receivingOrderId || !finishedWeight || !laborCharge) return;
 
-    const order = workOrders.find(o => o.id === receivingOrderId);
+    const order = jobWorks.find(o => o.id === receivingOrderId);
     if (!order) return;
+
+    // Finished goods can only be booked once the piece has actually finished on the floor.
+    // This is precisely the drift the old two-model split allowed (Milestone 17).
+    const blocked = receiptBlockedReason(order);
+    if (blocked) {
+      setReceiptError(blocked);
+      return;
+    }
 
     // Wastage is assessed in FINE gold, not raw grams (PRD §6.2). Comparing raw grams
     // across different purities understates the loss badly — issuing 22K and receiving
@@ -171,12 +189,13 @@ export default function KarigarManager({
     const fineReturned = fineGoldEquivalent(Number(finishedWeight), receivedPurity);
     const assessment = assessWastage(fineIssued, fineReturned, allowedWastage);
 
-    setWorkOrders(prev => prev.map(o => {
+    setJobWorks(prev => prev.map(o => {
       if (o.id === receivingOrderId) {
         return {
           ...o,
-          status: 'Completed',
+          receiptStatus: 'Received' as const,
           finishedWeight: Number(finishedWeight),
+          finishedMetalType: receivedMetalType,
           actualWastage: assessment.fineLost,
           laborCharge: Number(laborCharge)
         };
@@ -191,7 +210,7 @@ export default function KarigarManager({
         date: today,
         type: 'METAL_RETURNED',
         workOrderId: order.id,
-        narration: `${order.orderNo} — received ${Number(finishedWeight).toFixed(3)}g ${receivedMetalType}`,
+        narration: `${order.jobNo} — received ${Number(finishedWeight).toFixed(3)}g ${receivedMetalType}`,
         fineWeightDelta: -fineReturned,
         grossWeight: Number(finishedWeight),
         purityPercent: receivedPurity,
@@ -201,7 +220,7 @@ export default function KarigarManager({
         date: today,
         type: 'WASTAGE_ALLOWED',
         workOrderId: order.id,
-        narration: `${order.orderNo} — wastage absorbed @ ${allowedWastage}% (${assessment.wastagePercent.toFixed(2)}% actual)`,
+        narration: `${order.jobNo} — wastage absorbed @ ${allowedWastage}% (${assessment.wastagePercent.toFixed(2)}% actual)`,
         // Only the agreed portion is written off here. Anything beyond the cap stays on the
         // karigar's balance for owner review rather than being silently absorbed — the
         // previous code capped it away with Math.min(). The review workflow is Milestone 18.
@@ -216,7 +235,7 @@ export default function KarigarManager({
         date: today,
         type: 'LABOUR_CHARGED',
         workOrderId: order.id,
-        narration: `${order.orderNo} — making charges`,
+        narration: `${order.jobNo} — making charges`,
         moneyDelta: Number(laborCharge),
       });
     }
@@ -277,8 +296,8 @@ export default function KarigarManager({
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {karigars.map((kar) => {
-              const activeOrders = workOrders.filter(o => o.karigarId === kar.id && o.status === 'In Progress');
-              const completedOrders = workOrders.filter(o => o.karigarId === kar.id && o.status === 'Completed');
+              const activeOrders = jobWorks.filter(o => o.karigarId === kar.id && o.receiptStatus === 'Pending');
+              const completedOrders = jobWorks.filter(o => o.karigarId === kar.id && o.receiptStatus === 'Received');
               // Balances are DERIVED from the append-only ledger, never read from a stored
               // running total (Milestone 16, KNOWN_ISSUES #10).
               const balance = deriveKarigarBalance(ledger, kar.id);
@@ -357,7 +376,7 @@ export default function KarigarManager({
                             <div className="space-y-0.5">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-mono text-[9px] font-black text-amber-600 bg-amber-500/10 px-1 rounded">
-                                  {order.orderNo}
+                                  {order.jobNo}
                                 </span>
                                 <span className="font-bold text-slate-800 text-[11px] truncate max-w-[120px] md:max-w-[150px]">
                                   {order.designName}
@@ -383,7 +402,7 @@ export default function KarigarManager({
                             <div className="space-y-0.5">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-mono text-[9px] font-bold text-slate-500 bg-slate-100 px-1 rounded">
-                                  {order.orderNo}
+                                  {order.jobNo}
                                 </span>
                                 <span className="font-medium text-slate-600 text-[11px] line-through decoration-slate-300 truncate max-w-[120px] md:max-w-[150px]">
                                   {order.designName}
@@ -465,9 +484,9 @@ export default function KarigarManager({
                 </tr>
               </thead>
               <tbody className={`divide-y ${dark ? 'divide-zinc-800 text-zinc-200' : 'divide-slate-100 text-slate-700'}`}>
-                {workOrders.map((order) => (
+                {jobWorks.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50/30 transition">
-                    <td className="p-4 font-mono font-bold text-slate-900">{order.orderNo}</td>
+                    <td className="p-4 font-mono font-bold text-slate-900">{order.jobNo}</td>
                     <td>{order.karigarName}</td>
                     <td>
                       <div className="font-bold text-slate-850">{order.designName}</div>
@@ -478,15 +497,15 @@ export default function KarigarManager({
                     <td className="font-mono text-slate-500">{order.dueDate}</td>
                     <td>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                        order.status === 'Completed'
+                        order.receiptStatus === 'Received'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}>
-                        {order.status}
+                        {order.receiptStatus === 'Received' ? 'Received' : STAGE_LABEL[order.stage]}
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      {order.status === 'In Progress' && (
+                      {canReceiveFinishedGoods(order) && (
                         <button
                           onClick={() => handleReceiveOrderDetails(order)}
                           className="px-2.5 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg transition"
@@ -494,7 +513,7 @@ export default function KarigarManager({
                           Receive Finished
                         </button>
                       )}
-                      {order.status === 'Completed' && (
+                      {order.receiptStatus === 'Received' && (
                         <div className="text-[10px] text-slate-400 font-bold">
                           Loss: {order.actualWastage?.toFixed(3)}g
                         </div>
@@ -659,10 +678,10 @@ export default function KarigarManager({
               <div>
                 <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block mb-0.5">Assigned Job</span>
                 <p className="font-bold text-slate-800 text-sm">
-                  {workOrders.find(o => o.id === receivingOrderId)?.designName}
+                  {jobWorks.find(o => o.id === receivingOrderId)?.designName}
                 </p>
                 <p className="text-[10px] text-slate-500 font-mono">
-                  Gold Issued: {workOrders.find(o => o.id === receivingOrderId)?.goldIssued.toFixed(3)}g
+                  Gold Issued: {jobWorks.find(o => o.id === receivingOrderId)?.goldIssued.toFixed(3)}g
                 </p>
               </div>
 
@@ -724,7 +743,7 @@ export default function KarigarManager({
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-500">Actual Metal Loss:</span>
                     <span className="font-mono text-slate-800 font-bold">
-                      {Math.max(0, Number(( (workOrders.find(o => o.id === receivingOrderId)?.goldIssued || 0) - finishedWeight ).toFixed(3)))}g
+                      {Math.max(0, Number(( (jobWorks.find(o => o.id === receivingOrderId)?.goldIssued || 0) - finishedWeight ).toFixed(3)))}g
                     </span>
                   </div>
                 </div>

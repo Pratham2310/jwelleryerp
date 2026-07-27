@@ -2,7 +2,7 @@
 // Revenue Trend was hardcoded SVG coordinates and the ERP Action Log was a static list, both
 // of which read as real data to anyone looking at the screen.
 
-import type { SaleInvoice, Tag, JobBag, LooseStone } from '../types';
+import type { SaleInvoice, Tag, JobWork, LooseStone } from '../types';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -133,7 +133,7 @@ export interface ActivityEvent {
 export function buildActivityFeed(
   invoices: SaleInvoice[],
   tags: Tag[],
-  jobBags: JobBag[],
+  jobWorks: JobWork[],
   stones: LooseStone[],
   limit = 6
 ): ActivityEvent[] {
@@ -171,14 +171,14 @@ export function buildActivityFeed(
     }
   }
 
-  for (const bag of jobBags) {
+  for (const job of jobWorks) {
     events.push({
-      id: `bag-${bag.id}`,
+      id: `job-${job.id}`,
       kind: 'jobbag',
-      title: `Job bag ${bag.bagNo} at ${bag.currentStage}`,
-      detail: `${bag.metalIssuedWeight.toFixed(2)}g with ${bag.assignedKarigarName}`,
-      date: bag.createdAt,
-      sortAt: Date.parse(bag.createdAt || '') || 0,
+      title: `Job ${job.jobNo} at ${job.stage}`,
+      detail: `${job.goldIssued.toFixed(2)}g with ${job.karigarName}`,
+      date: job.createdAt,
+      sortAt: Date.parse(job.createdAt || '') || 0,
     });
   }
 

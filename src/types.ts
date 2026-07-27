@@ -112,6 +112,66 @@ export interface KarigarLedgerEntry {
   moneyDelta?: number;
 }
 
+/**
+ * Unified Karigar Job-Work aggregate (Milestone 17, Handbook §2.5 / DATABASE.md §1.1).
+ *
+ * `WorkOrder` (the ledger/financial view in KarigarManager) and `JobBag` (the production-floor
+ * view in JobBagManager) were two disconnected models describing the SAME real-world thing:
+ * metal issued to an artisan to make a piece by a due date. Keeping them separate meant the
+ * same job could drift out of sync between the two screens, with no shared identity or FK.
+ *
+ * They are now one record with two dimensions:
+ *  - financial: goldIssued / finishedWeight / labour, which drives the Milestone 16 ledger
+ *  - production: stage / priority / stage-wise metal loss, which drives the kanban board
+ */
+export type JobWorkStage =
+  | 'Issued'
+  | 'Casting'
+  | 'Filing'
+  | 'Setting'
+  | 'Polishing'
+  | 'Hallmark'
+  | 'Completed';
+
+export type JobWorkPriority = 'Normal' | 'Urgent' | 'Express';
+
+/** Whether the finished piece has been booked back against the karigar's ledger. */
+export type JobWorkReceiptStatus = 'Pending' | 'Received';
+
+export interface JobWork {
+  id: string;
+  jobNo: string; // JOB-<year>-n — replaces the separate orderNo/bagNo series
+  karigarId: string;
+  karigarName: string;
+  clientName?: string; // set when the piece is a bespoke order for a specific customer
+  designName: string;
+  category: string;
+
+  // Financial dimension — feeds the append-only karigar ledger (Milestone 16)
+  metalType: string;
+  goldIssued: number; // gross grams issued
+  issueDate: string;
+  dueDate: string;
+
+  // Production dimension — drives the Job Bags kanban
+  stage: JobWorkStage;
+  priority: JobWorkPriority;
+  stonesIssued: string;
+  metalLossRecorded: number; // cumulative stage-wise loss in grams
+
+  // Receipt / reconciliation
+  receiptStatus: JobWorkReceiptStatus;
+  finishedWeight?: number;
+  finishedMetalType?: string; // may differ from what was issued — see Milestone 16
+  actualWastage?: number; // fine grams, from assessWastage()
+  laborCharge?: number;
+  producedTagId?: string; // the real Tag created when the job completes (Handbook D-6)
+
+  notes?: string;
+  createdAt: string;
+}
+
+/** @deprecated Replaced by `JobWork` in Milestone 17. Retained only for reference. */
 export interface WorkOrder {
   id: string;
   orderNo: string;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialWorkOrders, initialInvoices, initialLooseStones, initialJobBags, initialOldGoldVouchers, initialKarigarLedger } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, WorkOrder, SaleInvoice, MetalRate, LooseStone, JobBag, OldGoldVoucher, KarigarLedgerEntry } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 
 // Custom layouts & Auth pages
@@ -66,9 +66,11 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialKarigars;
   });
 
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => {
-    const saved = localStorage.getItem('stitch_work_orders');
-    return saved ? JSON.parse(saved) : initialWorkOrders;
+  // One unified Job-Work aggregate (Milestone 17). Previously `workOrders` and `jobBags` were
+  // separate arrays describing the same real jobs, free to drift apart.
+  const [jobWorks, setJobWorks] = useState<JobWork[]>(() => {
+    const saved = localStorage.getItem('stitch_job_works');
+    return saved ? JSON.parse(saved) : initialJobWorks;
   });
 
   const [invoices, setInvoices] = useState<SaleInvoice[]>(() => {
@@ -81,10 +83,6 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialLooseStones;
   });
 
-  const [jobBags, setJobBags] = useState<JobBag[]>(() => {
-    const saved = localStorage.getItem('stitch_job_bags');
-    return saved ? JSON.parse(saved) : initialJobBags;
-  });
 
   const [oldGoldVouchers, setOldGoldVouchers] = useState<OldGoldVoucher[]>(() => {
     const saved = localStorage.getItem('stitch_old_gold_vouchers');
@@ -124,8 +122,8 @@ function AppContent() {
   }, [karigars]);
 
   useEffect(() => {
-    localStorage.setItem('stitch_work_orders', JSON.stringify(workOrders));
-  }, [workOrders]);
+    localStorage.setItem('stitch_job_works', JSON.stringify(jobWorks));
+  }, [jobWorks]);
 
   useEffect(() => {
     localStorage.setItem('stitch_invoices', JSON.stringify(invoices));
@@ -135,9 +133,6 @@ function AppContent() {
     localStorage.setItem('stitch_loose_stones', JSON.stringify(stones));
   }, [stones]);
 
-  useEffect(() => {
-    localStorage.setItem('stitch_job_bags', JSON.stringify(jobBags));
-  }, [jobBags]);
 
   useEffect(() => {
     localStorage.setItem('stitch_old_gold_vouchers', JSON.stringify(oldGoldVouchers));
@@ -166,7 +161,7 @@ function AppContent() {
     return () => clearTimeout(timer);
   }, [location.pathname, forceOffline, latency, user]);
 
-  const activeWorkOrdersCount = workOrders.filter(o => o.status === 'Assigned' || o.status === 'In Progress').length;
+  const activeWorkOrdersCount = jobWorks.filter(j => j.stage !== 'Completed').length;
 
   const handleLoginSuccess = (userData: { name: string; role: string; branch: string }) => {
     setUser(userData);
@@ -332,7 +327,7 @@ function AppContent() {
                     customersCount={customers.length}
                     karigars={karigars}
                     invoices={invoices}
-                    jobBags={jobBags}
+                    jobWorks={jobWorks}
                     stones={stones}
                     activeWorkOrdersCount={activeWorkOrdersCount}
                     setActiveTab={(tab) => navigate('/' + tab)}
@@ -390,8 +385,8 @@ function AppContent() {
                   <KarigarManager 
                     karigars={karigars}
                     setKarigars={setKarigars}
-                    workOrders={workOrders}
-                    setWorkOrders={setWorkOrders}
+                    jobWorks={jobWorks}
+                    setJobWorks={setJobWorks}
                     ledger={karigarLedger}
                     setLedger={setKarigarLedger}
                     isIssueModalOpen={isIssueModalOpen}
@@ -404,8 +399,8 @@ function AppContent() {
                 element={
                   <JobBagManager
                     karigars={karigars}
-                    jobBags={jobBags}
-                    setJobBags={setJobBags}
+                    jobWorks={jobWorks}
+                    setJobWorks={setJobWorks}
                   />
                 }
               />

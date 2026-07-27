@@ -22,7 +22,7 @@ import {
   formatCompactINR,
   buildActivityFeed,
 } from '../lib/dashboardAnalytics';
-import { Tag, SaleInvoice, Karigar, MetalRate, JobBag, LooseStone } from '../types';
+import { Tag, SaleInvoice, Karigar, MetalRate, JobWork, LooseStone } from '../types';
 
 interface DashboardProps {
   metalRates: MetalRate[];
@@ -32,7 +32,7 @@ interface DashboardProps {
   karigars: Karigar[];
   invoices: SaleInvoice[];
   // Lifted to App.tsx back in Milestone 1 but never consumed here until Milestone 13
-  jobBags: JobBag[];
+  jobWorks: JobWork[];
   stones: LooseStone[];
   activeWorkOrdersCount: number;
   setActiveTab: (tab: string) => void;
@@ -47,7 +47,7 @@ export default function Dashboard({
   customersCount,
   karigars,
   invoices,
-  jobBags,
+  jobWorks,
   stones,
   activeWorkOrdersCount,
   setActiveTab,
@@ -81,15 +81,15 @@ export default function Dashboard({
     : null;
 
   // Real activity feed, replacing the static hardcoded list (Milestone 13)
-  const activityFeed = buildActivityFeed(invoices, tags, jobBags, stones, 6);
+  const activityFeed = buildActivityFeed(invoices, tags, jobWorks, stones, 6);
 
   // Stone vault + job-bag KPIs. This state has been lifted to App.tsx since Milestone 1 but
   // was never displayed anywhere on the Dashboard.
   const vaultCarats = stones.reduce((sum, s) => sum + s.caratWeight, 0);
   const vaultValue = stones.reduce((sum, s) => sum + s.totalValue, 0);
   const stonesIssuedCount = stones.filter(s => s.status === 'Issued').length;
-  const activeJobBags = jobBags.filter(b => b.currentStage !== 'Completed');
-  const jobBagMetalInProduction = activeJobBags.reduce((sum, b) => sum + b.metalIssuedWeight, 0);
+  const activeJobBags = jobWorks.filter(j => j.stage !== 'Completed');
+  const jobBagMetalInProduction = activeJobBags.reduce((sum, j) => sum + j.goldIssued, 0);
   const urgentJobBags = activeJobBags.filter(b => b.priority === 'Urgent' || b.priority === 'Express').length;
 
   const ACTIVITY_DOT: Record<string, string> = {
