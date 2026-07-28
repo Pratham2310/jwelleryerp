@@ -374,13 +374,16 @@ export default function StoneManager({ karigars, stones, setStones }: StoneManag
 
                     {/* Status & Artisan */}
                     <td className="py-4 px-5">
+                      {/* These badges were authored for a dark row; on the white light-mode row the
+                          400-weight text drops to ~1.9:1. Light-first colours with dark: overrides.
+                          The amber text is an arbitrary value because index.css remaps text-amber-* to gold. */}
                       {stone.status === 'In Vault' ? (
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 dark:border-emerald-500/20 text-[10px]">
                           In Vault
                         </span>
                       ) : stone.status === 'Issued' ? (
                         <div className="space-y-1">
-                          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px]">
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-[#8C6D34] dark:text-[#C5A059] border border-amber-500/30 dark:border-amber-500/20 text-[10px]">
                             Issued
                           </span>
                           <p className="text-[9px] text-zinc-400 max-w-[150px] truncate" title={stone.assignedKarigarName}>
@@ -388,7 +391,7 @@ export default function StoneManager({ karigars, stones, setStones }: StoneManag
                           </p>
                         </div>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 border border-zinc-700 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-500 border border-zinc-300 dark:border-zinc-700 text-[10px]">
                           Sold
                         </span>
                       )}

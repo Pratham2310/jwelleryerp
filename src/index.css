@@ -1,6 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700;900&display=swap');
 @import "tailwindcss";
 
+/**
+ * Bind Tailwind's `dark:` variant to the .dark class that ThemeProvider puts on <html>.
+ *
+ * Tailwind v4 defaults `dark:` to `@media (prefers-color-scheme: dark)`, which is the
+ * operating system's setting — NOT this app's theme toggle. Without this line every
+ * `dark:` utility in the codebase is decoupled from the toggle: a user on a light OS
+ * never sees them even in dark mode, and a user on a dark OS sees them even in light
+ * mode. That is the root cause of KNOWN_ISSUES #12 (dark-mode contrast), which had
+ * been patched three times at the symptom level with explicit useTheme() branching.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
@@ -427,6 +439,29 @@ body.light,
 }
 .light .bg-slate-900.p-5.rounded-2xl .border-slate-800 {
   border-color: #E4E4E7 !important;
+}
+
+/**
+ * `.on-dark-panel` — opt a container out of the light-mode text remap above.
+ *
+ * The blanket `.light .text-white { color: #09090B }` rule assumes light text always
+ * sits on a light card once `.light` is active. That is false for a panel deliberately
+ * kept dark in BOTH themes (the Job Bags hero banner, the Net Amount Due card), where it
+ * renders the content black-on-black and unreadable. Mark such a panel `.on-dark-panel`
+ * to keep its descendants legible. Use this instead of adding another hyper-specific
+ * selector chain like the `.bg-slate-900.p-5.rounded-2xl` block above.
+ */
+.light .on-dark-panel .text-white,
+.light .on-dark-panel h2 {
+  color: #FFFFFF !important;
+}
+.light .on-dark-panel .text-stone-300,
+.light .on-dark-panel .text-zinc-300,
+.light .on-dark-panel .text-zinc-400,
+.light .on-dark-panel .text-zinc-500,
+.light .on-dark-panel .text-slate-300,
+.light .on-dark-panel .text-slate-400 {
+  color: #A1A1AA !important;
 }
 
 /* Custom Ambient Card Glows & Banner Overrides */

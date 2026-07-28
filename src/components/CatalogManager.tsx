@@ -15,13 +15,16 @@ import {
   Trash2,
   LayoutTemplate,
   Tags as TagsIcon,
-  ScanLine
+  ScanLine,
+  Truck
 } from 'lucide-react';
 import { ItemDesign, Tag, ItemCategory, MetalStandard, StoneVariety } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { ALL_TAG_STATUSES, TAG_STATUS_LABEL, canTransition, nextLegalStatuses, type TagStatus } from '../lib/tagStateMachine';
 import { TagBarcode, TagQRCode } from './ui/TagCode';
 import StockAuditPanel from './StockAuditPanel';
+import StockTransferPanel from './StockTransferPanel';
+import type { StockTransfer, Branch, MetalRate } from '../types';
 
 interface CatalogManagerProps {
   itemDesigns: ItemDesign[];
@@ -30,6 +33,13 @@ interface CatalogManagerProps {
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
   isAddModalOpen: boolean;
   setAddModalOpen: (open: boolean) => void;
+  // Inter-branch transfer (Milestone 20) — needs ALL tags, since a transfer spans two branches
+  allTags: Tag[];
+  transfers: StockTransfer[];
+  setTransfers: React.Dispatch<React.SetStateAction<StockTransfer[]>>;
+  branches: Branch[];
+  activeBranch: Branch | null;
+  metalRates: MetalRate[];
 }
 
 const CATEGORIES: ItemCategory[] = ['Rings', 'Necklaces', 'Earrings', 'Bangles', 'Bracelets', 'Chains', 'Coins'];
@@ -53,12 +63,18 @@ export default function CatalogManager({
   tags,
   setTags,
   isAddModalOpen,
-  setAddModalOpen
+  setAddModalOpen,
+  allTags,
+  transfers,
+  setTransfers,
+  branches,
+  activeBranch,
+  metalRates
 }: CatalogManagerProps) {
   const { theme } = useTheme();
 
   // Which tab is active — Item Design Templates, Tag Inventory, or Stock Audit (PRD §5.1, Handbook D-6; Milestone 6)
-  const [activeTab, setActiveTab] = useState<'designs' | 'tags' | 'audit'>('tags');
+  const [activeTab, setActiveTab] = useState<'designs' | 'tags' | 'audit' | 'transfers'>('tags');
 
   // Dashboard's "Add Showcase Item" quick action opens the Add Tag modal specifically
   // (adding new physical stock is the more common day-to-day action) and should land on that tab.
@@ -316,9 +332,29 @@ export default function CatalogManager({
         >
           <ScanLine className="w-4 h-4" /> Stock Audit
         </button>
+        <button
+          onClick={() => setActiveTab('transfers')}
+          className={`pb-3 text-sm font-bold border-b-2 transition flex items-center gap-1.5 ${
+            activeTab === 'transfers'
+              ? 'border-amber-500 text-slate-900'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Truck className="w-4 h-4" /> Stock Transfers
+        </button>
       </div>
 
-      {activeTab === 'audit' ? (
+      {activeTab === 'transfers' ? (
+        <StockTransferPanel
+          allTags={allTags}
+          setTags={setTags}
+          transfers={transfers}
+          setTransfers={setTransfers}
+          branches={branches}
+          activeBranch={activeBranch}
+          metalRates={metalRates}
+        />
+      ) : activeTab === 'audit' ? (
         <StockAuditPanel tags={tags} />
       ) : activeTab === 'tags' ? (
         <div className="space-y-6">

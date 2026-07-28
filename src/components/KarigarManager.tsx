@@ -481,9 +481,11 @@ export default function KarigarManager({
                           : '24K equivalent held by artisan'}
                       </span>
                     </div>
-                    <div className="p-3 bg-indigo-50/30 rounded-xl border border-indigo-100/50">
+                    {/* Unlike text-amber-800, index.css does not remap indigo for dark mode,
+                        so this must branch explicitly or it renders indigo-on-black (KNOWN_ISSUES #12). */}
+                    <div className={`p-3 rounded-xl border ${dark ? 'bg-indigo-950/25 border-indigo-900/40' : 'bg-indigo-50/30 border-indigo-100/50'}`}>
                       <span className="text-[10px] text-slate-400 font-mono uppercase font-bold tracking-wider block">Labor Charges Due</span>
-                      <span className="font-mono text-base font-black text-indigo-900">
+                      <span className={`font-mono text-base font-black ${dark ? 'text-indigo-300' : 'text-indigo-900'}`}>
                         ₹{balance.moneyPayable.toLocaleString('en-IN')}
                       </span>
                       <span className="text-[9px] text-slate-400 block mt-1">Pending approval payout</span>

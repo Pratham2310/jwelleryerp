@@ -336,6 +336,40 @@ export interface OldGoldVoucher {
   branchId?: string; // Milestone 19
 }
 
+/**
+ * Inter-Branch Stock Transfer (PRD §2/§9.5, Milestone 20).
+ *
+ * While `InTransit` the moved Tags sit in `TransferInTransit`, which is not a sellable state —
+ * so the pieces are invisible to BOTH branches until accepted somewhere. That is decision D-7
+ * ("a tag can never be sellable at two branches simultaneously") enforced structurally.
+ */
+export type StockTransferStatus =
+  | 'Draft'
+  | 'InTransit'
+  | 'Received'
+  | 'PartiallyReceived'
+  | 'Rejected';
+
+export interface StockTransfer {
+  id: string;
+  transferNo: string; // TRF-<year>-n — a delivery-challan series, not a tax-invoice series
+  fromBranchId: string;
+  toBranchId: string;
+  tagIds: string[];
+  status: StockTransferStatus;
+  createdOn: string;
+  dispatchedOn?: string;
+  receivedOn?: string;
+  /** Declared consignment value at dispatch, for the e-Way Bill threshold (PRD §9.5). */
+  declaredValue?: number;
+  eWayBillRequired?: boolean;
+  /** Set on receipt: which pieces the destination actually accepted. */
+  acceptedTagIds?: string[];
+  rejectedTagIds?: string[];
+  rejectionReason?: string;
+  notes?: string;
+}
+
 export interface MetalRate {
   id: string;
   metalType: string;

@@ -184,7 +184,9 @@ export default function JobBagManager({ karigars, jobWorks: bags, setJobWorks: s
   return (
     <div className="space-y-6 font-sans">
       {/* Top Title Banner */}
-      <div className={`p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl border ${
+      {/* on-dark-panel: this banner stays dark in light mode by design, so its text must
+          opt out of the light-mode text remap (see index.css) or it renders black-on-black. */}
+      <div className={`on-dark-panel p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl border ${
         theme === 'light'
           ? 'bg-stone-900 border-stone-850 text-white'
           : 'bg-[#141416] border-[#262626] text-white'

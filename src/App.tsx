@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 
@@ -101,6 +101,13 @@ function AppContent() {
     localStorage.getItem('stitch_active_branch') || null
   );
 
+  // Inter-branch stock transfers (Milestone 20). Deliberately NOT branch-scoped: a transfer
+  // belongs to two branches at once, and the destination must be able to see it arriving.
+  const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
+    const saved = localStorage.getItem('stitch_stock_transfers');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Append-only Karigar ledger (Milestone 16) — the single source of truth for karigar
   // balances, which are derived from it rather than stored (KNOWN_ISSUES #10 / D-2).
   const [karigarLedger, setKarigarLedger] = useState<KarigarLedgerEntry[]>(() => {
@@ -157,6 +164,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
   }, [branches]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_stock_transfers', JSON.stringify(stockTransfers));
+  }, [stockTransfers]);
 
   useEffect(() => {
     if (activeBranchId) localStorage.setItem('stitch_active_branch', activeBranchId);
@@ -388,6 +399,12 @@ function AppContent() {
                     setTags={setTags}
                     isAddModalOpen={isAddModalOpen}
                     setAddModalOpen={setAddModalOpen}
+                    allTags={tags}
+                    transfers={stockTransfers}
+                    setTransfers={setStockTransfers}
+                    branches={branches}
+                    activeBranch={activeBranch}
+                    metalRates={metalRates}
                   />
                 }
               />
