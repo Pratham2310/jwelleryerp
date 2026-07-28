@@ -4,6 +4,29 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-28 — Phase 6 Complete: Milestones 19–20 (Multi-Branch)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign; the deployed design is the approved one.
+
+**Milestone 19 — Branch Master & Branch Switcher.** Introduces a real `Branch` entity (`branchCode`, `gstin`, `stateCode`, `invoiceSeriesPrefix`, `defaultStockOwnershipType`, optional `rateOverrides`) and a header switcher, replacing the hardcoded "Mumbai BST"/"MUM-01" strings. `branchId` was added to `Tag`, `LooseStone`, `JobWork`, `SaleInvoice` and `OldGoldVoucher` — and **deliberately not** to `Customer` or `Karigar`, per decision **D-5**: branch-scoping the Party Master silently breaks both chain-wide loyalty and TCS aggregation. Legacy records predating `branchId` are attributed to the primary branch rather than disappearing from every branch's view.
+
+This also closes `KNOWN_ISSUES.md` **#11(b)**. Invoice numbers came from a single shop-wide sequence, which GST Rule 46 does not permit: each GSTIN requires its own consecutive series. `nextBranchInvoiceNumber()` now allocates per branch prefix, from the highest existing number rather than array length, so deletions and filtering cannot cause a collision.
+
+**Milestone 20 — Inter-Branch Stock Transfer (IBST).** Lifecycle `Draft → InTransit → Received | PartiallyReceived | Rejected`, surfaced as a fourth Catalog tab. The destination accepts or rejects **per piece** with a mandatory refusal reason; partial receipt is the realistic case, since a consignment can arrive with one piece damaged, and rejected pieces return to the source branch.
+
+Decision **D-7** ("a tag can never be sellable at two branches simultaneously") is satisfied *structurally* rather than by convention: a dispatched Tag moves to `TransferInTransit`, which `isSellable()` returns false for, so the piece is invisible to **both** branches until accepted somewhere. There is no window in which two counters could sell the same physical ornament, and a unit test asserts `isSellable('TransferInTransit') === false` so that guarantee cannot be silently removed. Consignments are valued at metal + stones and deliberately exclude making charge, because a branch transfer is a movement of goods rather than a sale, and are flagged when they exceed the e-Way Bill threshold (PRD §9.5) — generating the actual e-Way Bill is M22 and genuinely per-state thresholds are M34.
+
+Note that `stockTransfers` is intentionally **not** branch-scoped state: a transfer belongs to two branches at once, and the destination must be able to see it arriving.
+
+**Root cause found for `KNOWN_ISSUES.md` #12, after three symptom-level fixes.** Dark-mode contrast had been patched three times (M6 StockAuditPanel, M13 Dashboard SVG labels, M16 Karigar ledger modal), each time by adding explicit `useTheme()` branching. The underlying reason those were necessary: this project is on Tailwind v4, where `dark:` defaults to `@media (prefers-color-scheme: dark)` — the **operating system's** setting — while `ThemeProvider` signals the theme with a `.dark` class on `<html>`. No `@custom-variant` was ever declared, so **every `dark:` utility in the codebase was decoupled from the theme toggle**: invisible to a user on a light OS even in dark mode, and wrongly applied to a user on a dark OS in light mode. One line in `index.css` binds the variant to the class and makes all of them work.
+
+Fixing that exposed two real contrast defects that the dead utilities had been masking, both now fixed: the Job Bags hero banner rendered black-on-black in light mode (a blanket `.light .text-white → #09090B` rule assumed light text always sits on a light card, which is false for a panel deliberately dark in both themes — hence the new documented `.on-dark-panel` escape hatch), and the Karigar "Labor Charges Due" figure rendered indigo-on-black in dark mode (unlike `text-amber-*`, indigo has no global remap in `index.css`, so it must branch explicitly). The Stones status badges, authored for a dark row, were also dropping to ~1.9:1 on the white light-mode row.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **270 tests passing across 14 suites** (up from 214); `npm run build` clean. Playwright-verified end to end: dispatching two pieces from Mumbai to Pune removes them from Mumbai's sellable stock, they appear in **neither** branch's sellable list while in transit, and on partial receipt the accepted piece lands in Pune's stock while the rejected one returns to Mumbai; the e-Way Bill flag fires above ₹50,000; only the destination branch is offered the Receive action; the short-refusal-reason guard fires. Full regression across all 8 screens × both themes, plus a 390×844 mobile pass: **zero contrast failures and zero console errors**.
+
+---
+
 ## 2026-07-27 — Phase 5 Complete: Milestones 16–18 (Karigar & Production)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-27 — **Milestones 1–18 complete; Phases 1–5 all done** (see `CHANGELOG.md`). Milestone 19 (Branch Master) is next up by number, but see the Sequencing Note below — M48 (Rate Master) and M19 (Branch Master) both warrant pulling forward. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-28 — **Milestones 1–20 complete; Phases 1–6 all done** (see `CHANGELOG.md`). Milestone 21 (Tax Master & HSN / CGST-SGST-IGST split) is next, and now has its dependency satisfied since M19 supplies `Branch.stateCode`. See the Sequencing Note below — M48 (Rate Master) still warrants pulling forward, as decision **D-4** (append-only rate history) remains violated. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -336,9 +336,9 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ---
 
-## 🏁 Phase 6: Multi-Branch (Milestones 19 – 20)
+## 🏁 Phase 6: Multi-Branch (Milestones 19 – 20) — ✅ COMPLETE (2026-07-28)
 
-### 📍 Milestone 19: Branch Master & Branch Switcher
+### ✅ Milestone 19: Branch Master & Branch Switcher
 - **Goal:** Introduce a real `Branch` entity and let the active branch be switched from the header.
 - **Dependencies:** None beyond Milestone 1 (state-lifting pattern).
 - **Tasks:**
@@ -346,13 +346,15 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
   2. Replace `Sidebar`/`Header`'s hardcoded "Mumbai BST"/"MUM-01" text with a real Branch Switcher dropdown.
   3. Filter Catalog/Stones/Job Bags by active branch; add branch-specific metal rate override.
 - **Testable via:** Switching branches in the header changes which stock/rates are shown across Catalog/Stones/Job Bags.
+- **Done:** `src/lib/branch.ts` + branch switcher in `Header.tsx`. Per decision **D-5**, Party (Customer/Karigar) and Metal/Purity masters are deliberately **not** branch-scoped — branch-scoping customers would break chain-wide loyalty and TCS aggregation. Legacy records without a `branchId` are attributed to the primary branch rather than vanishing. Also closes `KNOWN_ISSUES.md` #11(b): invoice numbering is now a per-GSTIN series, as GST Rule 46 requires, instead of one shop-wide sequence.
 
-### 📍 Milestone 20: Inter-Branch Stock Transfer (IBST)
+### ✅ Milestone 20: Inter-Branch Stock Transfer (IBST)
 - **Goal:** Dispatch and receive Tag inventory between branches.
 - **Dependencies:** Milestone 19, Milestone 3 (transfers move real `Tag` records).
 - **Tasks:**
   1. Build an IBST screen: create transfer request → dispatch (Tag status → `TransferInTransit`) → receive & accept/reject at destination.
 - **Testable via:** A dispatched tag disappears from the source branch's sellable stock and appears as "in transit" until received at the destination.
+- **Done:** `src/lib/stockTransfer.ts` + `StockTransferPanel.tsx` (a fourth Catalog tab). Lifecycle `Draft → InTransit → Received | PartiallyReceived | Rejected`, with **per-piece** accept/reject at the destination and a mandatory refusal reason — partial receipt is the realistic case, since a consignment can arrive with one piece damaged. Decision **D-7** holds structurally: `TransferInTransit` is not a sellable state, so an in-flight piece is invisible to *both* branches and two counters can never sell the same ornament. Consignments are valued at metal + stones only (a branch transfer is a movement of goods, not a sale, so there is no value addition) and flagged for an e-Way Bill above the threshold — actual e-Way Bill generation is M22, per-state thresholds are M34.
 
 ---
 

@@ -70,17 +70,31 @@ See `FRONTEND_ARCHITECTURE.md` §3 and `DATABASE.md` §1.1. `LooseStone[]` and `
 
 **Resolved (Milestone 16):** `KarigarLedgerEntry[]` is now an append-only ledger; balances are derived with `deriveKarigarBalance()` and a statement view shows every entry with its running balance. Weight and money are structurally separate per D-2 — `validateLedgerEntry()` rejects an entry carrying both. `Karigar.metalBalance`/`laborChargesOwed` remain on the type only for legacy seed compatibility and must not be read. **Note the same event-sourcing gap is still open for Rate Master** — that is Milestone 48, and it remains a live D-4 violation.
 
-### 11. ⚠️ PARTIALLY RESOLVED (2026-07-25) — Invoice numbering is not GST-compliant
+### 11. ✅ RESOLVED (2026-07-28) — Invoice numbering is not GST-compliant
 **File:** `src/components/BillingEstimator.tsx`, `invoiceNumber: `INV-2026-${1000 + invoices.length + 1}`` (handleCheckout). This derives the "next" invoice number from the in-memory array length, which (a) isn't guaranteed gap-free or sequential once invoices can be deleted/filtered/multi-branch, and (b) has no per-GSTIN, per-financial-year scoping at all — a hard GST Rule 46 requirement (PRD §9.3, Handbook §2.9 for the Branch/GSTIN relationship this depends on).
 
-**Resolved (a):** `nextInvoiceNumber()` in `BillingEstimator.tsx` now uses a monotonic counter persisted at `stitch_invoice_seq_<year>` in `localStorage`, gap-free regardless of array filtering/deletion. **Still open (b):** no per-GSTIN/per-branch scoping — that depends on Multi-Branch (Milestone 8) and GST Compliance (Milestone 9) work not yet done.
+**Resolved (a) 2026-07-25:** `nextInvoiceNumber()` in `BillingEstimator.tsx` uses a monotonic counter persisted at `stitch_invoice_seq_<year>` in `localStorage`, gap-free regardless of array filtering/deletion.
 
-### 12. ⚠️ CONFIRMED IN PRACTICE (2026-07-25) — Design-system duplication: `ui/` components vs. raw-Tailwind + global CSS overrides
+**Resolved (b) 2026-07-28 (Milestone 19):** `nextBranchInvoiceNumber()` in `src/lib/branch.ts` allocates from a **per-GSTIN series** keyed on the branch's `invoiceSeriesPrefix`, as GST Rule 46 requires, taking the highest existing number for that prefix rather than an array length. Two branches can no longer issue colliding invoice numbers.
+
+### 12. ⚠️ ROOT CAUSE FIXED (2026-07-28) — Design-system duplication: `ui/` components vs. raw-Tailwind + global CSS overrides
 See `COMPONENT_LIBRARY.md` §3 for full detail. Only 3 of 15 components use the shared `ui/Button`/`Input`/`Card`/`Badge` primitives; the other 8 screens hand-roll markup styled via generic Tailwind class names that are then repainted by `!important` overrides in `index.css`. Not a functional bug, but a real maintainability risk: any new Tailwind class not already covered by an override rule will silently render with wrong/un-themed colors in dark mode.
 
-**This is no longer hypothetical.** Building `StockAuditPanel.tsx` (Milestone 6) reproduced it exactly on the first attempt: discrepancy rows rendered unreadable gray-on-gray, and the "Generate Discrepancy Report" button rendered white-on-white (invisible), because `bg-slate-50`/`text-slate-900` combinations in a new component aren't covered by the global dark-mode repaint list. Fixed there by making the panel explicitly theme-aware via `useTheme()`.
+**This is no longer hypothetical.** Building `StockAuditPanel.tsx` (Milestone 6) reproduced it exactly on the first attempt: discrepancy rows rendered unreadable gray-on-gray, and the "Generate Discrepancy Report" button rendered white-on-white (invisible). It then recurred twice more — Dashboard SVG labels (M13, because `index.css` only remaps `text-*`, not `fill-*`) and the Karigar ledger modal (M16).
 
-**Working rule for new UI until this is properly resolved:** branch on `useTheme()` explicitly for background/text/border colors in any new component. Do not assume `index.css` will repaint it. A shared `Card`/`Modal` primitive that encapsulates this (see `CURRENT_PROGRESS.md` §3.6) remains the real fix.
+**Root cause, found in Milestone 20 after three symptom-level fixes.** The reason `dark:` utilities could never be relied on: this project is on **Tailwind v4**, where `dark:` defaults to `@media (prefers-color-scheme: dark)` — the **operating system's** setting — whereas `ThemeProvider` signals the theme by putting a `.dark` class on `<html>`. No `@custom-variant` was declared, so every `dark:` utility in the codebase was decoupled from the app's own toggle: never applied for a user on a light OS even in dark mode, and wrongly applied for a user on a dark OS in light mode. `index.css` now declares:
+
+```css
+@custom-variant dark (&:where(.dark, .dark *));
+```
+
+**`dark:` utilities are therefore now trustworthy** and are the preferred way to theme new UI. Explicit `useTheme()` branching remains correct and is still required for anything Tailwind cannot express as a variant (inline SVG `fill`, computed style objects).
+
+**Still open:** the `!important` repaint layer in `index.css` itself. Two traps survive and both bit during the M20 sweep:
+- A blanket `.light .text-white { color: #09090B }` assumes light text always sits on a light card. For a panel deliberately dark in *both* themes it produces black-on-black. Mark such a panel `.on-dark-panel` (documented escape hatch in `index.css`) rather than adding another hyper-specific selector chain like `.bg-slate-900.p-5.rounded-2xl`.
+- Colour families are remapped inconsistently: `text-amber-*` is globally forced to the brand gold `#C5A059`, but indigo, emerald and others have no remap at all, so they render at their raw Tailwind value against whichever surface they land on. Check before relying on one.
+
+A shared `Card`/`Modal` primitive that encapsulates this (see `CURRENT_PROGRESS.md` §3.6) remains the real fix.
 
 ### 13. Dead dependencies
 `@google/genai`, `express`, `motion` are all declared in `package.json` but never imported anywhere in `src/`. Space Grotesk is imported as a web font in `index.css` but never referenced by any class. Not harmful, but worth pruning or deliberately using before shipping, to avoid confusing future contributors into thinking there's a hidden AI/animation/server feature.
