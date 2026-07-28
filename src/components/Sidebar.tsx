@@ -14,17 +14,19 @@ import {
   Coins,
   X
 } from 'lucide-react';
-import { MetalRate } from '../types';
+import { MetalRate, Branch } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface SidebarProps {
   metalRates: MetalRate[];
+  /** Shown in the footer so staff always know which branch they are operating as (M19). */
+  activeBranch?: Branch | null;
   operatorName: string;
   sidebarOpen?: boolean;
   setSidebarOpen?: (open: boolean) => void;
 }
 
-export default function Sidebar({ metalRates, operatorName, sidebarOpen, setSidebarOpen }: SidebarProps) {
+export default function Sidebar({ metalRates, activeBranch, operatorName, sidebarOpen, setSidebarOpen }: SidebarProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -142,7 +144,7 @@ export default function Sidebar({ metalRates, operatorName, sidebarOpen, setSide
           theme === 'light' ? 'text-zinc-500 font-medium' : 'text-[#71717A]'
         }`}>
           <span>OPERATOR: {operatorName.split(' ')[0].toUpperCase()}</span>
-          <span>STORE: MUM-01</span>
+          <span>STORE: {activeBranch?.branchCode || '--'}</span>
         </div>
         <div className={`flex items-center gap-3 p-2 rounded-xl border ${
           theme === 'light' 

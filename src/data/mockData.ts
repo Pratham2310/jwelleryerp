@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -167,6 +167,7 @@ export const initialItemDesigns: ItemDesign[] = [
 export const initialTags: Tag[] = [
   {
     id: 'item-1',
+    branchId: 'br-1',
     sku: 'RNG-22K-001',
     itemDesignId: 'design-1',
     name: 'Antique Peacock Royal Ring',
@@ -188,6 +189,7 @@ export const initialTags: Tag[] = [
   },
   {
     id: 'item-2',
+    branchId: 'br-1',
     sku: 'NEC-22K-042',
     itemDesignId: 'design-2',
     name: 'Temple Heritage Kundan Choker',
@@ -209,6 +211,7 @@ export const initialTags: Tag[] = [
   },
   {
     id: 'item-3',
+    branchId: 'br-1',
     sku: 'EAR-18K-109',
     itemDesignId: 'design-3',
     name: 'Solitaire Halo Diamond Studs',
@@ -229,6 +232,7 @@ export const initialTags: Tag[] = [
   },
   {
     id: 'item-4',
+    branchId: 'br-2',
     sku: 'BGL-22K-081',
     itemDesignId: 'design-4',
     name: 'Bridal Filigree Kada Bangles (Pair)',
@@ -250,6 +254,7 @@ export const initialTags: Tag[] = [
   },
   {
     id: 'item-5',
+    branchId: 'br-2',
     sku: 'NEC-18K-005',
     itemDesignId: 'design-5',
     name: 'Modernist Diamond Drop Pendant',
@@ -270,6 +275,7 @@ export const initialTags: Tag[] = [
   },
   {
     id: 'item-6',
+    branchId: 'br-1',
     sku: 'RNG-SLV-002',
     itemDesignId: 'design-6',
     name: 'Classic Vintage Marquise Silver Ring',
@@ -290,6 +296,7 @@ export const initialTags: Tag[] = [
   },
   {
     id: 'item-7',
+    branchId: 'br-3',
     sku: 'CHN-22K-033',
     itemDesignId: 'design-7',
     name: 'Classic 4-Sided Laser Cut Rope Chain',
@@ -311,6 +318,7 @@ export const initialTags: Tag[] = [
   },
   {
     id: 'item-8',
+    branchId: 'br-1',
     sku: 'COI-24K-001',
     itemDesignId: 'design-8',
     name: 'Goddess Lakshmi Gold Coin 10g',
@@ -775,5 +783,47 @@ export const initialKarigarLedger: KarigarLedgerEntry[] = [
     id: 'kle-open-8', karigarId: 'kar-4', date: '2026-07-01', sequence: 8,
     type: 'LABOUR_CHARGED', narration: 'Opening labour payable carried forward',
     moneyDelta: 3500
+  }
+];
+
+// Branch Master (PRD §2/§4.8, Milestone 19). Two branches in the same state plus one in
+// another, so the Milestone 21 CGST/SGST-vs-IGST split has something real to work against.
+// Each carries its OWN invoice series prefix — GST Rule 46 requires the tax-invoice series
+// to be consecutive per GSTIN, and each branch has a distinct GSTIN.
+export const initialBranches: Branch[] = [
+  {
+    id: 'br-1',
+    branchCode: 'MUM-01',
+    name: 'Mumbai BST Showroom',
+    address: '102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002',
+    gstin: '27AACCS9948H1Z1',
+    stateCode: '27',
+    invoiceSeriesPrefix: 'MUM',
+    defaultStockOwnershipType: 'OWNED',
+    isActive: true
+  },
+  {
+    id: 'br-2',
+    branchCode: 'PUN-02',
+    name: 'Pune Camp Boutique',
+    address: '44, MG Road, Camp, Pune, MH - 411001',
+    gstin: '27AACCS9948H2Z9',
+    stateCode: '27',
+    invoiceSeriesPrefix: 'PUN',
+    defaultStockOwnershipType: 'OWNED',
+    isActive: true,
+    // Branch-level override (D-1): Pune quotes 22K slightly above the HQ rate.
+    rateOverrides: { 'Gold (22K)': 6690 }
+  },
+  {
+    id: 'br-3',
+    branchCode: 'BLR-03',
+    name: 'Bengaluru Jayanagar',
+    address: '18, 11th Main, Jayanagar 4th Block, Bengaluru, KA - 560011',
+    gstin: '29AACCS9948H3Z7',
+    stateCode: '29',
+    invoiceSeriesPrefix: 'BLR',
+    defaultStockOwnershipType: 'OWNED',
+    isActive: true
   }
 ];

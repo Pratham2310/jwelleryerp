@@ -18,14 +18,15 @@ import {
   FileSpreadsheet,
   Menu,
   Sun,
-  Moon
+  Moon,
+  ChevronDown
 } from 'lucide-react';
 import Breadcrumbs from './Breadcrumbs';
 import { Badge } from '../ui/Badge';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Tag, Customer, Karigar } from '../../types';
+import { Tag, Customer, Karigar, Branch } from '../../types';
 
 interface HeaderProps {
   user: { name: string; role: string; branch: string } | null;
@@ -36,9 +37,13 @@ interface HeaderProps {
   tags: Tag[];
   customers: Customer[];
   karigars: Karigar[];
+  // Branch switcher (Milestone 19) — replaces the previously hardcoded "Mumbai BST" text
+  branches: Branch[];
+  activeBranch: Branch | null;
+  onSwitchBranch: (branchId: string) => void;
 }
 
-export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarOpen, setSidebarOpen, tags, customers, karigars }: HeaderProps) {
+export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarOpen, setSidebarOpen, tags, customers, karigars, branches, activeBranch, onSwitchBranch }: HeaderProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
@@ -46,6 +51,7 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
   const [isSearchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
+  const [isBranchMenuOpen, setBranchMenuOpen] = useState(false);
   const [isProfileOpen, setProfileOpen] = useState(false);
 
   // Notifications state
@@ -136,10 +142,51 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
           </button>
           <Breadcrumbs />
           <div className="h-4 w-px bg-[#262626] hidden lg:block" />
-          <div className="hidden lg:flex items-center gap-2 text-[10px] font-medium text-[#71717A] font-mono">
-            <Globe className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span>{user?.branch || 'Mumbai BST'} Showroom</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          {/* Branch switcher (Milestone 19). Switching changes which branch's stock every
+              screen shows, and which GSTIN/invoice series a sale is raised under. */}
+          <div className="hidden lg:block relative">
+            <button
+              onClick={() => setBranchMenuOpen(!isBranchMenuOpen)}
+              className="flex items-center gap-2 text-[10px] font-medium text-[#71717A] font-mono px-2 py-1 rounded-lg hover:bg-[#141416] border border-transparent hover:border-[#262626] transition"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span className="text-[#E5E5E5] font-bold">{activeBranch?.name || 'No Branch'}</span>
+              <span className="text-[#71717A]">{activeBranch?.branchCode}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <ChevronDown className="w-3 h-3" />
+            </button>
+
+            {isBranchMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setBranchMenuOpen(false)} />
+                <div className="absolute left-0 mt-2 w-72 bg-[#141416] border border-[#262626] rounded-2xl shadow-2xl z-50 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-[#262626]">
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-[#71717A] font-bold">Switch Branch</p>
+                  </div>
+                  {branches.filter(b => b.isActive).map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => { onSwitchBranch(b.id); setBranchMenuOpen(false); }}
+                      className={`w-full text-left px-4 py-3 transition border-l-2 ${
+                        b.id === activeBranch?.id
+                          ? 'bg-[#C5A059]/10 border-[#C5A059]'
+                          : 'border-transparent hover:bg-[#1A1A1D]'
+                      }`}
+                    >
+                      <p className={`text-xs font-bold ${b.id === activeBranch?.id ? 'text-[#C5A059]' : 'text-[#E5E5E5]'}`}>
+                        {b.name}
+                      </p>
+                      <p className="text-[10px] font-mono text-[#71717A] mt-0.5">
+                        {b.branchCode} - GSTIN {b.gstin}
+                      </p>
+                      <p className="text-[10px] font-mono text-[#71717A]">
+                        Invoice series {b.invoiceSeriesPrefix}- - state {b.stateCode}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -302,7 +349,7 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
               <div className="absolute right-0 mt-3 w-64 bg-[#141416] border border-[#262626] rounded-2xl shadow-2xl p-4 space-y-3.5 z-50 animate-in fade-in-50 duration-150">
                 <div className="border-b border-[#262626] pb-3 text-left">
                   <p className="font-bold text-white text-xs">{user?.name || 'Operator'}</p>
-                  <p className="text-[10px] text-[#A1A1AA] font-mono">{user?.role || 'Store Manager'} • {user?.branch || 'Mumbai BST'}</p>
+                  <p className="text-[10px] text-[#A1A1AA] font-mono">{user?.role || 'Store Manager'} • {activeBranch?.branchCode || '--'}</p>
                 </div>
 
                 <div className="space-y-1.5">

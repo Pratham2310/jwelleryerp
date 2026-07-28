@@ -1,0 +1,190 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e6]:
+      - heading "Navigation Menu" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - link "Homepage" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e13]:
+          - navigation "Global" [ref=e16]:
+            - list [ref=e17]:
+              - listitem [ref=e18]:
+                - button "Platform" [ref=e20] [cursor=pointer]
+              - listitem [ref=e23]:
+                - button "Solutions" [ref=e25] [cursor=pointer]
+              - listitem [ref=e28]:
+                - button "Resources" [ref=e30] [cursor=pointer]
+              - listitem [ref=e33]:
+                - button "Open Source" [ref=e35] [cursor=pointer]
+              - listitem [ref=e38]:
+                - button "Enterprise" [ref=e40] [cursor=pointer]
+              - listitem [ref=e43]:
+                - link "Pricing" [ref=e44] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+          - generic [ref=e46]:
+            - button "Search or jump to…" [ref=e49] [cursor=pointer]
+            - link "Sign in" [ref=e54] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2FPratham2310
+            - link "Sign up" [ref=e55] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E&source=header
+            - button "Appearance settings" [disabled] [ref=e58]
+  - main [ref=e61]:
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - generic:
+          - generic:
+            - generic:
+              - img "@Pratham2310"
+            - generic:
+              - strong: Pratham2310
+              - generic:
+                - generic:
+                  - link "Follow":
+                    - /url: /login?return_to=https%3A%2F%2Fgithub.com%2FPratham2310
+      - navigation "User profile" [ref=e68]:
+        - link "Overview" [ref=e69] [cursor=pointer]:
+          - /url: /Pratham2310
+        - link "Repositories 7" [ref=e72] [cursor=pointer]:
+          - /url: /Pratham2310?tab=repositories
+          - text: Repositories
+          - generic "7" [ref=e75]
+        - link "Projects" [ref=e76] [cursor=pointer]:
+          - /url: /Pratham2310?tab=projects
+        - link "Packages" [ref=e79] [cursor=pointer]:
+          - /url: /Pratham2310?tab=packages
+        - link "Stars" [ref=e82] [cursor=pointer]:
+          - /url: /Pratham2310?tab=stars
+    - generic [ref=e86]:
+      - generic [ref=e88]:
+        - generic:
+          - generic:
+            - generic:
+              - img "@Pratham2310"
+            - generic:
+              - generic:
+                - strong: Pratham2310
+            - generic:
+              - generic:
+                - generic:
+                  - link "Follow":
+                    - /url: /login?return_to=https%3A%2F%2Fgithub.com%2FPratham2310
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - link [ref=e92] [cursor=pointer]:
+              - /url: https://avatars.githubusercontent.com/u/151946177?v=4
+              - img "View Pratham2310's full-sized avatar" [ref=e93]
+            - heading "Prathaamesh soni Pratham2310" [level=1] [ref=e95]:
+              - generic [ref=e96]: Prathaamesh soni
+              - generic [ref=e97]: Pratham2310
+          - generic [ref=e98]:
+            - link "Follow" [ref=e105] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2FPratham2310
+            - generic [ref=e106]:
+              - generic [ref=e107]: i am a coder who loves to code logical question trying to build my career in it as software developer
+              - list [ref=e109]:
+                - 'listitem "Organization: ysm info solution" [ref=e110]':
+                  - generic [ref=e113]: ysm info solution
+                - 'listitem "Home location: nashik" [ref=e115]':
+                  - generic [ref=e118]: nashik
+          - generic [ref=e119]:
+            - heading "Highlights" [level=2] [ref=e120]
+            - list [ref=e121]:
+              - listitem [ref=e122]:
+                - 'generic "Label: Pro" [ref=e125]': Pro
+          - button "Block or report user" [ref=e127] [cursor=pointer]
+      - generic [ref=e132]:
+        - generic [ref=e134]:
+          - heading "Popular repositories Loading" [level=2] [ref=e135]:
+            - text: Popular repositories
+            - generic: Loading
+            - status
+          - list [ref=e137]:
+            - listitem [ref=e138]:
+              - generic [ref=e140]:
+                - generic [ref=e141]:
+                  - link "javapracticle" [ref=e143] [cursor=pointer]:
+                    - /url: /Pratham2310/javapracticle
+                  - generic [ref=e144]: Public
+                - paragraph
+                - paragraph
+            - listitem [ref=e146]:
+              - generic [ref=e148]:
+                - generic [ref=e149]:
+                  - link "demo_repo" [ref=e151] [cursor=pointer]:
+                    - /url: /Pratham2310/demo_repo
+                  - generic [ref=e152]: Public
+                - paragraph
+                - paragraph
+            - listitem [ref=e154]:
+              - generic [ref=e156]:
+                - generic [ref=e157]:
+                  - link "delta_demo" [ref=e159] [cursor=pointer]:
+                    - /url: /Pratham2310/delta_demo
+                  - generic [ref=e160]: Public
+                - paragraph [ref=e162]
+                - paragraph
+            - listitem [ref=e163]:
+              - generic [ref=e165]:
+                - generic [ref=e166]:
+                  - link "society_app" [ref=e168] [cursor=pointer]:
+                    - /url: /Pratham2310/society_app
+                  - generic [ref=e169]: Public
+                - paragraph
+                - paragraph [ref=e171]:
+                  - generic [ref=e172]: JavaScript
+            - listitem [ref=e174]:
+              - generic [ref=e176]:
+                - generic [ref=e177]:
+                  - link "javacodes" [ref=e179] [cursor=pointer]:
+                    - /url: /Pratham2310/javacodes
+                  - generic [ref=e180]: Public
+                - paragraph
+                - paragraph [ref=e182]:
+                  - generic [ref=e183]: Java
+            - listitem [ref=e185]:
+              - generic [ref=e187]:
+                - generic [ref=e188]:
+                  - link "QuickBite" [ref=e190] [cursor=pointer]:
+                    - /url: /Pratham2310/QuickBite
+                  - generic [ref=e191]: Public
+                - paragraph
+                - paragraph [ref=e193]:
+                  - generic [ref=e194]: TypeScript
+        - img "Loading" [ref=e200]
+  - contentinfo [ref=e203]:
+    - heading "Footer" [level=2] [ref=e204]
+    - generic [ref=e205]:
+      - generic [ref=e206]:
+        - link "GitHub Homepage" [ref=e207] [cursor=pointer]:
+          - /url: https://github.com
+        - generic [ref=e210]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e211]:
+        - heading "Footer navigation" [level=3] [ref=e212]
+        - list "Footer navigation" [ref=e213]:
+          - listitem [ref=e214]:
+            - link "Terms" [ref=e215] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e216]:
+            - link "Privacy" [ref=e217] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e218]:
+            - link "Security" [ref=e219] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e220]:
+            - link "Status" [ref=e221] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e222]:
+            - link "Community" [ref=e223] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e224]:
+            - link "Docs" [ref=e225] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e226]:
+            - link "Contact" [ref=e227] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e228]:
+            - button "Manage cookies" [ref=e230] [cursor=pointer]
+          - listitem [ref=e231]:
+            - button "Do not share my personal information" [ref=e233] [cursor=pointer]

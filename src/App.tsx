@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 
 // Custom layouts & Auth pages
 import Sidebar from './components/Sidebar';
@@ -89,6 +90,17 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialOldGoldVouchers;
   });
 
+  // Branch Master (Milestone 19). Party masters (customers/karigars) are deliberately NOT
+  // branch-scoped — see decision D-5 and src/lib/branch.ts.
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    const saved = localStorage.getItem('stitch_branches');
+    return saved ? JSON.parse(saved) : initialBranches;
+  });
+
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(() =>
+    localStorage.getItem('stitch_active_branch') || null
+  );
+
   // Append-only Karigar ledger (Milestone 16) — the single source of truth for karigar
   // balances, which are derived from it rather than stored (KNOWN_ISSUES #10 / D-2).
   const [karigarLedger, setKarigarLedger] = useState<KarigarLedgerEntry[]>(() => {
@@ -142,6 +154,14 @@ function AppContent() {
     localStorage.setItem('stitch_karigar_ledger', JSON.stringify(karigarLedger));
   }, [karigarLedger]);
 
+  useEffect(() => {
+    localStorage.setItem('stitch_branches', JSON.stringify(branches));
+  }, [branches]);
+
+  useEffect(() => {
+    if (activeBranchId) localStorage.setItem('stitch_active_branch', activeBranchId);
+  }, [activeBranchId]);
+
   // Trigger simulated API load on navigation
   useEffect(() => {
     if (!user) return;
@@ -161,7 +181,19 @@ function AppContent() {
     return () => clearTimeout(timer);
   }, [location.pathname, forceOffline, latency, user]);
 
-  const activeWorkOrdersCount = jobWorks.filter(j => j.stage !== 'Completed').length;
+  const activeBranch = getActiveBranch(branches, activeBranchId);
+  const fallbackBranchId = primaryBranchId(branches);
+
+  // Branch-scoped views of stock-bearing records (Milestone 19). Party masters (customers,
+  // karigars) are deliberately NOT scoped — D-5 calls branch-scoping them a compliance risk
+  // that silently breaks chain-wide loyalty and TCS aggregation.
+  const branchTags = scopeToBranch(tags, activeBranchId, fallbackBranchId);
+  const branchStones = scopeToBranch(stones, activeBranchId, fallbackBranchId);
+  const branchJobWorks = scopeToBranch(jobWorks, activeBranchId, fallbackBranchId);
+  const branchInvoices = scopeToBranch(invoices, activeBranchId, fallbackBranchId);
+  const branchOldGoldVouchers = scopeToBranch(oldGoldVouchers, activeBranchId, fallbackBranchId);
+
+  const activeWorkOrdersCount = branchJobWorks.filter(j => j.stage !== 'Completed').length;
 
   const handleLoginSuccess = (userData: { name: string; role: string; branch: string }) => {
     setUser(userData);
@@ -190,6 +222,7 @@ function AppContent() {
       {/* LEFT RESPONSIVE SIDEBAR */}
       <Sidebar 
         metalRates={metalRates} 
+        activeBranch={activeBranch}
         operatorName={user.name} 
         sidebarOpen={sidebarOpen} 
         setSidebarOpen={setSidebarOpen} 
@@ -207,6 +240,9 @@ function AppContent() {
           tags={tags}
           customers={customers}
           karigars={karigars}
+          branches={branches}
+          activeBranch={activeBranch}
+          onSwitchBranch={setActiveBranchId}
         />
 
         {/* CORE SCROLLABLE CLIENT AREA */}
@@ -323,12 +359,12 @@ function AppContent() {
                   <Dashboard
                     metalRates={metalRates}
                     setMetalRates={setMetalRates}
-                    tags={tags}
+                    tags={branchTags}
                     customersCount={customers.length}
                     karigars={karigars}
-                    invoices={invoices}
-                    jobWorks={jobWorks}
-                    stones={stones}
+                    invoices={branchInvoices}
+                    jobWorks={branchJobWorks}
+                    stones={branchStones}
                     activeWorkOrdersCount={activeWorkOrdersCount}
                     setActiveTab={(tab) => navigate('/' + tab)}
                     openAddModal={() => {
@@ -348,7 +384,7 @@ function AppContent() {
                   <CatalogManager
                     itemDesigns={itemDesigns}
                     setItemDesigns={setItemDesigns}
-                    tags={tags}
+                    tags={branchTags}
                     setTags={setTags}
                     isAddModalOpen={isAddModalOpen}
                     setAddModalOpen={setAddModalOpen}
@@ -360,7 +396,7 @@ function AppContent() {
                 element={
                   <StoneManager
                     karigars={karigars}
-                    stones={stones}
+                    stones={branchStones}
                     setStones={setStones}
                   />
                 }
@@ -369,13 +405,14 @@ function AppContent() {
                 path="/billing"
                 element={
                   <BillingEstimator
-                    tags={tags}
+                    tags={branchTags}
                     setTags={setTags}
                     customers={customers}
                     setCustomers={setCustomers}
                     metalRates={metalRates}
-                    invoices={invoices}
+                    invoices={branchInvoices}
                     setInvoices={setInvoices}
+                    activeBranch={activeBranch}
                   />
                 }
               />
@@ -385,7 +422,7 @@ function AppContent() {
                   <KarigarManager 
                     karigars={karigars}
                     setKarigars={setKarigars}
-                    jobWorks={jobWorks}
+                    jobWorks={branchJobWorks}
                     setJobWorks={setJobWorks}
                     ledger={karigarLedger}
                     setLedger={setKarigarLedger}
@@ -401,7 +438,7 @@ function AppContent() {
                 element={
                   <JobBagManager
                     karigars={karigars}
-                    jobWorks={jobWorks}
+                    jobWorks={branchJobWorks}
                     setJobWorks={setJobWorks}
                   />
                 }
@@ -419,7 +456,7 @@ function AppContent() {
                 path="/oldgold"
                 element={
                   <OldGoldManager
-                    vouchers={oldGoldVouchers}
+                    vouchers={branchOldGoldVouchers}
                     setVouchers={setOldGoldVouchers}
                     customers={customers}
                     metalRates={metalRates}

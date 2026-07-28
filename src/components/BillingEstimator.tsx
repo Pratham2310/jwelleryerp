@@ -20,10 +20,11 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType } from '../types';
+import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 import { isSellable, canTransition } from '../lib/tagStateMachine';
+import { nextBranchInvoiceNumber, resolveMetalRate } from '../lib/branch';
 import { validatePaymentSplit, type PaymentSplitEntry, type PaymentMode } from '../lib/billingCalculations';
 import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD, type PanDeclaration } from '../lib/statutoryChecks';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
@@ -37,16 +38,13 @@ interface BillingEstimatorProps {
   metalRates: { metalType: string; ratePerGram: number }[];
   invoices: SaleInvoice[];
   setInvoices: React.Dispatch<React.SetStateAction<SaleInvoice[]>>;
+  /** Determines the GSTIN, invoice series and any branch rate override (Milestone 19). */
+  activeBranch: Branch | null;
 }
 
-/** Gap-free, session-persistent invoice number sequence (fixes KNOWN_ISSUES.md #11). */
-function nextInvoiceNumber(): string {
-  const year = new Date().getFullYear();
-  const key = `stitch_invoice_seq_${year}`;
-  const next = Number(localStorage.getItem(key) || '1000') + 1;
-  localStorage.setItem(key, String(next));
-  return `INV-${year}-${next}`;
-}
+// NOTE: the old shop-wide `nextInvoiceNumber()` was removed in Milestone 19. GST Rule 46
+// requires the tax-invoice series to be consecutive PER GSTIN, and each branch has its own
+// GSTIN, so numbering now comes from `nextBranchInvoiceNumber()` in lib/branch.ts.
 
 /**
  * Estimates use their own, entirely separate sequence (Milestone 11, PRD §7.8) — a quotation
@@ -80,7 +78,8 @@ export default function BillingEstimator({
   setCustomers,
   metalRates,
   invoices,
-  setInvoices
+  setInvoices,
+  activeBranch
 }: BillingEstimatorProps) {
   // Available stock in showroom — only Tags in a legally sellable lifecycle state (Milestone 4)
   const availableStock = tags.filter(i => isSellable(i.status));
@@ -400,7 +399,7 @@ export default function BillingEstimator({
       id: `${isEstimate ? 'est' : 'inv'}-${Date.now()}`,
       invoiceType,
       // An estimate draws from its own sequence and never consumes a GST tax-invoice number (Rule 46)
-      invoiceNumber: isEstimate ? nextEstimateNumber() : nextInvoiceNumber(),
+      invoiceNumber: isEstimate ? nextEstimateNumber() : nextBranchInvoiceNumber(activeBranch),
       date: new Date().toISOString().split('T')[0],
       customerId: selectedCustomer?.id,
       customerName,
@@ -413,6 +412,7 @@ export default function BillingEstimator({
       discount,
       grandTotal: invoiceTotal,
       netAmountDue: finalGrandTotal,
+      branchId: activeBranch?.id,
       paymentMethod: isSplitPayment && paymentSplit.length > 1 ? 'Mixed' : (isSplitPayment ? paymentSplit[0]?.mode || paymentMethod : paymentMethod),
       // An estimate records no tender and no PAN — both belong to the eventual tax invoice
       paymentSplit: isEstimate ? undefined : (isSplitPayment ? paymentSplit : [{ mode: paymentMethod, amount: finalGrandTotal }]),
@@ -523,7 +523,7 @@ export default function BillingEstimator({
       ...estimate,
       id: `inv-${Date.now()}`,
       invoiceType: 'TAX_INVOICE',
-      invoiceNumber: nextInvoiceNumber(),
+      invoiceNumber: nextBranchInvoiceNumber(activeBranch),
       date: new Date().toISOString().split('T')[0],
       items,
       subtotal: totals.subtotal,
@@ -610,6 +610,7 @@ export default function BillingEstimator({
       netAmountDue: totals.returnedTotal, // negative = refundable to the customer
       paymentMethod: original.paymentMethod,
       paymentSplit: undefined,
+      branchId: activeBranch?.id,
       creditNoteAgainstInvoice: original.invoiceNumber,
       creditNoteAgainstInvoiceDate: original.date,
       returnedLineIndexes: [...returnLineSelection],

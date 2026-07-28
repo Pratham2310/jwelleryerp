@@ -52,6 +52,31 @@ export interface Tag {
   stockOwnershipType: 'OWNED' | 'GML_FINANCED' | 'CONSIGNMENT'; // Handbook §1.6/D-3
   status: TagStatus; // enforced lifecycle, see lib/tagStateMachine.ts (Milestone 4, Handbook D-6)
   imageUrl?: string;
+  /** Which branch physically holds this piece (Milestone 19). Absent = pre-M19 record. */
+  branchId?: string;
+}
+
+/**
+ * Branch / Location Master (PRD §2/§4.8, Handbook §2.10, Milestone 19).
+ *
+ * D-1: architected for a multi-branch regional chain, with branch-wise GSTIN mandatory from
+ * the start. D-5: Party Master (Customer/Karigar) and the Metal/Purity Master are explicitly
+ * NOT branch-scoped — see `src/lib/branch.ts` for why that matters.
+ */
+export interface Branch {
+  id: string;
+  branchCode: string; // e.g. MUM-01
+  name: string;
+  address: string;
+  gstin: string;
+  /** GST state code — Milestone 21 compares this to the customer's to pick CGST+SGST vs IGST. */
+  stateCode: string;
+  /** Each GSTIN needs its own consecutive tax-invoice series (GST Rule 46). */
+  invoiceSeriesPrefix: string;
+  defaultStockOwnershipType: 'OWNED' | 'GML_FINANCED' | 'CONSIGNMENT';
+  isActive: boolean;
+  /** Permissioned branch-level rate override (D-1); HQ rate applies when absent. */
+  rateOverrides?: Record<string, number>;
 }
 
 export interface Customer {
@@ -171,6 +196,8 @@ export interface JobWork {
   /** Set when actual wastage exceeded the agreed cap and needs owner sign-off (Milestone 18). */
   wastageReview?: WastageReview;
 
+  branchId?: string; // Milestone 19 — which branch issued the metal
+
   notes?: string;
   createdAt: string;
 }
@@ -265,6 +292,7 @@ export interface SaleInvoice {
   creditNoteAgainstInvoice?: string; // on a CREDIT_NOTE: the original tax invoice number
   creditNoteAgainstInvoiceDate?: string; // §34 requires the original invoice's date too
   returnedLineIndexes?: number[]; // on a CREDIT_NOTE: which original lines it reverses
+  branchId?: string; // Milestone 19 — the branch (and therefore GSTIN) that raised this document
   creditNoteNumbers?: string[]; // on a TAX_INVOICE: every credit note raised against it
   returnedLineIndexesCovered?: number[]; // on a TAX_INVOICE: lines already credited, so they can't be returned twice
   returnReason?: string;
@@ -305,6 +333,7 @@ export interface OldGoldVoucher {
   status: OldGoldLotStatus;
   recoveredFineWeight?: number; // actual fine gold recovered once melted
   meltedOn?: string;
+  branchId?: string; // Milestone 19
 }
 
 export interface MetalRate {
@@ -331,6 +360,7 @@ export interface LooseStone {
   certificateNo?: string;
   status: 'In Vault' | 'Issued' | 'Sold';
   assignedKarigarName?: string;
+  branchId?: string; // Milestone 19
 }
 
 export interface JobBag {
