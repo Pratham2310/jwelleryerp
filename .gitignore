@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Playwright MCP browser session artifacts (not project files)
+.playwright-mcp/
