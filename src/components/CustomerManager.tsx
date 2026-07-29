@@ -14,14 +14,28 @@ import {
   Clock,
   UserCheck
 } from 'lucide-react';
-import { Customer } from '../types';
+import { Customer, SavingsScheme, SchemeEnrollment, SchemeInstalment, Branch } from '../types';
+import SchemeManager from './SchemeManager';
 
 interface CustomerManagerProps {
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  // Gold Savings Schemes (Milestones 26-27). Enrollment balances are derived from the
+  // instalment receipts, so none of these carry a stored balance.
+  schemes: SavingsScheme[];
+  setSchemes: React.Dispatch<React.SetStateAction<SavingsScheme[]>>;
+  enrollments: SchemeEnrollment[];
+  setEnrollments: React.Dispatch<React.SetStateAction<SchemeEnrollment[]>>;
+  instalments: SchemeInstalment[];
+  setInstalments: React.Dispatch<React.SetStateAction<SchemeInstalment[]>>;
+  activeBranch: Branch | null;
 }
 
-export default function CustomerManager({ customers, setCustomers }: CustomerManagerProps) {
+export default function CustomerManager({
+  customers, setCustomers, schemes, setSchemes, enrollments, setEnrollments,
+  instalments, setInstalments, activeBranch,
+}: CustomerManagerProps) {
+  const [activeTab, setActiveTab] = useState<'customers' | 'schemes'>('customers');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   
@@ -108,6 +122,38 @@ export default function CustomerManager({ customers, setCustomers }: CustomerMan
 
   return (
     <div className="space-y-6">
+      {/* Tabs — CRM and the savings-scheme book are two views of the same customer base */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 pb-px gap-6 items-center">
+        {([
+          { key: 'customers', label: 'Customer Directory' },
+          { key: 'schemes', label: 'Gold Savings Schemes' },
+        ] as const).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`pb-3 text-sm font-bold transition relative cursor-pointer ${
+              activeTab === t.key ? 'text-amber-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            {t.label}
+            {activeTab === t.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'schemes' ? (
+        <SchemeManager
+          customers={customers}
+          schemes={schemes}
+          setSchemes={setSchemes}
+          enrollments={enrollments}
+          setEnrollments={setEnrollments}
+          instalments={instalments}
+          setInstalments={setInstalments}
+          activeBranch={activeBranch}
+        />
+      ) : (
+      <div className="space-y-6">
       {/* Search and intake Header */}
       <div className="bg-white border border-slate-150 p-5 rounded-2xl shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="relative flex-1 w-full">
@@ -409,6 +455,8 @@ export default function CustomerManager({ customers, setCustomers }: CustomerMan
             </form>
           </div>
         </div>
+      )}
+      </div>
       )}
     </div>
   );

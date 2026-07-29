@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
@@ -137,6 +137,24 @@ function AppContent() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Gold Savings Schemes (Milestones 26-27). Tenant-wide like the other masters (D-5): a
+  // customer's scheme follows them across branches. The balance is NOT stored anywhere — it is
+  // folded from `schemeInstalments`, the same way karigar balances and metal rates work.
+  const [savingsSchemes, setSavingsSchemes] = useState<SavingsScheme[]>(() => {
+    const saved = localStorage.getItem('stitch_savings_schemes');
+    return saved ? JSON.parse(saved) : initialSavingsSchemes;
+  });
+
+  const [schemeEnrollments, setSchemeEnrollments] = useState<SchemeEnrollment[]>(() => {
+    const saved = localStorage.getItem('stitch_scheme_enrollments');
+    return saved ? JSON.parse(saved) : initialSchemeEnrollments;
+  });
+
+  const [schemeInstalments, setSchemeInstalments] = useState<SchemeInstalment[]>(() => {
+    const saved = localStorage.getItem('stitch_scheme_instalments');
+    return saved ? JSON.parse(saved) : initialSchemeInstalments;
+  });
+
   // Non-hallmarked sale guard policy (Milestone 25). PRD §11.3 requires this be configurable
   // rather than absolute, because mandatory hallmarking has genuine exemptions.
   const [hallmarkPolicy, setHallmarkPolicy] = useState<HallmarkPolicy>(() => {
@@ -228,6 +246,18 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_hallmark_policy', JSON.stringify(hallmarkPolicy));
   }, [hallmarkPolicy]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_savings_schemes', JSON.stringify(savingsSchemes));
+  }, [savingsSchemes]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_scheme_enrollments', JSON.stringify(schemeEnrollments));
+  }, [schemeEnrollments]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_scheme_instalments', JSON.stringify(schemeInstalments));
+  }, [schemeInstalments]);
 
   useEffect(() => {
     if (activeBranchId) localStorage.setItem('stitch_active_branch', activeBranchId);
@@ -536,6 +566,13 @@ function AppContent() {
                   <CustomerManager
                     customers={customers}
                     setCustomers={setCustomers}
+                    schemes={savingsSchemes}
+                    setSchemes={setSavingsSchemes}
+                    enrollments={schemeEnrollments}
+                    setEnrollments={setSchemeEnrollments}
+                    instalments={schemeInstalments}
+                    setInstalments={setSchemeInstalments}
+                    activeBranch={activeBranch}
                   />
                 }
               />

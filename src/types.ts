@@ -466,6 +466,66 @@ export interface MetalRate {
 }
 
 /**
+ * Gold Savings Scheme master (PRD §12.2, Milestone 26).
+ *
+ * Replaces the single hardcoded "Swarna Nidhi" that lived as three loose fields on `Customer`.
+ * A scheme is configuration; a customer's position in one is a `SchemeEnrollment`.
+ */
+export type SchemeBonusType = 'EXTRA_INSTALMENT' | 'PERCENTAGE' | 'NONE';
+
+export interface SavingsScheme {
+  id: string;
+  schemeCode: string;
+  name: string;
+  tenureMonths: number;
+  bonusType: SchemeBonusType;
+  /** Months free for EXTRA_INSTALMENT; a percentage of principal for PERCENTAGE. */
+  bonusValue: number;
+  /** Fixed amount, or the minimum when `isFixedInstallment` is false. */
+  installmentAmount: number;
+  isFixedInstallment: boolean;
+  /**
+   * Always jewellery-only in practice — see `CASH_REFUND_BLOCK_NOTICE`. Modelled as a field
+   * because PRD §12.2 allows restricting redemption to specific categories too.
+   */
+  redemptionRule: 'JEWELLERY_ONLY' | 'SPECIFIC_CATEGORIES';
+  allowedCategories?: string[];
+  prematureClosurePenaltyPercent: number;
+  isActive: boolean;
+}
+
+export type SchemeEnrollmentStatus = 'Active' | 'Matured' | 'Redeemed' | 'Closed' | 'Lapsed';
+
+export interface SchemeEnrollment {
+  id: string;
+  enrollmentNo: string; // SCH-<year>-nnn
+  customerId: string;
+  schemeId: string;
+  startDate: string;
+  installmentAmount: number;
+  status: SchemeEnrollmentStatus;
+  closedOn?: string;
+  closureNote?: string;
+  redeemedAgainstInvoice?: string;
+  branchId?: string;
+}
+
+/**
+ * One instalment receipt. Append-only: the enrollment's balance is FOLDED from these rather
+ * than stored, so "which payments make up this balance" is always answerable — which is exactly
+ * what a customer disputing their passbook asks. Same principle as the karigar ledger (M16).
+ */
+export interface SchemeInstalment {
+  id: string;
+  enrollmentId: string;
+  installmentNo: number;
+  amount: number;
+  paidOn: string;
+  mode: 'Cash' | 'Card' | 'UPI';
+  receiptNo: string; // SR-<year>-nnnn, its own series
+}
+
+/**
  * Non-hallmarked sale guard policy (PRD §11.3, Milestone 25).
  *
  * PRD §11.3 requires this be "configurable hard-block vs warning, since exemptions exist" —

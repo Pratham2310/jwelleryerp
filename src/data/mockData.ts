@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, TaxRate } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, TaxRate, SavingsScheme, SchemeEnrollment, SchemeInstalment } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -897,4 +897,103 @@ export const initialTaxRates: TaxRate[] = [
     isService: true,
     notificationRef: 'Notf. 11/2017-CTR'
   }
+];
+
+/**
+ * Gold Savings Scheme master (PRD §12, Milestone 26). Two deliberately different schemes so the
+ * engine is exercised on both bonus types — the old hardcoded behaviour was a single 11+1.
+ */
+export const initialSavingsSchemes: SavingsScheme[] = [
+  {
+    id: 'sch-1',
+    schemeCode: 'SN11',
+    name: 'Swarna Nidhi 11 + 1',
+    tenureMonths: 11,
+    bonusType: 'EXTRA_INSTALMENT',
+    bonusValue: 1,
+    installmentAmount: 5000,
+    isFixedInstallment: true,
+    redemptionRule: 'JEWELLERY_ONLY',
+    prematureClosurePenaltyPercent: 10,
+    isActive: true
+  },
+  {
+    id: 'sch-2',
+    schemeCode: 'DHAN18',
+    name: 'Dhanvarsha Flexi 18',
+    tenureMonths: 18,
+    bonusType: 'PERCENTAGE',
+    bonusValue: 8,
+    installmentAmount: 2500, // minimum, not fixed
+    isFixedInstallment: false,
+    redemptionRule: 'JEWELLERY_ONLY',
+    prematureClosurePenaltyPercent: 5,
+    isActive: true
+  }
+];
+
+// Enrollments carry no balance of their own — it is folded from the receipts below (M16 pattern).
+export const initialSchemeEnrollments: SchemeEnrollment[] = [
+  {
+    id: 'en-1',
+    enrollmentNo: 'SCH-2026-001',
+    customerId: 'cust-1',
+    schemeId: 'sch-1',
+    startDate: '2026-01-15',
+    installmentAmount: 5000,
+    status: 'Active',
+    branchId: 'br-1'
+  },
+  {
+    id: 'en-2',
+    enrollmentNo: 'SCH-2026-002',
+    customerId: 'cust-3',
+    schemeId: 'sch-2',
+    startDate: '2026-03-20',
+    installmentAmount: 3000,
+    status: 'Active',
+    branchId: 'br-1'
+  },
+  {
+    // Deliberately behind on payments, so the collection-overdue report has something real in it.
+    id: 'en-3',
+    enrollmentNo: 'SCH-2026-003',
+    customerId: 'cust-5',
+    schemeId: 'sch-1',
+    startDate: '2026-02-10',
+    installmentAmount: 5000,
+    status: 'Active',
+    branchId: 'br-1'
+  }
+];
+
+export const initialSchemeInstalments: SchemeInstalment[] = [
+  ...Array.from({ length: 6 }, (_, i) => ({
+    id: `si-1-${i + 1}`,
+    enrollmentId: 'en-1',
+    installmentNo: i + 1,
+    amount: 5000,
+    paidOn: `2026-0${i + 1}-15`,
+    mode: (i % 2 === 0 ? 'Cash' : 'UPI') as 'Cash' | 'UPI',
+    receiptNo: `SR-2026-000${i + 1}`
+  })),
+  ...Array.from({ length: 4 }, (_, i) => ({
+    id: `si-2-${i + 1}`,
+    enrollmentId: 'en-2',
+    installmentNo: i + 1,
+    amount: 3000,
+    paidOn: `2026-0${i + 3}-20`,
+    mode: 'UPI' as const,
+    receiptNo: `SR-2026-001${i + 1}`
+  })),
+  // Only two of the expected instalments — this enrollment is the overdue case.
+  ...Array.from({ length: 2 }, (_, i) => ({
+    id: `si-3-${i + 1}`,
+    enrollmentId: 'en-3',
+    installmentNo: i + 1,
+    amount: 5000,
+    paidOn: `2026-0${i + 2}-10`,
+    mode: 'Cash' as const,
+    receiptNo: `SR-2026-002${i + 1}`
+  }))
 ];
