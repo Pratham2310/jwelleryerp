@@ -4,6 +4,32 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-29 — Milestone 25: Non-Hallmarked Sale Prevention Guard
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+Closes the legal exposure Milestone 24 left open. M24 made HUIDs assignable; nothing stopped a piece being sold *without* one, and selling un-hallmarked gold that is not exempt is a BIS offence.
+
+**Deliberately configurable rather than absolute**, because PRD §11.3 says so: *"configurable hard-block vs warning, since exemptions exist"*. Mandatory hallmarking has real carve-outs, and a shop hitting an unconditional block on a legitimate sale simply could not trade. Four exemptions are modelled:
+
+- **Metal.** Mandatory hallmarking is a *gold* regime — silver hallmarking is voluntary and platinum separately regulated — so blocking a silver ring for want of a HUID would be wrong, not merely strict.
+- **Category.** Coins and bullion are not "articles of jewellery", consistent with Milestone 21 filing them under HSN 7108/7106 rather than 7113.
+- **Weight.** Articles below a threshold (2g by default, configurable) are exempt.
+- **Turnover.** A shop below the notified annual turnover is exempt entirely.
+
+**Detection is kept separate from enforcement.** Violations are computed in every mode and only the till behaviour changes — switching to WARN does not make a piece compliant. That separation is what lets a shop run relaxed and still report its own exposure honestly, rather than showing itself as clean because the till stopped complaining.
+
+Two smaller judgement calls worth recording. A **zero or missing weight does not earn the below-threshold exemption**: absent data is not a light piece, and treating it as one would let an unweighed ornament through. And an **ESTIMATE is never blocked**, because a quotation is not a supply — the banner instead says it must be resolved before conversion, and the guard re-applies at that point.
+
+The gate runs **before** the PAN and tender checks: if a piece legally cannot be sold at all, there is no point collecting a PAN or a payment for it.
+
+**Known gap, called out in the code:** manually-typed billing lines carry no tag, so there is no HUID to look up and nothing to check. Ad-hoc billing remains a compliance risk until custom lines are modelled properly.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **497 tests passing across 21 suites** (up from 468); `npm run build` clean. Playwright-verified: an un-hallmarked 22K ring is named in a live banner while the bill is being built and refused at checkout with no invoice raised; the same piece quotes freely as an estimate; switching to *Warn only* lets the sale complete while still flagging it; and a silver ring and a gold coin, both without HUIDs, never trip the guard even in *Block* mode. Regression across 8 screens × 2 themes, all 5 Catalog tabs × 2 themes, and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+---
+
 ## 2026-07-29 — Milestone 24: AHC Dispatch Register & HUID Assignment
 
 **Author:** AI agent (Claude Code), pair programming with USER.
