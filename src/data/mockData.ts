@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, TaxRate } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -155,7 +155,9 @@ export const initialItemDesigns: ItemDesign[] = [
     defaultMakingChargeType: 'flat',
     defaultMakingChargeValue: 450,
     defaultStoneType: 'None',
-    hsnCode: '7113',
+    // Bullion, not an article of jewellery. Same 3% rate as 7113, but GSTR-1's
+    // HSN-wise summary would be wrong if coins were filed as ornaments (Milestone 21).
+    hsnCode: '7108',
     isActive: true,
     imageUrl: 'https://images.unsplash.com/photo-1610375461369-d613b564f4c4?w=400&auto=format&fit=crop&q=60'
   }
@@ -351,7 +353,8 @@ export const initialCustomers: Customer[] = [
     lifetimeSpend: 425000,
     savingsSchemeActive: true,
     savingsSchemeMaturityDate: '2026-11-15',
-    savingsSchemeBalance: 50000
+    savingsSchemeBalance: 50000,
+    stateCode: '27'
   },
   {
     id: 'cust-2',
@@ -361,7 +364,9 @@ export const initialCustomers: Customer[] = [
     tier: 'Gold',
     loyaltyPoints: 1200,
     lifetimeSpend: 185000,
-    savingsSchemeActive: false
+    savingsSchemeActive: false,
+    // Karnataka buyer — an inter-state sale from either Maharashtra branch, so IGST.
+    stateCode: '29'
   },
   {
     id: 'cust-3',
@@ -383,7 +388,8 @@ export const initialCustomers: Customer[] = [
     tier: 'Bronze',
     loyaltyPoints: 80,
     lifetimeSpend: 14500,
-    savingsSchemeActive: false
+    savingsSchemeActive: false,
+    stateCode: '27'
   },
   {
     id: 'cust-5',
@@ -395,7 +401,10 @@ export const initialCustomers: Customer[] = [
     lifetimeSpend: 620000,
     savingsSchemeActive: true,
     savingsSchemeMaturityDate: '2027-02-10',
-    savingsSchemeBalance: 80000
+    savingsSchemeBalance: 80000,
+    // Registered B2B buyer: Rule 46 requires the customer GSTIN on the invoice.
+    stateCode: '29',
+    gstin: '29AABCU9603R1ZM'
   }
 ];
 
@@ -825,5 +834,67 @@ export const initialBranches: Branch[] = [
     invoiceSeriesPrefix: 'BLR',
     defaultStockOwnershipType: 'OWNED',
     isActive: true
+  }
+];
+
+/**
+ * Tax Master (PRD §9.2, Milestone 21). Rates are DATA, never constants — §9.2 requires
+ * the accountant be able to apply a GST Council notification immediately, with
+ * effective-date versioning so an old invoice still resolves the rate it was billed at.
+ *
+ * Note 7102 (diamond) is seeded at 1.5% because that is what §9.2 lists, but nothing is
+ * *assigned* to it: `defaultHsnForLine()` bills a diamond-set ornament as one composite
+ * supply under 7113 until the HANDOFF.md item 1 question gets CA sign-off. The row exists
+ * so that the switch, when authorised, is a data change rather than an engine change.
+ */
+export const initialTaxRates: TaxRate[] = [
+  {
+    id: 'tax-7113',
+    hsnCode: '7113',
+    description: 'Articles of jewellery — gold, silver, platinum',
+    gstRatePercent: 3,
+    effectiveFrom: '2017-07-01',
+    notificationRef: 'Notf. 1/2017-CTR Sch. V'
+  },
+  {
+    id: 'tax-7102',
+    hsnCode: '7102',
+    description: 'Diamonds — unset, cut & polished',
+    gstRatePercent: 1.5,
+    effectiveFrom: '2022-07-18',
+    notificationRef: 'Notf. 6/2022-CTR'
+  },
+  {
+    id: 'tax-7103',
+    hsnCode: '7103',
+    description: 'Precious & semi-precious stones (other than diamond)',
+    gstRatePercent: 3,
+    effectiveFrom: '2017-07-01',
+    notificationRef: 'Notf. 1/2017-CTR Sch. V'
+  },
+  {
+    id: 'tax-7108',
+    hsnCode: '7108',
+    description: 'Gold bullion — bars & coins',
+    gstRatePercent: 3,
+    effectiveFrom: '2017-07-01',
+    notificationRef: 'Notf. 1/2017-CTR Sch. V'
+  },
+  {
+    id: 'tax-7106',
+    hsnCode: '7106',
+    description: 'Silver bullion — bars & coins',
+    gstRatePercent: 3,
+    effectiveFrom: '2017-07-01',
+    notificationRef: 'Notf. 1/2017-CTR Sch. V'
+  },
+  {
+    id: 'tax-9988',
+    hsnCode: '9988',
+    description: 'Job-work service on gems & jewellery (SAC)',
+    gstRatePercent: 5,
+    effectiveFrom: '2017-07-01',
+    isService: true,
+    notificationRef: 'Notf. 11/2017-CTR'
   }
 ];

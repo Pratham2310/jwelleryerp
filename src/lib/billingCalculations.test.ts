@@ -133,6 +133,49 @@ describe('bill-level discount reduces the taxable value before GST (fixes Milest
   });
 });
 
+describe('CGST/SGST vs IGST split (Milestone 21, PRD §7.3/§9.2)', () => {
+  it('splits an intra-state sale into equal halves that sum to the tax charged', () => {
+    const invoice = calculateInvoiceTotals([289440], 0, { ratePercent: 3, supplyType: 'INTRA_STATE' });
+    // PRD §17 prints CGST 4,341.60 + SGST 4,341.60; at whole rupees that is 4342 + 4341.
+    expect(invoice.gstSplit).toEqual({ cgst: 4342, sgst: 4341, igst: 0, total: 8683 });
+    expect(invoice.gstSplit.cgst + invoice.gstSplit.sgst).toBe(invoice.gstTax);
+    expect(invoice.gstSplit.igst).toBe(0);
+  });
+
+  it('bills the PRD §17 inter-state variant entirely as IGST', () => {
+    // PRD §17 names "inter-state IGST variant" as a required QA edge case.
+    const invoice = calculateInvoiceTotals([289440], 0, { ratePercent: 3, supplyType: 'INTER_STATE' });
+    expect(invoice.gstSplit).toEqual({ cgst: 0, sgst: 0, igst: 8683, total: 8683 });
+    expect(invoice.grandTotal).toBe(298123); // identical total; only the split differs
+  });
+
+  it('defaults to intra-state at the composite rate when no tax context is given', () => {
+    // Guards the pre-Milestone-21 call signature, still used by older call sites.
+    const invoice = calculateInvoiceTotals([100000], 0);
+    expect(invoice.ratePercent).toBe(3);
+    expect(invoice.supplyType).toBe('INTRA_STATE');
+    expect(invoice.gstSplit).toEqual({ cgst: 1500, sgst: 1500, igst: 0, total: 3000 });
+  });
+
+  it('honours a non-composite rate from the Tax Master', () => {
+    // Proves the rate is genuinely data-driven and no longer a hardcoded 0.03.
+    const invoice = calculateInvoiceTotals([100000], 0, { ratePercent: 1.5 });
+    expect(invoice.gstTax).toBe(1500);
+    expect(invoice.gstSplit).toEqual({ cgst: 750, sgst: 750, igst: 0, total: 1500 });
+  });
+
+  it('reports the round-off that GST on a whole-rupee base leaves behind (PRD §7.3)', () => {
+    const invoice = calculateInvoiceTotals([289440], 0, { ratePercent: 3 });
+    // 2,89,440 + 8,683.20 = 2,98,123.20, rounded to 2,98,123.
+    expect(invoice.roundOff).toBe(-0.2);
+    expect(invoice.grandTotal).toBe(298123);
+  });
+
+  it('reports a zero round-off when the exact total is already whole', () => {
+    expect(calculateInvoiceTotals([100000], 0, { ratePercent: 3 }).roundOff).toBe(0);
+  });
+});
+
 describe('multi-tender payment split (PRD §7.5, Milestone 9)', () => {
   it('accepts a split across Cash + Card + UPI that sums exactly to the amount due', () => {
     const result = validatePaymentSplit(100000, [

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 
@@ -101,6 +101,13 @@ function AppContent() {
     localStorage.getItem('stitch_active_branch') || null
   );
 
+  // Tax Master (Milestone 21). Tenant-wide, never branch-scoped — a GST notification applies
+  // to the whole business. Rows are append-only with effective-date versioning (PRD §9.2).
+  const [taxRates, setTaxRates] = useState<TaxRate[]>(() => {
+    const saved = localStorage.getItem('stitch_tax_rates');
+    return saved ? JSON.parse(saved) : initialTaxRates;
+  });
+
   // Inter-branch stock transfers (Milestone 20). Deliberately NOT branch-scoped: a transfer
   // belongs to two branches at once, and the destination must be able to see it arriving.
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
@@ -168,6 +175,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_stock_transfers', JSON.stringify(stockTransfers));
   }, [stockTransfers]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_tax_rates', JSON.stringify(taxRates));
+  }, [taxRates]);
 
   useEffect(() => {
     if (activeBranchId) localStorage.setItem('stitch_active_branch', activeBranchId);
@@ -430,6 +441,9 @@ function AppContent() {
                     invoices={branchInvoices}
                     setInvoices={setInvoices}
                     activeBranch={activeBranch}
+                    taxRates={taxRates}
+                    setTaxRates={setTaxRates}
+                    itemDesigns={itemDesigns}
                   />
                 }
               />

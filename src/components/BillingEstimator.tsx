@@ -20,7 +20,7 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch } from '../types';
+import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch, TaxRate, ItemDesign } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 import { isSellable, canTransition } from '../lib/tagStateMachine';
@@ -29,6 +29,13 @@ import { validatePaymentSplit, type PaymentSplitEntry, type PaymentMode } from '
 import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD, type PanDeclaration } from '../lib/statutoryChecks';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
 import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
+import TaxMasterPanel from './TaxMasterPanel';
+import {
+  resolveGstRatePercent,
+  defaultHsnForLine,
+  determineSupplyType,
+  gstComponentLabels,
+} from '../lib/taxMaster';
 
 interface BillingEstimatorProps {
   tags: Tag[];
@@ -40,6 +47,11 @@ interface BillingEstimatorProps {
   setInvoices: React.Dispatch<React.SetStateAction<SaleInvoice[]>>;
   /** Determines the GSTIN, invoice series and any branch rate override (Milestone 19). */
   activeBranch: Branch | null;
+  /** Tax Master rows, append-only with effective-date versioning (Milestone 21, PRD §9.2). */
+  taxRates: TaxRate[];
+  setTaxRates: React.Dispatch<React.SetStateAction<TaxRate[]>>;
+  /** Supplies each line's authoritative HSN classification. */
+  itemDesigns: ItemDesign[];
 }
 
 // NOTE: the old shop-wide `nextInvoiceNumber()` was removed in Milestone 19. GST Rule 46
@@ -71,6 +83,64 @@ function nextCreditNoteNumber(): string {
   return `CRN-${year}-${next}`;
 }
 
+/**
+ * Statutory tax lines for a STORED invoice (Milestone 21, PRD §7.3/§9.3).
+ *
+ * Invoices written before Milestone 21 have no cgst/sgst/igst fields, so they fall back to
+ * the single combined `tax` figure they were saved with. Never recompute the split from
+ * today's Tax Master here — a reprint must show what was actually charged on the day.
+ */
+function InvoiceTaxLines({ invoice }: { invoice: SaleInvoice }) {
+  const isCreditNote = invoice.invoiceType === 'CREDIT_NOTE';
+  const money = (n: number) => `₹${Math.abs(n).toLocaleString('en-IN')}`;
+  const sign = (n: number) => (n < 0 ? '-' : '');
+
+  const hasSplit =
+    invoice.cgst !== undefined || invoice.sgst !== undefined || invoice.igst !== undefined;
+  const ratePercent = invoice.items[0]?.gstRatePercent ?? 3;
+  const labels = gstComponentLabels(
+    ratePercent,
+    invoice.supplyType === 'INTER_STATE' ? 'INTER_STATE' : 'INTRA_STATE'
+  );
+
+  if (!hasSplit) {
+    return (
+      <div className="flex justify-between text-slate-500">
+        <span>{isCreditNote ? `GST Reversed (${ratePercent}%):` : `Jewelry GST (${ratePercent}% on taxable value):`}</span>
+        <span className="font-mono">{sign(invoice.tax)}{money(invoice.tax)}</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {invoice.supplyType === 'INTER_STATE' ? (
+        <div className="flex justify-between text-slate-500">
+          <span>{isCreditNote ? `${labels[0]} Reversed:` : `${labels[0]}:`}</span>
+          <span className="font-mono">{sign(invoice.igst ?? 0)}{money(invoice.igst ?? 0)}</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-between text-slate-500">
+            <span>{isCreditNote ? `${labels[0]} Reversed:` : `${labels[0]}:`}</span>
+            <span className="font-mono">{sign(invoice.cgst ?? 0)}{money(invoice.cgst ?? 0)}</span>
+          </div>
+          <div className="flex justify-between text-slate-500">
+            <span>{isCreditNote ? `${labels[1]} Reversed:` : `${labels[1]}:`}</span>
+            <span className="font-mono">{sign(invoice.sgst ?? 0)}{money(invoice.sgst ?? 0)}</span>
+          </div>
+        </>
+      )}
+      {!!invoice.roundOff && (
+        <div className="flex justify-between text-slate-500">
+          <span>Round Off:</span>
+          <span className="font-mono">{invoice.roundOff > 0 ? '+' : '-'}₹{Math.abs(invoice.roundOff).toFixed(2)}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function BillingEstimator({
   tags,
   setTags,
@@ -79,7 +149,10 @@ export default function BillingEstimator({
   metalRates,
   invoices,
   setInvoices,
-  activeBranch
+  activeBranch,
+  taxRates,
+  setTaxRates,
+  itemDesigns
 }: BillingEstimatorProps) {
   // Available stock in showroom — only Tags in a legally sellable lifecycle state (Milestone 4)
   const availableStock = tags.filter(i => isSellable(i.status));
@@ -87,13 +160,15 @@ export default function BillingEstimator({
   const { theme } = useTheme();
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'create' | 'registry'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'registry' | 'taxmaster'>('create');
 
   // Sync tab with URL parameter
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab') === 'history') {
       setActiveTab('registry');
+    } else if (params.get('tab') === 'tax') {
+      setActiveTab('taxmaster');
     }
   }, [window.location.search]);
 
@@ -248,7 +323,44 @@ export default function BillingEstimator({
   // reduced by the old-gold trade-in — old gold is netted only against the
   // final payable amount at settlement — KNOWN_ISSUES.md #1)
   const lineSubtotals = billingItems.map(item => item.subtotal || 0);
-  const { subtotal: invoiceSubtotal, taxableValue, gstTax, grandTotal: invoiceTotal } = calculateInvoiceTotals(lineSubtotals, discount);
+
+  // GST rate and split now come from data, not a constant (Milestone 21, PRD §9.2/§7.3).
+  const invoiceDate = new Date().toISOString().split('T')[0];
+
+  /** The HSN a billing row is classified under — the design master wins when it has one. */
+  const hsnForLine = (item: Partial<InvoiceItem> & { category?: string }): string => {
+    const tag = item.itemId ? tags.find(t => t.id === item.itemId) : null;
+    const design = tag ? itemDesigns.find(d => d.id === tag.itemDesignId) : null;
+    return defaultHsnForLine({
+      hsnCode: design?.hsnCode,
+      metalType: item.metalType || tag?.metalType,
+      category: item.category || tag?.category,
+    });
+  };
+
+  // The bill's headline rate is the one covering the largest share of the taxable value, so a
+  // mixed ornament+bullion bill shows the rate that actually dominates it. Both are 3% today,
+  // so this only becomes visible once a genuinely different HSN rate is in play.
+  const billHsn = lineSubtotals.length
+    ? hsnForLine(billingItems.reduce((a, b) => ((b.subtotal || 0) > (a.subtotal || 0) ? b : a)))
+    : defaultHsnForLine({});
+  const gstRatePercent = resolveGstRatePercent(billHsn, taxRates, invoiceDate);
+
+  // PRD §7.3: compare the customer's state to the branch's. A walk-in with no state on file
+  // is treated as intra-state — the PRD says so explicitly, and treating them as inter-state
+  // would misfile every counter sale.
+  const supplyType = determineSupplyType(activeBranch?.stateCode, selectedCustomer?.stateCode);
+
+  const {
+    subtotal: invoiceSubtotal,
+    taxableValue,
+    gstTax,
+    grandTotal: invoiceTotal,
+    gstSplit,
+    roundOff,
+  } = calculateInvoiceTotals(lineSubtotals, discount, { ratePercent: gstRatePercent, supplyType });
+
+  const taxLineLabels = gstComponentLabels(gstRatePercent, supplyType);
   const oldGoldValue = Math.round(oldGoldWeight * oldGoldRate);
   const netAmountDue = settleOldGold(invoiceTotal, oldGoldValue);
   const finalGrandTotal = netAmountDue; // actual amount collected from the customer, after old-gold settlement
@@ -391,7 +503,11 @@ export default function BillingEstimator({
         makingCharge: Number(item.makingCharge || 0),
         stoneCharge: Number(item.stoneCharge || 0),
         subtotal: Number(item.subtotal || 0),
-        overrides
+        overrides,
+        // Rule 46 requires an HSN per line, and GSTR-1 summarises by it (Milestone 21).
+        // Captured at billing time so a reprint shows what was actually charged.
+        hsnCode: hsnForLine(item),
+        gstRatePercent: resolveGstRatePercent(hsnForLine(item), taxRates, invoiceDate)
       };
     });
 
@@ -413,6 +529,13 @@ export default function BillingEstimator({
       grandTotal: invoiceTotal,
       netAmountDue: finalGrandTotal,
       branchId: activeBranch?.id,
+      // Statutory tax breakdown (Milestone 21). cgst + sgst + igst always equals `tax`.
+      cgst: gstSplit.cgst,
+      sgst: gstSplit.sgst,
+      igst: gstSplit.igst,
+      supplyType,
+      placeOfSupplyStateCode: selectedCustomer?.stateCode || activeBranch?.stateCode,
+      roundOff,
       paymentMethod: isSplitPayment && paymentSplit.length > 1 ? 'Mixed' : (isSplitPayment ? paymentSplit[0]?.mode || paymentMethod : paymentMethod),
       // An estimate records no tender and no PAN — both belong to the eventual tax invoice
       paymentSplit: isEstimate ? undefined : (isSplitPayment ? paymentSplit : [{ mode: paymentMethod, amount: finalGrandTotal }]),
@@ -740,6 +863,22 @@ export default function BillingEstimator({
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />
             )}
           </button>
+          <button
+            onClick={() => {
+              setActiveTab('taxmaster');
+              window.history.replaceState({}, '', '/billing?tab=tax');
+            }}
+            className={`pb-3 text-sm font-bold transition relative cursor-pointer ${
+              activeTab === 'taxmaster'
+                ? 'text-amber-500'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            Tax Master (HSN)
+            {activeTab === 'taxmaster' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />
+            )}
+          </button>
         </div>
       )}
 
@@ -776,8 +915,9 @@ export default function BillingEstimator({
             {/* Header */}
             <div className="text-center border-b pb-4 space-y-1">
               <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">STITCH JEWELLERY HOUSE</h1>
-              <p className="text-xs text-slate-500">102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002</p>
-              <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: 27AACCS9948H1Z1</p>
+              {/* Rule 46: the issuing branch's own address and GSTIN, not a hardcoded HQ one */}
+              <p className="text-xs text-slate-500">{activeBranch?.address || '102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002'}</p>
+              <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: {activeBranch?.gstin || '27AACCS9948H1Z1'}</p>
               {/* A quotation must be unmistakably marked as non-fiscal (PRD §7.8, Milestone 11) */}
               <h2 className={`text-xs uppercase font-bold py-1 tracking-widest rounded mt-3 ${
                 completedInvoice.invoiceType === 'ESTIMATE'
@@ -855,10 +995,7 @@ export default function BillingEstimator({
                   <span className="font-mono">-₹{completedInvoice.discount.toLocaleString('en-IN')}</span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-500">
-                <span>Jewelry GST (3% on taxable value):</span>
-                <span className="font-mono">₹{completedInvoice.tax.toLocaleString('en-IN')}</span>
-              </div>
+              <InvoiceTaxLines invoice={completedInvoice} />
               <div className="flex justify-between font-black text-slate-900 border-t-2 pt-2 text-sm bg-amber-50 px-2 py-1.5 rounded">
                 <span>{completedInvoice.invoiceType === 'ESTIMATE' ? 'Estimate Total (Indicative):' : 'Invoice Total (Tax Invoice):'}</span>
                 <span className="font-mono text-amber-800">₹{completedInvoice.grandTotal.toLocaleString('en-IN')}</span>
@@ -987,6 +1124,34 @@ export default function BillingEstimator({
                     </div>
                   </div>
                 )}
+
+                {/* Place of supply decides CGST+SGST vs IGST (Milestone 21, PRD §7.3). Shown
+                    explicitly so the biller can see WHY a bill turned inter-state. */}
+                <div className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+                  supplyType === 'INTER_STATE'
+                    ? 'bg-amber-50/60 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40'
+                    : 'bg-slate-50/60 border-slate-150 dark:bg-zinc-900/40 dark:border-zinc-800'
+                }`}>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">Place of Supply</span>
+                    <p className="font-bold text-slate-700 dark:text-zinc-200">
+                      State {selectedCustomer?.stateCode || activeBranch?.stateCode || '—'}
+                      {!selectedCustomer?.stateCode && (
+                        <span className="font-normal text-slate-400"> · defaulted to branch state</span>
+                      )}
+                    </p>
+                    {selectedCustomer?.gstin && (
+                      <p className="text-[10px] font-mono text-slate-400">Customer GSTIN: {selectedCustomer.gstin}</p>
+                    )}
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    supplyType === 'INTER_STATE'
+                      ? 'bg-amber-500/10 text-[#8C6D34] dark:text-[#C5A059] border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                  }`}>
+                    {supplyType === 'INTER_STATE' ? 'IGST' : 'CGST + SGST'}
+                  </span>
+                </div>
 
                 {selectedCustomer && (
                   <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100 flex items-center justify-between text-xs">
@@ -1292,15 +1457,47 @@ export default function BillingEstimator({
                   </div>
                 )}
 
+                {/* Statutory split (Milestone 21, PRD §7.3): CGST+SGST intra-state, IGST
+                    inter-state. The halves are derived so they sum to gstTax exactly. */}
                 <div className="flex justify-between text-slate-500">
-                  <span className="flex items-center gap-1">GST/Taxes (3% on taxable value): <Percent className="w-3 h-3 text-slate-400" /></span>
-                  <span className="font-mono">₹{gstTax.toLocaleString('en-IN')}</span>
+                  <span className="flex items-center gap-1">Taxable Value: <Percent className="w-3 h-3 text-slate-400" /></span>
+                  <span className="font-mono">₹{taxableValue.toLocaleString('en-IN')}</span>
                 </div>
+                {supplyType === 'INTER_STATE' ? (
+                  <div className="flex justify-between text-slate-500">
+                    <span>{taxLineLabels[0]}:</span>
+                    <span className="font-mono">₹{gstSplit.igst.toLocaleString('en-IN')}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-slate-500">
+                      <span>{taxLineLabels[0]}:</span>
+                      <span className="font-mono">₹{gstSplit.cgst.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>{taxLineLabels[1]}:</span>
+                      <span className="font-mono">₹{gstSplit.sgst.toLocaleString('en-IN')}</span>
+                    </div>
+                  </>
+                )}
+
+                {roundOff !== 0 && (
+                  <div className="flex justify-between text-slate-500">
+                    <span>Round Off:</span>
+                    <span className="font-mono">{roundOff > 0 ? '+' : ''}₹{roundOff.toFixed(2)}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-slate-700 border-t pt-2.5 font-bold">
                   <span>Invoice Total (Tax Invoice):</span>
                   <span className="font-mono">₹{invoiceTotal.toLocaleString('en-IN')}</span>
                 </div>
+
+                {supplyType === 'INTER_STATE' && (
+                  <p className="text-[10px] text-amber-600 font-mono">
+                    Inter-state supply — place of supply {selectedCustomer?.stateCode}, branch state {activeBranch?.stateCode}.
+                  </p>
+                )}
 
                 {oldGoldWeight > 0 && (
                   <div className="flex justify-between text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded">
@@ -1607,6 +1804,8 @@ export default function BillingEstimator({
             </div>
           )}
         </div>
+      ) : activeTab === 'taxmaster' ? (
+        <TaxMasterPanel taxRates={taxRates} setTaxRates={setTaxRates} />
       ) : (
         /* SALES INVOICE REGISTRY & HISTORY TAB */
         <div className="space-y-6">
@@ -2034,8 +2233,9 @@ export default function BillingEstimator({
               {/* Header */}
               <div className="text-center border-b pb-4 space-y-1">
                 <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">STITCH JEWELLERY HOUSE</h1>
-                <p className="text-xs text-slate-500">102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002</p>
-                <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: 27AACCS9948H1Z1</p>
+                {/* Rule 46: the issuing branch's own address and GSTIN, not a hardcoded HQ one */}
+                <p className="text-xs text-slate-500">{activeBranch?.address || '102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002'}</p>
+                <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: {activeBranch?.gstin || '27AACCS9948H1Z1'}</p>
                 <h2 className={`text-xs uppercase font-bold py-1 tracking-widest rounded mt-3 ${
                   selectedInvoiceForDetail.invoiceType === 'ESTIMATE'
                     ? 'bg-amber-100 text-amber-900 border border-amber-300'
@@ -2109,6 +2309,8 @@ export default function BillingEstimator({
                     <tr className="text-slate-400 uppercase font-mono text-[9px] border-b pb-2">
                       <th className="py-2">Item Description</th>
                       <th>Standard</th>
+                      {/* Rule 46 requires the HSN code printed against every line */}
+                      <th>HSN</th>
                       <th className="text-right">Net Wt</th>
                       <th className="text-right">Metal Rate</th>
                       <th className="text-right">Wastage + MC + Stones</th>
@@ -2123,6 +2325,7 @@ export default function BillingEstimator({
                           {item.sku && <p className="text-[10px] text-slate-400 font-mono">SKU: {item.sku}</p>}
                         </td>
                         <td className="font-mono text-slate-500">{item.metalType}</td>
+                        <td className="font-mono text-slate-500">{item.hsnCode || '7113'}</td>
                         <td className="text-right font-mono">{item.netWeight.toFixed(2)} g</td>
                         <td className="text-right font-mono">₹{item.goldPrice ? Math.round(item.goldPrice / item.netWeight).toLocaleString('en-IN') : '-'}</td>
                         <td className="text-right font-mono">₹{(item.wastageValue + item.makingCharge + item.stoneCharge).toLocaleString('en-IN')}</td>
@@ -2147,10 +2350,7 @@ export default function BillingEstimator({
                     <span className="font-mono">-₹{Math.abs(selectedInvoiceForDetail.discount).toLocaleString('en-IN')}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-slate-500">
-                  <span>{selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'GST Reversed (3%):' : 'Jewelry GST (3% on taxable value):'}</span>
-                  <span className="font-mono">₹{Math.abs(selectedInvoiceForDetail.tax).toLocaleString('en-IN')}</span>
-                </div>
+                <InvoiceTaxLines invoice={selectedInvoiceForDetail} />
                 <div className={`flex justify-between font-black border-t-2 pt-2 text-sm px-2 py-1.5 rounded ${
                   selectedInvoiceForDetail.invoiceType === 'CREDIT_NOTE' ? 'bg-rose-50 text-rose-900' : 'bg-amber-50 text-slate-900'
                 }`}>

@@ -90,6 +90,12 @@ export interface Customer {
   savingsSchemeActive: boolean;
   savingsSchemeMaturityDate?: string;
   savingsSchemeBalance?: number;
+
+  // Milestone 21 — GST place-of-supply. Optional because most retail buyers are walk-ins
+  // with no state on file, and PRD §7.3 says to default those to the shop's own state
+  // (intra-state) rather than guessing. Deliberately NOT branch-scoped, per decision D-5.
+  stateCode?: string; // GST state code, e.g. '27' Maharashtra, '29' Karnataka
+  gstin?: string; // only for a B2B buyer; Rule 46 requires it printed on the invoice
 }
 
 export interface Karigar {
@@ -256,6 +262,11 @@ export interface InvoiceItem {
   stoneCharge: number;
   subtotal: number;
   overrides?: OverrideRecord[]; // counter-level price overrides + logged reasons (PRD §7.1/§15.1)
+
+  // Milestone 21 — GST Rule 46 requires an HSN code per line. Optional so invoices
+  // written before M21 still parse; those fall back to the composite jewellery rate.
+  hsnCode?: string;
+  gstRatePercent?: number; // the rate in force on the invoice date, captured at billing time
 }
 
 /**
@@ -296,6 +307,33 @@ export interface SaleInvoice {
   creditNoteNumbers?: string[]; // on a TAX_INVOICE: every credit note raised against it
   returnedLineIndexesCovered?: number[]; // on a TAX_INVOICE: lines already credited, so they can't be returned twice
   returnReason?: string;
+
+  // Milestone 21 — statutory tax breakdown (PRD §7.3/§9.3). All optional so invoices
+  // persisted before M21 still load; `tax` above remains the combined total, and
+  // cgst + sgst + igst always sums to exactly that figure.
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
+  placeOfSupplyStateCode?: string; // the customer's state, which decides the split
+  supplyType?: 'INTRA_STATE' | 'INTER_STATE';
+  roundOff?: number; // PRD §7.3: Round(Total) - Total, its own accounting ledger
+}
+
+/**
+ * Tax Master row (PRD §9.2, Milestone 21). Append-only with effective-date versioning:
+ * a rate change is a NEW row, and the previous row is closed with an `effectiveTo` rather
+ * than overwritten — re-printing an old invoice must resolve the rate that applied on its
+ * own date, not today's. PRD §9.2 is explicit that these must never be hardcoded.
+ */
+export interface TaxRate {
+  id: string;
+  hsnCode: string; // HSN for goods, SAC for services (e.g. 9988 job work)
+  description: string;
+  gstRatePercent: number; // composite rate; CGST/SGST each take half on an intra-state sale
+  effectiveFrom: string; // ISO date
+  effectiveTo?: string; // absent = still in force
+  isService?: boolean; // true for a SAC row
+  notificationRef?: string; // the GST Council notification this rate came from
 }
 
 /**
