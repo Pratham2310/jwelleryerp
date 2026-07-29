@@ -4,6 +4,37 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-29 — Phase 7 Complete: Milestones 21–23 (GST Compliance)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign; the deployed design is the approved one.
+
+**Milestone 21 — Tax Master & HSN / CGST-SGST-IGST split.** The hardcoded `GST_RATE = 0.03` is gone. PRD §9.2 states outright that the system "MUST NOT hardcode these as immutable" — an accountant has to apply a GST Council notification the day it lands — so rates are now rows in a Tax Master with **effective-date versioning**. A change appends a new row and closes the previous one the day before it takes effect; nothing is overwritten, so reprinting a two-year-old invoice resolves the rate that actually applied on its date rather than today's. This is the same append-only principle as decision **D-4**, and the Tax Master is now a working reference implementation for the M48 Rate Master, where D-4 is still violated.
+
+Supply type follows PRD §7.3: same state gives CGST+SGST, different gives IGST, and a walk-in with no state on file defaults to the shop's own state. That default is not a shortcut — the PRD specifies it, and it matters commercially, because treating stateless retail buyers as inter-state would misfile every counter sale.
+
+The CGST/SGST halves are derived as `round(total/2)` and `total − cgst`, never rounded independently. Rounding both would let them sum to a rupee more than the tax on the invoice (8683 → 4342 + 4342 = 8684), and an invoice whose components do not equal its own GST total will not reconcile in GSTR-1.
+
+Also implements PRD §7.3's **Round Off** line, which sat in the spec's formula block but was tracked in no milestone and no issue list. `grandTotal` is now rounded from the *exact* tax rather than from the rupee-rounded tax, so the round-off reported is real: PRD §17's own example lands on ₹2,98,123.20 and books −0.20.
+
+The diamond HSN question stays open by design. HSN 7102 is seeded and resolves correctly, but `defaultHsnForLine()` bills a diamond-set ornament as one composite supply under 7113 until the `HANDOFF.md` item 1 question gets CA sign-off — reassigning it would silently halve the tax charged on every diamond sale. A unit test and an on-screen caveat both pin this down, and the engine already supports the split, so authorising it later is a data change rather than a code change.
+
+Two GST Rule 46 defects surfaced and were fixed along the way: every invoice printed a hardcoded Mumbai GSTIN and address regardless of which branch raised it (a real multi-branch bug that M19 had left behind), and no line carried an HSN code. The gold-coin design was also classified 7113; bullion is 7108, and while the rate is identical the GSTR-1 HSN summary would have been wrong.
+
+**Milestone 22 — e-Invoice (IRN/QR) & e-Way Bill simulation.** Simulation only, per the ground rule in `.ai/IMPLEMENTATION_WORKFLOW.md`; every surface is labelled SIMULATED and the QR payload carries a `SIMULATED` flag so it can never be mistaken for a signed one. The IRN is deterministic on the same four inputs the real portal uses (supplier GSTIN, document type, document number, financial year) and has the real 64-hex shape. Determinism is the design, not a convenience: the real IRP is idempotent per those fields, so a retry after a gateway timeout must return the same IRN instead of registering the invoice twice.
+
+Estimates are never registered — a quotation is not a supply. Cancellation is held to PRD §9.4's 24-hour window measured from acknowledgement, and once it closes the UI points at a credit note, which the app has supported since M12. The failure path is reachable deliberately via "Simulate Gateway Failure", because an error path nobody can reproduce is an error path nobody has tested; `FAILED → PENDING` is legal (the retry queue §9.4 asks for) while `GENERATED → PENDING` is not.
+
+The e-Way Bill completes what M20 left unfinished: M20 detected that a transfer crossed the threshold, and M22 generates the document against it, with validity of one day per 200 km per the rules and vehicle-number validation.
+
+**Milestone 23 — GSTR-1 / GSTR-3B preview & CSV export.** GSTR-1 tables 4A, 7, 9B and 12, plus GSTR-3B 3.1(a), derived read-only from the invoice register. Three domain rules drive it, each easy to get wrong: an ESTIMATE never reaches a return; B2B vs B2C is decided by whether the buyer holds a GSTIN rather than by transaction size (misfiling a registered buyer as B2C silently denies them input credit); and credit notes, stored negative here so 3B nets automatically, are reported as **positive magnitudes** in GSTR-1's own table because the portal applies the sign — filing them negative would double-subtract them. A reconciliation banner compares the return against the register and names the difference when they disagree.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **383 tests passing across 18 suites** (up from 270); `npm run build` clean. Playwright-verified: a state-27 customer bills CGST ₹970 + SGST ₹969 while a state-29 customer bills IGST ₹3,878 and a customer with no state on file defaults to the branch state; superseding a Tax Master rate closes the old row at the day before and leaves it resolvable; an e-Invoice failure then retry yields a 64-hex IRN with a real scannable QR, and a short cancellation reason is refused; an invalid vehicle plate is rejected and a 600 km movement produces a 12-digit EBN valid three days; the exported GSTR-3B CSV totals equal the register read independently from storage (₹5,085 tax on ₹1,69,495 taxable). Full regression across 8 screens × 2 themes, the 4 Billing sub-tabs × 2 themes, and a 390×844 mobile pass: **zero contrast failures and zero console errors**.
+
+**Bug found in browser testing that typechecking could not catch:** the e-Invoice cancellation modal is opened *from* the invoice-detail modal, but both were `z-50` and the detail overlay comes later in the DOM — so it painted on top and swallowed every click. The dialog was visible but completely dead. Fixed by stacking the child modal at `z-[60]`.
+
+---
+
 ## 2026-07-28 — Phase 6 Complete: Milestones 19–20 (Multi-Branch)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

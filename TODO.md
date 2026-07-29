@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-28 — **Milestones 1–20 complete; Phases 1–6 all done** (see `CHANGELOG.md`). Milestone 21 (Tax Master & HSN / CGST-SGST-IGST split) is next, and now has its dependency satisfied since M19 supplies `Branch.stateCode`. See the Sequencing Note below — M48 (Rate Master) still warrants pulling forward, as decision **D-4** (append-only rate history) remains violated. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-29 — **Milestones 1–23 complete; Phases 1–7 all done** (see `CHANGELOG.md`). Milestone 24 (BIS Hallmarking & HUID assignment) is next. See the Sequencing Note below — M48 (Rate Master) still warrants pulling forward, as decision **D-4** (append-only rate history) remains violated for *metal* rates; note the Tax Master built in M21 already follows that pattern and is a working reference for it. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -358,30 +358,33 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ---
 
-## 🏁 Phase 7: GST Compliance (Milestones 21 – 23)
+## 🏁 Phase 7: GST Compliance (Milestones 21 – 23) — ✅ COMPLETE (2026-07-29)
 
-### 📍 Milestone 21: Tax Master & HSN / CGST-SGST-IGST Split
+### ✅ Milestone 21: Tax Master & HSN / CGST-SGST-IGST Split
 - **Goal:** Replace the hardcoded flat 3% GST constant with a data-driven Tax Master and automatic intra-/inter-state split.
 - **Dependencies:** Milestone 19 (needs `Branch.stateCode` to compare against customer state).
 - **Tasks:**
   1. Add a `TaxRate[]` master (HSN 7113/7102/9988 rows with CGST/SGST/IGST) and a lookup replacing the hardcoded `0.03` in `billingCalculations.ts`. Keep the single composite-rate default behavior (per `HANDOFF.md` item 1, still unresolved pending CA sign-off) unless/until that question is explicitly resolved.
   2. Auto-determine CGST+SGST vs. IGST by comparing branch state to customer state.
 - **Testable via:** Billing a customer in the branch's own state produces CGST+SGST; a different-state customer produces IGST; unit tests cover both.
+- **Done:** `src/lib/taxMaster.ts` + a Tax Master tab on Billing. Rates are data with **effective-date versioning** (PRD §9.2 forbids hardcoding them), append-only like D-4 — a change supersedes the old row so a reprinted invoice resolves the rate it was billed at. CGST/SGST halves are derived so they sum to the tax charged exactly, never rounded independently, or GSTR-1 would not reconcile. Also implements PRD §7.3's **Round Off** line, which was in the spec's formula block but tracked in no milestone. The diamond 7102 split is deliberately defined-but-unapplied pending CA sign-off (`HANDOFF.md` §1). Fixed two Rule 46 defects found here: a hardcoded Mumbai GSTIN/address on every branch's invoices, and no HSN per line.
 
-### 📍 Milestone 22: e-Invoice & e-Way Bill Simulation
+### ✅ Milestone 22: e-Invoice & e-Way Bill Simulation
 - **Goal:** Model the e-Invoice/e-Way Bill data shape and UI states without a real government API integration (per the simulation-only ground rule in `.ai/IMPLEMENTATION_WORKFLOW.md`).
 - **Dependencies:** Milestone 21.
 - **Tasks:**
   1. Add an e-Invoice status badge on invoices (`PENDING`/`GENERATED`/`FAILED`, mock `irn` string) with a "Simulate Submission" action.
   2. Add an e-Way Bill auto-trigger UI stub for goods movement > ₹50,000.
 - **Testable via:** Simulating submission flips the badge state and shows a mock IRN/QR placeholder.
+- **Done:** `src/lib/eInvoice.ts`. The IRN is deterministic on the real portal's four inputs (GSTIN, doc type, doc number, FY) and 64-hex, so a retry after a timeout cannot double-register — the real IRP is idempotent the same way. Renders a genuine scannable QR of the payload rather than a placeholder box. The 24-hour cancellation window (PRD §9.4) is enforced from acknowledgement, after which the UI points at a credit note. `FAILED → PENDING` is legal, which is the retry queue §9.4 requires; `GENERATED → PENDING` is not. Also generates the actual e-Way Bill for the transfers M20 could only flag.
 
-### 📍 Milestone 23: GSTR-1 / GSTR-3B Report Export
+### ✅ Milestone 23: GSTR-1 / GSTR-3B Report Export
 - **Goal:** Read-only preview tables for periodic GST returns.
 - **Dependencies:** Milestone 21.
 - **Tasks:**
   1. Build GSTR-1 & GSTR-3B preview tables computed from `invoices`, exportable as CSV client-side.
 - **Testable via:** Exported CSV totals reconcile against the sum of the underlying invoices for the selected period.
+- **Done:** `src/lib/gstReturns.ts` + a GST Returns tab. GSTR-1 tables 4A / 7 / 9B / 12 and GSTR-3B 3.1(a), with a reconciliation banner that states the difference when the return disagrees with the register. Credit notes are stored negative (so 3B nets automatically) but reported positive in GSTR-1's own table, because the portal applies the sign — filing them negative would double-subtract. B2B vs B2C is decided by the buyer's GSTIN, not transaction size; misfiling a registered buyer as B2C denies them input credit.
 
 ---
 
