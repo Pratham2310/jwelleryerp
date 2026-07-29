@@ -443,13 +443,41 @@ export interface StockTransfer {
   notes?: string;
 }
 
+/**
+ * The CURRENT rate view, kept in this shape because every screen already consumes it.
+ * Since Milestone 48 it is PROJECTED from the append-only `MetalRateVersion[]` rather than
+ * edited directly — `projectCurrentRates()` in `src/lib/rateMaster.ts` is the only writer.
+ * Same pattern as Milestone 16's derived karigar balances.
+ */
 export interface MetalRate {
   id: string;
   metalType: string;
   purity: string;
   ratePerGram: number;
-  change24h: number; // percentage
-  history24h: number[]; // 8 data points for sparkline
+  change24h: number; // percentage, measured against the version in force 24h ago
+  history24h: number[]; // real recorded versions since M48, not a decorative array
+}
+
+/**
+ * Append-only metal rate history (PRD §4.2, decision D-4, Milestone 48).
+ *
+ * A version is NEVER edited or deleted — a correction is a new version. `effectiveFrom` is a
+ * full timestamp, not a date, because gold moves intraday and two rates on the same day must
+ * still order deterministically. This is what lets a disputed invoice be explained: resolve the
+ * rate that was in force when it was billed rather than whatever is live today.
+ */
+export interface MetalRateVersion {
+  id: string;
+  metalType: string;
+  ratePerGram: number;
+  effectiveFrom: string; // ISO timestamp
+  setBy: string;
+  /** MANUAL = typed in; DERIVED = accepted from the 24K base; MIGRATED = reconstructed pre-M48. */
+  source: 'MANUAL' | 'DERIVED' | 'MIGRATED';
+  /** Mandatory when the change exceeds the PRD §4.2 fat-finger guard. */
+  overrideReason?: string;
+  /** The rate this superseded, captured so history reads without recomputation. */
+  previousRatePerGram?: number;
 }
 
 export interface LooseStone {

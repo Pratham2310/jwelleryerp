@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
+import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
 
 // Custom layouts & Auth pages
 import Sidebar from './components/Sidebar';
@@ -42,10 +43,30 @@ function AppContent() {
   const { theme, toggleTheme } = useTheme();
 
   // Core database states (with LocalStorage persistence)
+  // Metal metadata (id/metalType/purity). Since Milestone 48 the RATE itself is projected from
+  // the append-only version history below, so nothing writes ratePerGram here directly.
   const [metalRates, setMetalRates] = useState<MetalRate[]>(() => {
     const saved = localStorage.getItem('stitch_metal_rates');
     return saved ? JSON.parse(saved) : initialMetalRates;
   });
+
+  /**
+   * Append-only metal rate history (Milestone 48, decision D-4). A rate is never overwritten;
+   * a change is a new version. Shops that predate M48 have their existing sparkline points
+   * reconstructed into an opening trail so no movement is lost.
+   */
+  const [rateVersions, setRateVersions] = useState<MetalRateVersion[]>(() => {
+    const saved = localStorage.getItem('stitch_rate_versions');
+    if (saved) return JSON.parse(saved);
+    const base = localStorage.getItem('stitch_metal_rates');
+    return seedVersionsFromRates(base ? JSON.parse(base) : initialMetalRates);
+  });
+
+  /** The current-rate view every other screen consumes, derived from the version history. */
+  const projectedRates = useMemo(
+    () => projectCurrentRates(rateVersions, metalRates),
+    [rateVersions, metalRates]
+  );
 
   const [itemDesigns, setItemDesigns] = useState<ItemDesign[]>(() => {
     const saved = localStorage.getItem('stitch_item_designs');
@@ -130,6 +151,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_metal_rates', JSON.stringify(metalRates));
   }, [metalRates]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_rate_versions', JSON.stringify(rateVersions));
+  }, [rateVersions]);
 
   useEffect(() => {
     localStorage.setItem('stitch_item_designs', JSON.stringify(itemDesigns));
@@ -243,7 +268,7 @@ function AppContent() {
     <div className={`flex h-screen bg-[#0A0A0B] font-sans text-[#E5E5E5] overflow-hidden ${theme}`}>
       {/* LEFT RESPONSIVE SIDEBAR */}
       <Sidebar 
-        metalRates={metalRates} 
+        metalRates={projectedRates} 
         activeBranch={activeBranch}
         operatorName={user.name} 
         sidebarOpen={sidebarOpen} 
@@ -379,8 +404,10 @@ function AppContent() {
                 path="/dashboard" 
                 element={
                   <Dashboard
-                    metalRates={metalRates}
-                    setMetalRates={setMetalRates}
+                    metalRates={projectedRates}
+                    rateVersions={rateVersions}
+                    setRateVersions={setRateVersions}
+                    operatorName={user?.name || 'Operator'}
                     tags={branchTags}
                     customersCount={customers.length}
                     karigars={karigars}
@@ -415,7 +442,7 @@ function AppContent() {
                     setTransfers={setStockTransfers}
                     branches={branches}
                     activeBranch={activeBranch}
-                    metalRates={metalRates}
+                    metalRates={projectedRates}
                   />
                 }
               />
@@ -437,7 +464,7 @@ function AppContent() {
                     setTags={setTags}
                     customers={customers}
                     setCustomers={setCustomers}
-                    metalRates={metalRates}
+                    metalRates={projectedRates}
                     invoices={branchInvoices}
                     setInvoices={setInvoices}
                     activeBranch={activeBranch}
@@ -490,7 +517,7 @@ function AppContent() {
                     vouchers={branchOldGoldVouchers}
                     setVouchers={setOldGoldVouchers}
                     customers={customers}
-                    metalRates={metalRates}
+                    metalRates={projectedRates}
                   />
                 }
               />

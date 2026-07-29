@@ -13,7 +13,10 @@ import {
   RefreshCw,
   Scale,
   Gem,
-  Layers
+  Layers,
+  AlertTriangle,
+  History,
+  X
 } from 'lucide-react';
 import { isSellable } from '../lib/tagStateMachine';
 import {
@@ -22,11 +25,22 @@ import {
   formatCompactINR,
   buildActivityFeed,
 } from '../lib/dashboardAnalytics';
-import { Tag, SaleInvoice, Karigar, MetalRate, JobWork, LooseStone } from '../types';
+import { Tag, SaleInvoice, Karigar, MetalRate, JobWork, LooseStone, MetalRateVersion } from '../types';
+import {
+  assessRateChange,
+  validateRateVersion,
+  appendRateVersion,
+  currentRateVersion,
+  buildRateHistory,
+  buildDerivedSuggestions,
+} from '../lib/rateMaster';
 
 interface DashboardProps {
+  /** Projected from `rateVersions` — never edited directly (Milestone 48, D-4). */
   metalRates: MetalRate[];
-  setMetalRates: React.Dispatch<React.SetStateAction<MetalRate[]>>;
+  rateVersions: MetalRateVersion[];
+  setRateVersions: React.Dispatch<React.SetStateAction<MetalRateVersion[]>>;
+  operatorName: string;
   tags: Tag[];
   customersCount: number;
   karigars: Karigar[];
@@ -42,7 +56,9 @@ interface DashboardProps {
 
 export default function Dashboard({
   metalRates,
-  setMetalRates,
+  rateVersions,
+  setRateVersions,
+  operatorName,
   tags,
   customersCount,
   karigars,
@@ -101,30 +117,60 @@ export default function Dashboard({
     stock: 'bg-slate-400',
   };
 
-  // Metal Rate Updater
+  /**
+   * Rate changes are APPENDED as new versions, never written over the old rate (D-4, PRD §4.2).
+   * A change beyond the fat-finger guard needs a written reason before it can be recorded.
+   */
+  const [rateReason, setRateReason] = useState('');
+  const [rateError, setRateError] = useState('');
+  const [historyMetal, setHistoryMetal] = useState<string | null>(null);
+
   const handleStartEdit = (rate: MetalRate) => {
     setEditingRateId(rate.id);
     setTempRate(rate.ratePerGram.toString());
+    setRateReason('');
+    setRateError('');
   };
 
-  const handleSaveRate = (id: string) => {
-    const parsed = parseFloat(tempRate);
-    if (!isNaN(parsed) && parsed > 0) {
-      setMetalRates(prev => prev.map(r => {
-        if (r.id === id) {
-          const oldRate = r.ratePerGram;
-          const pctChange = ((parsed - oldRate) / oldRate) * 100;
-          return {
-            ...r,
-            ratePerGram: parsed,
-            change24h: Number(pctChange.toFixed(2)),
-            history24h: [...r.history24h.slice(1), parsed]
-          };
-        }
-        return r;
-      }));
-    }
+  const handleCancelEdit = () => {
     setEditingRateId(null);
+    setRateReason('');
+    setRateError('');
+  };
+
+  /** Live assessment for the row being edited, so the warning appears before Save is pressed. */
+  const editingRate = metalRates.find(r => r.id === editingRateId) || null;
+  const pendingAssessment =
+    editingRate && Number(tempRate) > 0
+      ? assessRateChange(Number(tempRate), editingRate.ratePerGram)
+      : null;
+
+  const handleSaveRate = (id: string) => {
+    const target = metalRates.find(r => r.id === id);
+    if (!target) return;
+
+    const parsed = parseFloat(tempRate);
+    const previous = currentRateVersion(target.metalType, rateVersions);
+    const error = validateRateVersion(
+      { metalType: target.metalType, ratePerGram: parsed, overrideReason: rateReason },
+      previous
+    );
+    if (error) {
+      setRateError(error);
+      return;
+    }
+
+    setRateVersions(prev => appendRateVersion(prev, {
+      id: `rv-${Date.now()}-${target.metalType.replace(/\W+/g, '')}`,
+      metalType: target.metalType,
+      ratePerGram: parsed,
+      effectiveFrom: new Date().toISOString(),
+      setBy: operatorName,
+      source: 'MANUAL',
+      overrideReason: rateReason.trim() || undefined,
+      previousRatePerGram: previous?.ratePerGram,
+    }));
+    handleCancelEdit();
   };
 
   // Sparkline generator
@@ -241,24 +287,58 @@ export default function Dashboard({
               {/* Price / Edit Box */}
               <div className="mt-3 flex items-baseline justify-between">
                 {isEditing ? (
-                  <div className="flex items-center gap-1.5 w-full mt-1">
-                    <div className="relative flex-1">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
-                      <input
-                        type="number"
-                        className="w-full text-sm font-semibold font-mono pl-6 pr-1 py-1 rounded bg-slate-100 border border-amber-500 focus:outline-none"
-                        value={tempRate}
-                        onChange={(e) => setTempRate(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSaveRate(rate.id)}
-                        autoFocus
-                      />
+                  <div className="w-full mt-1 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                        <input
+                          type="number"
+                          className="w-full text-sm font-semibold font-mono pl-6 pr-1 py-1 rounded bg-slate-100 border border-amber-500 focus:outline-none"
+                          value={tempRate}
+                          onChange={(e) => { setTempRate(e.target.value); setRateError(''); }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveRate(rate.id);
+                            if (e.key === 'Escape') handleCancelEdit();
+                          }}
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleSaveRate(rate.id)}
+                        className="px-2 py-1 text-[10px] font-bold bg-amber-500 text-slate-950 rounded hover:bg-amber-600"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-slate-700"
+                      >
+                        Cancel
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => handleSaveRate(rate.id)}
-                      className="px-2 py-1 text-[10px] font-bold bg-amber-500 text-slate-950 rounded hover:bg-amber-600"
-                    >
-                      Save
-                    </button>
+
+                    {/* PRD §4.2 fat-finger guard — shown live, before Save is pressed */}
+                    {pendingAssessment?.requiresReason && (
+                      <div className={`text-[10px] leading-snug rounded px-2 py-1.5 border ${
+                        pendingAssessment.severity === 'IMPLAUSIBLE'
+                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                          : 'bg-amber-500/10 border-amber-500/30 text-[#8C6D34] dark:text-[#C5A059]'
+                      }`}>
+                        <p className="font-bold flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 shrink-0" /> {pendingAssessment.message}
+                        </p>
+                        <input
+                          value={rateReason}
+                          onChange={(e) => { setRateReason(e.target.value); setRateError(''); }}
+                          placeholder="Reason, e.g. Budget duty revision"
+                          className="mt-1.5 w-full text-[10px] px-2 py-1 rounded bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none"
+                        />
+                      </div>
+                    )}
+
+                    {rateError && (
+                      <p className="text-[10px] font-bold text-rose-500">{rateError}</p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-baseline gap-2">
@@ -268,12 +348,21 @@ export default function Dashboard({
                 )}
                 
                 {!isEditing && (
-                  <button 
-                    onClick={() => handleStartEdit(rate)}
-                    className="text-[10px] font-bold text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity hover:underline absolute top-4.5 right-4 bg-amber-50 px-1.5 py-0.5 rounded"
-                  >
-                    Edit Rate
-                  </button>
+                  <div className="absolute top-4.5 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => setHistoryMetal(rate.metalType)}
+                      className="text-[10px] font-bold text-slate-500 hover:underline bg-slate-100 px-1.5 py-0.5 rounded"
+                      title="Full rate history"
+                    >
+                      History
+                    </button>
+                    <button
+                      onClick={() => handleStartEdit(rate)}
+                      className="text-[10px] font-bold text-amber-600 hover:underline bg-amber-50 px-1.5 py-0.5 rounded"
+                    >
+                      Edit Rate
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -614,6 +703,100 @@ export default function Dashboard({
           )}
         </div>
       </div>
+
+      {/* Append-only rate history (Milestone 48, D-4) — this is what makes a disputed
+          invoice explainable: the rate that was live when it was billed is still here. */}
+      {historyMetal && (() => {
+        const rows = buildRateHistory(historyMetal, rateVersions);
+        const base24k = metalRates.find(r => r.metalType === 'Gold (24K)')?.ratePerGram ?? 0;
+        const suggestion = buildDerivedSuggestions(base24k, metalRates)
+          .find(sg => sg.metalType === historyMetal);
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border shadow-2xl bg-white dark:bg-[#141416] border-slate-150 dark:border-[#262626]">
+              <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-[#262626]">
+                <div>
+                  <h3 className="text-sm font-bold flex items-center gap-2 text-slate-900 dark:text-zinc-100">
+                    <History className="w-4 h-4 text-amber-500" /> Rate History — {historyMetal}
+                  </h3>
+                  <p className="text-[11px] mt-0.5 text-slate-400 dark:text-zinc-500">
+                    Append-only. A rate is never overwritten, so an old invoice still resolves the rate it was billed at (PRD §4.2 / D-4).
+                  </p>
+                </div>
+                <button
+                  onClick={() => setHistoryMetal(null)}
+                  aria-label="Close rate history"
+                  className="p-1.5 rounded-lg transition hover:bg-slate-100 dark:hover:bg-zinc-900 text-slate-500 dark:text-zinc-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* PRD §4.2 purity derivation, offered as a suggestion rather than applied */}
+              {suggestion && (
+                <div className="mx-5 mt-4 p-3 rounded-xl border text-[11px] bg-slate-50 dark:bg-zinc-900/40 border-slate-150 dark:border-zinc-800 text-slate-600 dark:text-zinc-400">
+                  Derived from the 24K base (₹{base24k.toLocaleString('en-IN')} × purity ratio):{' '}
+                  <span className="font-mono font-bold text-slate-800 dark:text-zinc-200">₹{suggestion.derivedRate.toLocaleString('en-IN')}</span>
+                  {suggestion.differenceAmount !== 0 && (
+                    <> — the counter rate differs by ₹{Math.abs(suggestion.differenceAmount).toLocaleString('en-IN')}. That gap is normal (local premium and rounding), so it is shown rather than applied.</>
+                  )}
+                </div>
+              )}
+
+              <div className="overflow-y-auto p-5">
+                <table className="w-full text-left text-xs">
+                  <thead className="uppercase font-mono text-[9px] border-b text-slate-400 dark:text-zinc-500 border-slate-100 dark:border-[#262626]">
+                    <tr>
+                      <th className="py-2 pr-4">Effective From</th>
+                      <th className="text-right px-4">Rate</th>
+                      <th className="text-right px-4">Change</th>
+                      <th className="px-4">Set By</th>
+                      <th className="px-4">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-slate-700 dark:text-zinc-300">
+                    {rows.map((r, i) => (
+                      <tr key={r.id} className="border-b last:border-0 border-slate-100 dark:border-[#262626]">
+                        <td className="py-2.5 pr-4 font-mono text-[10px] whitespace-nowrap">
+                          {r.effectiveFrom.slice(0, 16).replace('T', ' ')}
+                          {i === 0 && (
+                            <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                              current
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right px-4 font-mono font-bold whitespace-nowrap">₹{r.ratePerGram.toLocaleString('en-IN')}</td>
+                        <td className={`text-right px-4 font-mono whitespace-nowrap ${
+                          r.deltaPercent === null ? 'text-slate-400 dark:text-zinc-600'
+                            : r.deltaPercent > 0 ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-rose-600 dark:text-rose-400'
+                        }`}>
+                          {r.deltaPercent === null ? 'opening' : `${r.deltaPercent > 0 ? '+' : ''}${r.deltaPercent}%`}
+                        </td>
+                        <td className="px-4 text-[10px]">
+                          {r.setBy}
+                          {r.source === 'MIGRATED' && (
+                            <span className="ml-1 text-[9px] text-slate-400 dark:text-zinc-600">(reconstructed)</span>
+                          )}
+                        </td>
+                        <td className="px-4 text-[10px] text-slate-500 dark:text-zinc-500">{r.overrideReason || '—'}</td>
+                      </tr>
+                    ))}
+                    {rows.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400 dark:text-zinc-600">
+                          No recorded versions for this metal yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
