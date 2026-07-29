@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { Truck, Plus, X, AlertCircle, ArrowRight, PackageCheck, FileWarning } from 'lucide-react';
 import type { StockTransfer, Tag, Branch, MetalRate } from '../types';
+import {
+  nextEWayBillNumber,
+  eWayBillExpiry,
+  validateEWayBillDraft,
+} from '../lib/eInvoice';
 import { useTheme } from '../contexts/ThemeContext';
 import { canTransition } from '../lib/tagStateMachine';
 import {
@@ -26,6 +31,9 @@ interface StockTransferPanelProps {
   metalRates: MetalRate[];
 }
 
+/** Blank e-Way Bill draft (Milestone 22, PRD §9.5). */
+const emptyEwb = { transporterName: '', vehicleNumber: '', distanceKm: '' };
+
 const STATUS_BADGE: Record<string, string> = {
   Draft: 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700',
   InTransit: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/50',
@@ -49,6 +57,44 @@ export default function StockTransferPanel({
   const [acceptedIds, setAcceptedIds] = useState<string[]>([]);
   const [rejectionReason, setRejectionReason] = useState('');
   const [receiveError, setReceiveError] = useState('');
+
+  // e-Way Bill generation (Milestone 22)
+  const [ewbTransfer, setEwbTransfer] = useState<StockTransfer | null>(null);
+  const [ewbDraft, setEwbDraft] = useState({ ...emptyEwb });
+  const [ewbError, setEwbError] = useState('');
+
+  const handleGenerateEwb = () => {
+    if (!ewbTransfer) return;
+    const draft = {
+      transporterName: ewbDraft.transporterName,
+      vehicleNumber: ewbDraft.vehicleNumber,
+      distanceKm: Number(ewbDraft.distanceKm),
+    };
+    const error = validateEWayBillDraft(draft);
+    if (error) {
+      setEwbError(error);
+      return;
+    }
+    const generatedOn = new Date().toISOString().slice(0, 10);
+    const ebn = nextEWayBillNumber(
+      transfers.map(t => t.eWayBill?.ebn).filter((n): n is string => !!n)
+    );
+    setTransfers(prev => prev.map(t => t.id === ewbTransfer.id ? {
+      ...t,
+      eWayBill: {
+        ebn,
+        generatedOn,
+        validUntil: eWayBillExpiry(generatedOn, draft.distanceKm),
+        transporterName: draft.transporterName.trim(),
+        vehicleNumber: draft.vehicleNumber.replace(/[\s-]/g, '').toUpperCase(),
+        distanceKm: draft.distanceKm,
+        declaredValue: t.declaredValue ?? 0,
+      },
+    } : t));
+    setEwbTransfer(null);
+    setEwbDraft({ ...emptyEwb });
+    setEwbError('');
+  };
 
   const summary = summariseTransfers(transfers);
   const fromBranchId = activeBranch?.id;
@@ -212,10 +258,28 @@ export default function StockTransferPanel({
                   <td className="text-center font-mono">{tr.tagIds.length}</td>
                   <td className="text-right font-mono">₹{(tr.declaredValue ?? 0).toLocaleString('en-IN')}</td>
                   <td className="text-center">
-                    {tr.eWayBillRequired ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600">
-                        <FileWarning className="w-3 h-3" /> Required
+                    {/* Milestone 22: M20 only flagged that an e-Way Bill was needed; the document
+                        is generated here. Only the dispatching branch can raise it. */}
+                    {tr.eWayBill ? (
+                      <span className="inline-flex flex-col items-center leading-tight">
+                        <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {tr.eWayBill.ebn}
+                        </span>
+                        <span className={`text-[9px] ${mutedCls}`}>valid to {tr.eWayBill.validUntil}</span>
                       </span>
+                    ) : tr.eWayBillRequired ? (
+                      tr.fromBranchId === activeBranch?.id && tr.status !== 'Draft' ? (
+                        <button
+                          onClick={() => { setEwbTransfer(tr); setEwbDraft({ ...emptyEwb }); setEwbError(''); }}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold border border-amber-400/60 text-amber-600 dark:text-[#C5A059] hover:bg-amber-500/10 rounded-lg transition"
+                        >
+                          <FileWarning className="w-3 h-3" /> Generate
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600">
+                          <FileWarning className="w-3 h-3" /> Required
+                        </span>
+                      )
                     ) : (
                       <span className={`text-[10px] ${mutedCls}`}>Not required</span>
                     )}
@@ -364,6 +428,82 @@ export default function StockTransferPanel({
       )}
 
       {/* ---------- Receive at destination ---------- */}
+      {/* e-Way Bill generation (Milestone 22, PRD §9.5) */}
+      {ewbTransfer && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-md rounded-2xl border shadow-2xl ${cardCls}`}>
+            <div className={`flex items-center justify-between p-5 border-b ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+              <div>
+                <h3 className={`text-sm font-bold flex items-center gap-2 ${dark ? 'text-zinc-100' : 'text-slate-900'}`}>
+                  <FileWarning className="w-4 h-4 text-amber-500" /> Generate e-Way Bill
+                </h3>
+                <p className={`text-[11px] mt-0.5 font-mono ${mutedCls}`}>
+                  {ewbTransfer.transferNo} · ₹{(ewbTransfer.declaredValue ?? 0).toLocaleString('en-IN')}
+                </p>
+              </div>
+              <button
+                onClick={() => setEwbTransfer(null)}
+                aria-label="Close e-Way Bill"
+                className={`p-1.5 rounded-lg transition ${dark ? 'hover:bg-zinc-900 text-zinc-500' : 'hover:bg-slate-100 text-slate-500'}`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <p className={`text-[11px] leading-relaxed ${mutedCls}`}>
+                Simulated — no NIC portal call. Validity is one day per 200 km, as the e-Way Bill
+                rules provide.
+              </p>
+              <label className="space-y-1 block">
+                <span className={`text-[10px] uppercase font-mono font-bold tracking-wider block ${mutedCls}`}>Transporter</span>
+                <input
+                  value={ewbDraft.transporterName}
+                  onChange={e => setEwbDraft({ ...ewbDraft, transporterName: e.target.value })}
+                  placeholder="Blue Dart Secure Logistics"
+                  className={`w-full text-xs px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`}
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-1">
+                  <span className={`text-[10px] uppercase font-mono font-bold tracking-wider block ${mutedCls}`}>Vehicle No.</span>
+                  <input
+                    value={ewbDraft.vehicleNumber}
+                    onChange={e => setEwbDraft({ ...ewbDraft, vehicleNumber: e.target.value })}
+                    placeholder="MH12AB1234"
+                    className={`w-full text-xs font-mono px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`}
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className={`text-[10px] uppercase font-mono font-bold tracking-wider block ${mutedCls}`}>Distance (km)</span>
+                  <input
+                    type="number"
+                    value={ewbDraft.distanceKm}
+                    onChange={e => setEwbDraft({ ...ewbDraft, distanceKm: e.target.value })}
+                    placeholder="150"
+                    className={`w-full text-xs font-mono px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`}
+                  />
+                </label>
+              </div>
+              {ewbError && (
+                <p className="text-[11px] font-bold text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
+                  {ewbError}
+                </p>
+              )}
+            </div>
+
+            <div className={`p-5 border-t ${dark ? 'border-zinc-800' : 'border-slate-100'}`}>
+              <button
+                onClick={handleGenerateEwb}
+                className="w-full py-2.5 bg-[#C5A059] hover:bg-[#B08D4A] text-[#0A0A0B] text-xs font-bold rounded-xl transition"
+              >
+                Generate e-Way Bill
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {receivingTransfer && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden ${cardCls}`}>

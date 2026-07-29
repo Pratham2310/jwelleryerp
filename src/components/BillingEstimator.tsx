@@ -31,6 +31,14 @@ import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRID
 import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
 import TaxMasterPanel from './TaxMasterPanel';
 import {
+  isEInvoiceApplicable,
+  submitForIrn,
+  cancelEInvoice,
+  canCancelEInvoice,
+  hoursUntilCancellationCloses,
+} from '../lib/eInvoice';
+import { QRCodeSVG } from 'qrcode.react';
+import {
   resolveGstRatePercent,
   defaultHsnForLine,
   determineSupplyType,
@@ -81,6 +89,36 @@ function nextCreditNoteNumber(): string {
   const next = Number(localStorage.getItem(key) || '900') + 1;
   localStorage.setItem(key, String(next));
   return `CRN-${year}-${next}`;
+}
+
+/** e-Invoice registration state at a glance (Milestone 22, PRD §9.4). */
+function EInvoiceBadge({ invoice }: { invoice: SaleInvoice }) {
+  if (!isEInvoiceApplicable(invoice)) {
+    // An estimate is a quotation, not a supply — it is never registered.
+    return <span className="text-[10px] font-mono text-slate-400">n/a</span>;
+  }
+
+  const status = invoice.eInvoice?.status ?? 'PENDING';
+  const styles: Record<string, string> = {
+    PENDING: 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700',
+    GENERATED: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
+    FAILED: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30',
+    CANCELLED: 'bg-amber-500/10 text-[#8C6D34] dark:text-[#C5A059] border-amber-500/30',
+    NOT_APPLICABLE: 'bg-slate-100 dark:bg-zinc-800 text-slate-500 border-slate-200 dark:border-zinc-700',
+  };
+  const label: Record<string, string> = {
+    PENDING: 'Not filed',
+    GENERATED: 'IRN issued',
+    FAILED: 'Failed',
+    CANCELLED: 'Cancelled',
+    NOT_APPLICABLE: 'n/a',
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${styles[status]}`}>
+      {label[status]}
+    </span>
+  );
 }
 
 /**
@@ -782,6 +820,34 @@ export default function BillingEstimator({
     setReturnReason('');
     setReturnError('');
     setSelectedInvoiceForDetail(creditNote);
+  };
+
+  /* ─── e-Invoice simulation (Milestone 22, PRD §9.4) ─── */
+  const [eInvoiceToCancel, setEInvoiceToCancel] = useState<SaleInvoice | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+
+  const handleSubmitEInvoice = (inv: SaleInvoice, forceFailure: boolean) => {
+    const gstin = activeBranch?.gstin || '27AACCS9948H1Z1';
+    const record = submitForIrn(inv, gstin, inv.eInvoice, { forceFailure });
+    setInvoices(prev => prev.map(i => (i.id === inv.id ? { ...i, eInvoice: record } : i)));
+    setSelectedInvoiceForDetail(prev => (prev && prev.id === inv.id ? { ...prev, eInvoice: record } : prev));
+  };
+
+  const handleCancelEInvoice = () => {
+    if (!eInvoiceToCancel?.eInvoice) return;
+    const { record, error } = cancelEInvoice(eInvoiceToCancel.eInvoice, cancelReason);
+    if (error) {
+      setCancelError(error);
+      return;
+    }
+    setInvoices(prev => prev.map(i => (i.id === eInvoiceToCancel.id ? { ...i, eInvoice: record } : i)));
+    setSelectedInvoiceForDetail(prev =>
+      prev && prev.id === eInvoiceToCancel.id ? { ...prev, eInvoice: record } : prev
+    );
+    setEInvoiceToCancel(null);
+    setCancelReason('');
+    setCancelError('');
   };
 
   const handleConfirmPan = (type: PanDeclaration['type']) => {
@@ -1888,13 +1954,15 @@ export default function BillingEstimator({
                     <th>Phone</th>
                     <th>Payment</th>
                     <th className="text-right">Grand Total</th>
+                    {/* e-Invoice registration state (Milestone 22, PRD §9.4) */}
+                    <th className="text-center">e-Invoice</th>
                     <th className="text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-200">
                   {filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-slate-400 font-mono">
+                      <td colSpan={9} className="py-8 text-center text-slate-400 font-mono">
                         No invoices found matching query.
                       </td>
                     </tr>
@@ -1925,6 +1993,9 @@ export default function BillingEstimator({
                           inv.grandTotal < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-100'
                         }`}>
                           {inv.grandTotal < 0 ? '-' : ''}₹{Math.abs(inv.grandTotal).toLocaleString('en-IN')}
+                        </td>
+                        <td className="text-center">
+                          <EInvoiceBadge invoice={inv} />
                         </td>
                         <td className="text-center">
                           <div className="inline-flex items-center gap-1.5">
@@ -1979,6 +2050,65 @@ export default function BillingEstimator({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* e-Invoice cancellation — only inside the 24-hour window (PRD §9.4, Milestone 22) */}
+      {eInvoiceToCancel && (
+        /* z-[60], not z-50: this modal is opened FROM the invoice-detail modal, which is itself
+           z-50 and later in the DOM. At equal z-index the detail overlay paints on top and
+           swallows every click here, leaving the dialog visible but dead. */
+        <div className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-md rounded-2xl border shadow-2xl ${
+            theme === 'light' ? 'bg-white border-slate-150' : 'bg-[#141416] border-[#262626]'
+          }`}>
+            <div className={`flex items-center justify-between p-5 border-b ${
+              theme === 'light' ? 'border-slate-100' : 'border-[#262626]'
+            }`}>
+              <div>
+                <h3 className={`text-sm font-bold ${theme === 'light' ? 'text-slate-900' : 'text-zinc-100'}`}>
+                  Cancel e-Invoice
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5 font-mono">{eInvoiceToCancel.invoiceNumber}</p>
+              </div>
+              <button
+                onClick={() => setEInvoiceToCancel(null)}
+                aria-label="Close e-Invoice cancellation"
+                className={`p-1.5 rounded-lg transition ${
+                  theme === 'light' ? 'hover:bg-slate-100 text-slate-500' : 'hover:bg-zinc-900 text-zinc-500'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Cancelling withdraws the IRN on the portal. This is only possible within 24 hours of
+                acknowledgement; afterwards the lawful remedy is a credit note.
+              </p>
+              <input
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                placeholder="Reason, e.g. Wrong customer selected"
+                className={`w-full text-xs px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${
+                  theme === 'light' ? 'bg-white border-slate-200 text-slate-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'
+                }`}
+              />
+              {cancelError && (
+                <p className="text-[11px] font-bold text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
+                  {cancelError}
+                </p>
+              )}
+            </div>
+            <div className={`p-5 border-t ${theme === 'light' ? 'border-slate-100' : 'border-[#262626]'}`}>
+              <button
+                onClick={handleCancelEInvoice}
+                className="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl transition"
+              >
+                Confirm Cancellation
+              </button>
             </div>
           </div>
         </div>
@@ -2404,6 +2534,86 @@ export default function BillingEstimator({
                   </div>
                 )}
               </div>
+
+              {/* e-Invoice / IRN panel (Milestone 22, PRD §9.4) — SIMULATED, never a real IRP call */}
+              {isEInvoiceApplicable(selectedInvoiceForDetail) && (() => {
+                const rec = selectedInvoiceForDetail.eInvoice;
+                const status = rec?.status ?? 'PENDING';
+                const cancellable = canCancelEInvoice(rec);
+                const hoursLeft = hoursUntilCancellationCloses(rec);
+                return (
+                  <div className="p-4 rounded-xl border border-slate-150 bg-slate-50 space-y-3 print:break-inside-avoid">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-bold text-slate-700 text-[11px] flex items-center gap-1.5">
+                        <FileCheck className="w-4 h-4 text-amber-600" /> e-Invoice (IRN)
+                        <span className="font-normal text-slate-400 font-mono text-[9px]">SIMULATED — no IRP call</span>
+                      </p>
+                      <EInvoiceBadge invoice={selectedInvoiceForDetail} />
+                    </div>
+
+                    {status === 'GENERATED' && rec?.irn && (
+                      <div className="flex gap-4 items-start">
+                        <div className="bg-white p-2 rounded-lg border border-slate-200 shrink-0">
+                          {/* A real QR of the payload, not a placeholder box */}
+                          <QRCodeSVG value={rec.signedQrPayload || rec.irn} size={92} level="M" />
+                        </div>
+                        <div className="text-[10px] text-slate-500 space-y-1 min-w-0">
+                          <p><span className="font-bold text-slate-600">IRN:</span></p>
+                          <p className="font-mono break-all leading-tight text-slate-500">{rec.irn}</p>
+                          <p><span className="font-bold text-slate-600">Ack No:</span> <span className="font-mono">{rec.ackNo}</span></p>
+                          <p><span className="font-bold text-slate-600">Ack Date:</span> <span className="font-mono">{rec.ackDate?.slice(0, 19).replace('T', ' ')}</span></p>
+                        </div>
+                      </div>
+                    )}
+
+                    {status === 'FAILED' && (
+                      <p className="text-[10px] text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+                        {rec?.failureReason} · attempt {rec?.attempts}
+                      </p>
+                    )}
+
+                    {status === 'CANCELLED' && (
+                      <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        Cancelled on {rec?.cancelledOn?.slice(0, 10)} — {rec?.cancelReason}. A credit note is the remedy after this point.
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 print:hidden">
+                      {(status === 'PENDING' || status === 'FAILED') && (
+                        <>
+                          <button
+                            onClick={() => handleSubmitEInvoice(selectedInvoiceForDetail, false)}
+                            className="px-3 py-1.5 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg transition"
+                          >
+                            {status === 'FAILED' ? 'Retry Submission' : 'Simulate Submission'}
+                          </button>
+                          <button
+                            onClick={() => handleSubmitEInvoice(selectedInvoiceForDetail, true)}
+                            className="px-3 py-1.5 text-[10px] font-bold border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                            title="Exercise the failure/retry path deliberately"
+                          >
+                            Simulate Gateway Failure
+                          </button>
+                        </>
+                      )}
+                      {status === 'GENERATED' && (
+                        cancellable ? (
+                          <button
+                            onClick={() => { setEInvoiceToCancel(selectedInvoiceForDetail); setCancelReason(''); setCancelError(''); }}
+                            className="px-3 py-1.5 text-[10px] font-bold border border-rose-300 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          >
+                            Cancel e-Invoice{hoursLeft !== null ? ` (${hoursLeft}h left)` : ''}
+                          </button>
+                        ) : (
+                          <p className="text-[10px] text-slate-400">
+                            The 24-hour cancellation window has closed — raise a credit note instead.
+                          </p>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Hallmark Warranty declaration — tax invoices only (see the receipt view above) */}
               {selectedInvoiceForDetail.invoiceType === 'TAX_INVOICE' && (

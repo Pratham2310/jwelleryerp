@@ -317,6 +317,40 @@ export interface SaleInvoice {
   placeOfSupplyStateCode?: string; // the customer's state, which decides the split
   supplyType?: 'INTRA_STATE' | 'INTER_STATE';
   roundOff?: number; // PRD §7.3: Round(Total) - Total, its own accounting ledger
+
+  // Milestone 22 — simulated e-Invoice registration (PRD §9.4). Absent on documents
+  // raised before M22 and on estimates, which are never registered.
+  eInvoice?: EInvoiceRecord;
+}
+
+/**
+ * e-Invoice registration state (PRD §9.4, Milestone 22). SIMULATED — there is no GSP/NIC
+ * integration; see the header of `src/lib/eInvoice.ts`. `NOT_APPLICABLE` covers estimates,
+ * which are quotations rather than supplies and never get an IRN.
+ */
+export type EInvoiceStatus = 'NOT_APPLICABLE' | 'PENDING' | 'GENERATED' | 'FAILED' | 'CANCELLED';
+
+export interface EInvoiceRecord {
+  status: EInvoiceStatus;
+  attempts: number; // retry count — PRD §9.4 requires a queue/retry for portal downtime
+  irn?: string; // 64-hex Invoice Reference Number
+  ackNo?: string;
+  ackDate?: string; // starts the 24-hour cancellation window
+  signedQrPayload?: string;
+  failureReason?: string;
+  cancelledOn?: string;
+  cancelReason?: string;
+}
+
+/** e-Way Bill for a goods movement (PRD §9.5, Milestone 22). */
+export interface EWayBill {
+  ebn: string; // 12-digit e-Way Bill number
+  generatedOn: string;
+  validUntil: string;
+  transporterName: string;
+  vehicleNumber: string;
+  distanceKm: number;
+  declaredValue: number;
 }
 
 /**
@@ -402,6 +436,7 @@ export interface StockTransfer {
   declaredValue?: number;
   eWayBillRequired?: boolean;
   /** Set on receipt: which pieces the destination actually accepted. */
+  eWayBill?: EWayBill; // Milestone 22 — generated for a movement over the threshold
   acceptedTagIds?: string[];
   rejectedTagIds?: string[];
   rejectionReason?: string;
