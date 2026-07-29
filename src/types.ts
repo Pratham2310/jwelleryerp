@@ -459,6 +459,39 @@ export interface MetalRate {
 }
 
 /**
+ * BIS Hallmarking / AHC dispatch register (PRD §11, Milestone 24).
+ *
+ * A batch is the unit the shop physically ships to an Assaying & Hallmarking Centre. The AHC
+ * returns each piece either PASSED with a laser-engraved HUID and a certified fineness, or
+ * FAILED — which PRD §11.3 treats as an investigation trigger, not a clerical outcome.
+ */
+export type HallmarkBatchStatus = 'Draft' | 'AtAHC' | 'Received' | 'PartiallyReceived';
+
+export interface HallmarkResult {
+  tagId: string;
+  outcome: 'PASSED' | 'FAILED';
+  /** Only on PASSED. Unique to this one physical piece, forever (PRD §11.1). */
+  huid?: string;
+  /** Fineness the AHC actually certified, which may differ from what was declared. */
+  certifiedPurityPercent?: number;
+  failureReason?: string;
+}
+
+export interface HallmarkBatch {
+  id: string;
+  batchNo: string; // AHC-<year>-nnn, its own dispatch-register series
+  ahcName: string;
+  ahcLicenseNo?: string;
+  tagIds: string[];
+  status: HallmarkBatchStatus;
+  dispatchedOn: string;
+  receivedOn?: string;
+  certificateRef?: string; // AHC hallmarking certificate / report reference
+  results?: HallmarkResult[];
+  branchId?: string;
+}
+
+/**
  * Append-only metal rate history (PRD §4.2, decision D-4, Milestone 48).
  *
  * A version is NEVER edited or deleted — a correction is a new version. `effectiveFrom` is a

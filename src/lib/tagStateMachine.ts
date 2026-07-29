@@ -63,7 +63,12 @@ const TRANSITIONS: Record<TagStatus, TagStatus[]> = {
   RawMetal: ['IssuedToKarigar', 'DamagedOrMelted'],
   IssuedToKarigar: ['ReceivedFromKarigar', 'DamagedOrMelted'],
   ReceivedFromKarigar: ['PendingHallmark', 'InStock', 'DamagedOrMelted'],
-  PendingHallmark: ['Hallmarked', 'DamagedOrMelted'],
+  // `ReceivedFromKarigar` added in Milestone 24: a piece that FAILS the AHC purity test is not
+  // damaged, it is under-karat. It must come back into the shop for rework and karigar
+  // accountability (PRD §11.3), from where it can be re-submitted for hallmarking. Without this
+  // edge the only legal exit was DamagedOrMelted, which would force melting down a rectifiable
+  // piece and destroy the evidence of the shortfall.
+  PendingHallmark: ['Hallmarked', 'ReceivedFromKarigar', 'DamagedOrMelted'],
   Hallmarked: ['InStock', 'DamagedOrMelted'],
   InStock: ['InShowcase', 'OutForJobwork', 'MemoOut', 'TransferInTransit', 'Sold', 'DamagedOrMelted'],
   InShowcase: ['InStock', 'OutForJobwork', 'MemoOut', 'TransferInTransit', 'Sold', 'DamagedOrMelted'],

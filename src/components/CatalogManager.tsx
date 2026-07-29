@@ -16,7 +16,8 @@ import {
   LayoutTemplate,
   Tags as TagsIcon,
   ScanLine,
-  Truck
+  Truck,
+  BadgeCheck
 } from 'lucide-react';
 import { ItemDesign, Tag, ItemCategory, MetalStandard, StoneVariety } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -24,7 +25,8 @@ import { ALL_TAG_STATUSES, TAG_STATUS_LABEL, canTransition, nextLegalStatuses, t
 import { TagBarcode, TagQRCode } from './ui/TagCode';
 import StockAuditPanel from './StockAuditPanel';
 import StockTransferPanel from './StockTransferPanel';
-import type { StockTransfer, Branch, MetalRate } from '../types';
+import type { StockTransfer, Branch, MetalRate, HallmarkBatch } from '../types';
+import HallmarkingPanel from './HallmarkingPanel';
 
 interface CatalogManagerProps {
   itemDesigns: ItemDesign[];
@@ -40,6 +42,9 @@ interface CatalogManagerProps {
   branches: Branch[];
   activeBranch: Branch | null;
   metalRates: MetalRate[];
+  /** AHC dispatch register (Milestone 24). */
+  hallmarkBatches: HallmarkBatch[];
+  setHallmarkBatches: React.Dispatch<React.SetStateAction<HallmarkBatch[]>>;
 }
 
 const CATEGORIES: ItemCategory[] = ['Rings', 'Necklaces', 'Earrings', 'Bangles', 'Bracelets', 'Chains', 'Coins'];
@@ -69,12 +74,14 @@ export default function CatalogManager({
   setTransfers,
   branches,
   activeBranch,
-  metalRates
+  metalRates,
+  hallmarkBatches,
+  setHallmarkBatches
 }: CatalogManagerProps) {
   const { theme } = useTheme();
 
   // Which tab is active — Item Design Templates, Tag Inventory, or Stock Audit (PRD §5.1, Handbook D-6; Milestone 6)
-  const [activeTab, setActiveTab] = useState<'designs' | 'tags' | 'audit' | 'transfers'>('tags');
+  const [activeTab, setActiveTab] = useState<'designs' | 'tags' | 'audit' | 'transfers' | 'hallmark'>('tags');
 
   // Dashboard's "Add Showcase Item" quick action opens the Add Tag modal specifically
   // (adding new physical stock is the more common day-to-day action) and should land on that tab.
@@ -342,9 +349,27 @@ export default function CatalogManager({
         >
           <Truck className="w-4 h-4" /> Stock Transfers
         </button>
+        <button
+          onClick={() => setActiveTab('hallmark')}
+          className={`pb-3 text-sm font-bold border-b-2 transition flex items-center gap-1.5 ${
+            activeTab === 'hallmark'
+              ? 'border-amber-500 text-slate-900'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <BadgeCheck className="w-4 h-4" /> Hallmarking
+        </button>
       </div>
 
-      {activeTab === 'transfers' ? (
+      {activeTab === 'hallmark' ? (
+        <HallmarkingPanel
+          tags={tags}
+          setTags={setTags}
+          batches={hallmarkBatches}
+          setBatches={setHallmarkBatches}
+          activeBranch={activeBranch}
+        />
+      ) : activeTab === 'transfers' ? (
         <StockTransferPanel
           allTags={allTags}
           setTags={setTags}

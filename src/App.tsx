@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
@@ -129,6 +129,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialTaxRates;
   });
 
+  // AHC hallmarking dispatch register (Milestone 24). A batch is a physical shipment to an
+  // Assaying & Hallmarking Centre; results assign the legally-required HUID per piece.
+  const [hallmarkBatches, setHallmarkBatches] = useState<HallmarkBatch[]>(() => {
+    const saved = localStorage.getItem('stitch_hallmark_batches');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Inter-branch stock transfers (Milestone 20). Deliberately NOT branch-scoped: a transfer
   // belongs to two branches at once, and the destination must be able to see it arriving.
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
@@ -204,6 +211,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_tax_rates', JSON.stringify(taxRates));
   }, [taxRates]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_hallmark_batches', JSON.stringify(hallmarkBatches));
+  }, [hallmarkBatches]);
 
   useEffect(() => {
     if (activeBranchId) localStorage.setItem('stitch_active_branch', activeBranchId);
@@ -443,6 +454,8 @@ function AppContent() {
                     branches={branches}
                     activeBranch={activeBranch}
                     metalRates={projectedRates}
+                    hallmarkBatches={hallmarkBatches}
+                    setHallmarkBatches={setHallmarkBatches}
                   />
                 }
               />
