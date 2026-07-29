@@ -570,7 +570,10 @@ export default function BillingEstimator({
         // Rule 46 requires an HSN per line, and GSTR-1 summarises by it (Milestone 21).
         // Captured at billing time so a reprint shows what was actually charged.
         hsnCode: hsnForLine(item),
-        gstRatePercent: resolveGstRatePercent(hsnForLine(item), taxRates, invoiceDate)
+        gstRatePercent: resolveGstRatePercent(hsnForLine(item), taxRates, invoiceDate),
+        // The HUID printed against this line (PRD §9.3). A catalogue line takes the tag's;
+        // a custom line carries whatever was recorded against it (Milestone 25).
+        huid: (item.itemId ? tags.find(t => t.id === item.itemId)?.huid : item.huid) || undefined
       };
     });
 
@@ -1066,6 +1069,8 @@ export default function BillingEstimator({
                   <tr className="text-slate-400 uppercase font-mono text-[9px] border-b pb-2">
                     <th className="py-2">Item Description</th>
                     <th>Standard</th>
+                    {/* Rule 46 requires the HSN code printed against every line */}
+                    <th>HSN</th>
                     <th className="text-right">Net Wt</th>
                     <th className="text-right">Metal Rate</th>
                     <th className="text-right">Wastage + MC + Stones</th>
@@ -1079,7 +1084,12 @@ export default function BillingEstimator({
                         <p className="font-bold text-slate-900">{item.name}</p>
                         {item.sku && <p className="text-[10px] text-slate-400 font-mono">SKU: {item.sku}</p>}
                       </td>
-                      <td className="font-mono text-slate-500">{item.metalType}</td>
+                      <td className="font-mono text-slate-500">
+                        {item.metalType}
+                        {/* PRD §9.3: the HUID must appear against each hallmarked piece */}
+                        {item.huid && <span className="block text-[9px] text-slate-400">HUID: {item.huid}</span>}
+                      </td>
+                      <td className="font-mono text-slate-500">{item.hsnCode || '7113'}</td>
                       <td className="text-right font-mono">{item.netWeight.toFixed(2)} g</td>
                       <td className="text-right font-mono">₹{item.goldPrice ? Math.round(item.goldPrice / item.netWeight).toLocaleString('en-IN') : '-'}</td>
                       <td className="text-right font-mono">₹{(item.wastageValue + item.makingCharge + item.stoneCharge).toLocaleString('en-IN')}</td>
@@ -1403,6 +1413,39 @@ export default function BillingEstimator({
                         />
                       </div>
                     </div>
+
+                    {/* HUID. A catalogue line shows the Tag's, read-only — it is assigned by the AHC
+                        (Milestone 24) and must never be editable at the till. A custom line has no
+                        tag, so it records its own; without this the sale guard could be bypassed
+                        simply by typing the piece in rather than scanning it (Milestone 25). */}
+                    {(() => {
+                      const lineTag = item.itemId ? tags.find(t => t.id === item.itemId) : null;
+                      const offending = hallmarkViolations.some(v => v.lineIndex === index);
+                      return (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div>
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                              BIS HUID {lineTag ? '(from tag)' : '(custom line)'}
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={6}
+                              readOnly={!!lineTag}
+                              placeholder={lineTag ? 'Not hallmarked' : 'A1B2C3'}
+                              className={`w-full text-xs font-mono uppercase px-2.5 py-1.5 border rounded-md focus:outline-none focus:border-amber-500 ${
+                                lineTag
+                                  ? 'bg-slate-50 text-slate-500 border-slate-200 cursor-not-allowed'
+                                  : offending
+                                    ? 'bg-white border-rose-400'
+                                    : 'bg-white border-slate-200'
+                              }`}
+                              value={(lineTag ? lineTag.huid : item.huid) || ''}
+                              onChange={(e) => updateItemField(index, 'huid', e.target.value.toUpperCase())}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Bottom Row: Computed breakdown */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -2524,7 +2567,11 @@ export default function BillingEstimator({
                           <p className="font-bold text-slate-900">{item.name}</p>
                           {item.sku && <p className="text-[10px] text-slate-400 font-mono">SKU: {item.sku}</p>}
                         </td>
-                        <td className="font-mono text-slate-500">{item.metalType}</td>
+                        <td className="font-mono text-slate-500">
+                          {item.metalType}
+                          {/* Rule 46 / PRD §9.3: the HUID must appear against each hallmarked piece */}
+                          {item.huid && <span className="block text-[9px] text-slate-400">HUID: {item.huid}</span>}
+                        </td>
                         <td className="font-mono text-slate-500">{item.hsnCode || '7113'}</td>
                         <td className="text-right font-mono">{item.netWeight.toFixed(2)} g</td>
                         <td className="text-right font-mono">₹{item.goldPrice ? Math.round(item.goldPrice / item.netWeight).toLocaleString('en-IN') : '-'}</td>

@@ -139,9 +139,14 @@ export interface HallmarkViolation {
  * Checks a whole bill. Returns every violation rather than the first, so an operator fixes one
  * trip to the hallmarking centre instead of discovering the pieces one at a time.
  *
- * Manually-typed lines with no `itemId` are not checked: they carry no tag, so there is nothing
- * to hallmark and no HUID to look up. That is a deliberate gap and it is why the ad-hoc billing
- * path stays a compliance risk until custom lines are modelled properly.
+ * **Manually-typed "custom item" lines are checked too**, from the line's own typed fields. They
+ * carry no tag, but they are one button click away on the billing desk and default to Gold (22K)
+ * — so exempting them would leave the whole guard bypassable by anyone who typed the piece in
+ * rather than scanning it. A custom line can record its own HUID for exactly this reason.
+ *
+ * A custom line has no category, so the "not an article of jewellery" exemption cannot apply to
+ * it. That is deliberate and matches how a missing weight is treated: absent data must never be
+ * read as a qualifying value.
  */
 export function findHallmarkViolations(
   lines: Partial<InvoiceItem>[],
@@ -151,24 +156,39 @@ export function findHallmarkViolations(
   const violations: HallmarkViolation[] = [];
 
   lines.forEach((line, lineIndex) => {
-    if (!line.itemId) return;
-    const tag = tags.find(t => t.id === line.itemId);
-    if (!tag) return;
+    const tag = line.itemId ? tags.find(t => t.id === line.itemId) : undefined;
 
-    const result = assessHallmarkCompliance(
-      {
-        metalType: tag.metalType,
-        category: tag.category,
-        netWeight: tag.netWeight,
-        huid: tag.huid,
-        sku: tag.sku,
-        name: tag.name,
-      },
-      policy
-    );
+    // A catalogue line takes the tag as authoritative; a custom line is judged on what was typed.
+    const subject: HallmarkSubject = tag
+      ? {
+          metalType: tag.metalType,
+          category: tag.category,
+          netWeight: tag.netWeight,
+          huid: tag.huid,
+          sku: tag.sku,
+          name: tag.name,
+        }
+      : {
+          metalType: line.metalType,
+          netWeight: line.netWeight,
+          huid: line.huid,
+          sku: line.sku,
+          name: line.name,
+        };
+
+    // An empty row the operator has not filled in yet is not a violation.
+    if (!tag && !line.name?.trim() && !Number(line.netWeight)) return;
+    // A line pointing at a tag that no longer exists cannot be assessed.
+    if (line.itemId && !tag) return;
+
+    const result = assessHallmarkCompliance(subject, policy);
 
     if (!result.compliant && result.message) {
-      violations.push({ lineIndex, sku: tag.sku, message: result.message });
+      violations.push({
+        lineIndex,
+        sku: tag?.sku || line.name?.trim() || `Line ${lineIndex + 1}`,
+        message: result.message,
+      });
     }
   });
 

@@ -267,6 +267,13 @@ export interface InvoiceItem {
   // written before M21 still parse; those fall back to the composite jewellery rate.
   hsnCode?: string;
   gstRatePercent?: number; // the rate in force on the invoice date, captured at billing time
+
+  /**
+   * Milestone 25 — the HUID printed against this line (PRD §9.3 requires it per hallmarked
+   * piece). A catalogue line inherits it from the Tag; a manually-typed custom line records
+   * its own, which is what stops the sale guard being bypassed by typing a piece in.
+   */
+  huid?: string;
 }
 
 /**

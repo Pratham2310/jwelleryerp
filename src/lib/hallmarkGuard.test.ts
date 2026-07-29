@@ -132,9 +132,45 @@ describe('findHallmarkViolations across a bill', () => {
     expect(findHallmarkViolations([line('g2'), line('s1')], tags)).toEqual([]);
   });
 
-  it('skips manually-typed lines that carry no tag', () => {
-    // A custom line has nothing to hallmark and no HUID to look up.
-    expect(findHallmarkViolations([line(undefined), { name: 'Custom bangle' }], tags)).toEqual([]);
+  it('CHECKS a manually-typed custom line — the guard must not be bypassable by typing', () => {
+    // "Add Custom Item Row" is one click away on the billing desk and defaults to Gold (22K).
+    // If custom lines were skipped, the entire guard could be sidestepped by typing the piece
+    // in rather than scanning it.
+    const v = findHallmarkViolations(
+      [{ name: 'Custom bangle', metalType: 'Gold (22K)', netWeight: 30 }],
+      tags
+    );
+    expect(v).toHaveLength(1);
+    expect(v[0].sku).toBe('Custom bangle');
+    expect(v[0].message).toMatch(/requires a BIS HUID/i);
+  });
+
+  it('accepts a custom line that records its own HUID', () => {
+    expect(findHallmarkViolations(
+      [{ name: 'Custom bangle', metalType: 'Gold (22K)', netWeight: 30, huid: 'ZZ9999' }],
+      tags
+    )).toEqual([]);
+  });
+
+  it('applies the metal and weight exemptions to a custom line too', () => {
+    expect(findHallmarkViolations(
+      [{ name: 'Silver anklet', metalType: 'Silver (999)', netWeight: 30 }],
+      tags
+    )).toEqual([]);
+    expect(findHallmarkViolations(
+      [{ name: 'Tiny gold charm', metalType: 'Gold (22K)', netWeight: 1 }],
+      tags
+    )).toEqual([]);
+  });
+
+  it('ignores an untouched empty row', () => {
+    // A blank row the operator has not filled in yet is not a compliance failure.
+    expect(findHallmarkViolations([line(undefined), {}], tags)).toEqual([]);
+  });
+
+  it('falls back to a line number when a custom line has no name yet', () => {
+    const v = findHallmarkViolations([{ metalType: 'Gold (22K)', netWeight: 30 }], tags);
+    expect(v[0].sku).toBe('Line 1');
   });
 
   it('skips a line whose tag no longer exists rather than crashing', () => {
