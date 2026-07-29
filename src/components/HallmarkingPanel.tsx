@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { BadgeCheck, Plus, X, Send, PackageCheck, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import type { Tag, HallmarkBatch, HallmarkResult, Branch } from '../types';
+import type { Tag, HallmarkBatch, HallmarkResult, Branch, HallmarkPolicy } from '../types';
+import { EXEMPTION_LABEL, validateHallmarkPolicy } from '../lib/hallmarkGuard';
 import { canTransition } from '../lib/tagStateMachine';
 import {
   nextBatchNumber,
@@ -21,6 +22,9 @@ interface HallmarkingPanelProps {
   batches: HallmarkBatch[];
   setBatches: React.Dispatch<React.SetStateAction<HallmarkBatch[]>>;
   activeBranch: Branch | null;
+  /** Non-hallmarked sale guard policy (Milestone 25, PRD §11.3). */
+  policy: HallmarkPolicy;
+  setPolicy: React.Dispatch<React.SetStateAction<HallmarkPolicy>>;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -31,7 +35,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function HallmarkingPanel({
-  tags, setTags, batches, setBatches, activeBranch,
+  tags, setTags, batches, setBatches, activeBranch, policy, setPolicy,
 }: HallmarkingPanelProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -40,6 +44,8 @@ export default function HallmarkingPanel({
   const [ahcName, setAhcName] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [dispatchError, setDispatchError] = useState('');
+
+  const [policyError, setPolicyError] = useState('');
 
   const [receivingBatch, setReceivingBatch] = useState<HallmarkBatch | null>(null);
   const [draftResults, setDraftResults] = useState<Record<string, HallmarkResult>>({});
@@ -171,6 +177,77 @@ export default function HallmarkingPanel({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Sale guard policy (Milestone 25, PRD §11.3 — "configurable hard-block vs warning") */}
+      <div className={`p-5 rounded-2xl border shadow-sm ${cardCls}`}>
+        <p className="text-xs font-bold">Non-Hallmarked Sale Guard</p>
+        <p className={`text-[11px] mt-0.5 mb-3 ${mutedCls}`}>
+          Mandatory hallmarking has genuine carve-outs, so this is configurable rather than
+          absolute — an unconditional block would stop legitimate sales. Violations are recorded
+          in every mode; only the till behaviour changes.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className={`inline-flex rounded-lg border overflow-hidden ${dark ? 'border-zinc-800' : 'border-slate-200'}`}>
+            {([
+              { m: 'BLOCK', label: 'Block sale' },
+              { m: 'WARN', label: 'Warn only' },
+              { m: 'OFF', label: 'Off' },
+            ] as const).map(({ m, label }) => (
+              <button
+                key={m}
+                onClick={() => { setPolicy(p => ({ ...p, enforcement: m })); setPolicyError(''); }}
+                className={`px-3 py-1.5 text-[11px] font-bold transition ${
+                  policy.enforcement === m
+                    ? m === 'BLOCK' ? 'bg-rose-500 text-white'
+                      : m === 'WARN' ? 'bg-[#C5A059] text-[#0A0A0B]'
+                      : 'bg-slate-500 text-white'
+                    : dark ? 'text-zinc-400 hover:bg-zinc-900' : 'text-slate-500 hover:bg-slate-50'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <label className="flex items-center gap-2">
+            <span className={`text-[10px] uppercase font-mono font-bold tracking-wider ${mutedCls}`}>Min weight (g)</span>
+            <input
+              type="number"
+              step="0.1"
+              value={policy.minimumWeightGrams}
+              onChange={e => {
+                const next = { ...policy, minimumWeightGrams: Number(e.target.value) };
+                const err = validateHallmarkPolicy(next);
+                setPolicyError(err || '');
+                if (!err) setPolicy(next);
+              }}
+              className={`w-20 text-xs font-mono px-2 py-1.5 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`}
+            />
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={policy.shopExemptByTurnover}
+              onChange={e => setPolicy(p => ({ ...p, shopExemptByTurnover: e.target.checked }))}
+              className="accent-amber-500"
+            />
+            <span className={`text-[11px] ${dark ? 'text-zinc-300' : 'text-slate-600'}`}>
+              Shop below notified turnover (exempt entirely)
+            </span>
+          </label>
+        </div>
+
+        {policyError && (
+          <p className="mt-2 text-[11px] font-bold text-rose-500">{policyError}</p>
+        )}
+
+        <p className={`text-[10px] mt-3 ${mutedCls}`}>
+          Always exempt: {policy.exemptMetals.join(', ')} ({EXEMPTION_LABEL.METAL_NOT_COVERED.toLowerCase()});
+          {' '}{policy.exemptCategories.join(', ')} ({EXEMPTION_LABEL.CATEGORY_NOT_JEWELLERY.toLowerCase()}).
+        </p>
       </div>
 
       {/* Dispatch register */}

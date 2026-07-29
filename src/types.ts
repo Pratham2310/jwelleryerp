@@ -459,6 +459,26 @@ export interface MetalRate {
 }
 
 /**
+ * Non-hallmarked sale guard policy (PRD §11.3, Milestone 25).
+ *
+ * PRD §11.3 requires this be "configurable hard-block vs warning, since exemptions exist" —
+ * mandatory hallmarking has real carve-outs, and an unconditional block would stop legitimate
+ * sales. `enforcement` decides what happens when a violation is found; it never decides whether
+ * one *is* found, so a shop running in WARN mode still reports its exposure accurately.
+ */
+export interface HallmarkPolicy {
+  enforcement: 'BLOCK' | 'WARN' | 'OFF';
+  /** Articles below this weight are exempt (commonly 2g). */
+  minimumWeightGrams: number;
+  /** Mandatory hallmarking is a gold regime; silver is voluntary, platinum separate. */
+  exemptMetals: string[];
+  /** Bullion and coins are not "articles of jewellery". */
+  exemptCategories: string[];
+  /** A shop below the notified annual turnover is exempt entirely. */
+  shopExemptByTurnover: boolean;
+}
+
+/**
  * BIS Hallmarking / AHC dispatch register (PRD §11, Milestone 24).
  *
  * A batch is the unit the shop physically ships to an Assaying & Hallmarking Centre. The AHC

@@ -18,9 +18,10 @@ import {
   Calendar,
   Users,
   Sparkles,
-  X
+  X,
+  ShieldAlert
 } from 'lucide-react';
-import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch, TaxRate, ItemDesign } from '../types';
+import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch, TaxRate, ItemDesign, HallmarkPolicy } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 import { isSellable, canTransition } from '../lib/tagStateMachine';
@@ -31,6 +32,7 @@ import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRID
 import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
 import TaxMasterPanel from './TaxMasterPanel';
 import GstReturnsPanel from './GstReturnsPanel';
+import { findHallmarkViolations, applyHallmarkGate } from '../lib/hallmarkGuard';
 import {
   isEInvoiceApplicable,
   submitForIrn,
@@ -61,6 +63,8 @@ interface BillingEstimatorProps {
   setTaxRates: React.Dispatch<React.SetStateAction<TaxRate[]>>;
   /** Supplies each line's authoritative HSN classification. */
   itemDesigns: ItemDesign[];
+  /** Non-hallmarked sale guard policy (Milestone 25, PRD §11.3). */
+  hallmarkPolicy: HallmarkPolicy;
 }
 
 // NOTE: the old shop-wide `nextInvoiceNumber()` was removed in Milestone 19. GST Rule 46
@@ -191,7 +195,8 @@ export default function BillingEstimator({
   activeBranch,
   taxRates,
   setTaxRates,
-  itemDesigns
+  itemDesigns,
+  hallmarkPolicy
 }: BillingEstimatorProps) {
   // Available stock in showroom — only Tags in a legally sellable lifecycle state (Milestone 4)
   const availableStock = tags.filter(i => isSellable(i.status));
@@ -402,6 +407,14 @@ export default function BillingEstimator({
   } = calculateInvoiceTotals(lineSubtotals, discount, { ratePercent: gstRatePercent, supplyType });
 
   const taxLineLabels = gstComponentLabels(gstRatePercent, supplyType);
+
+  /**
+   * Non-hallmarked sale guard (Milestone 25, PRD §11.3). Computed live so the operator sees the
+   * problem while building the bill rather than at the till. Violations are detected regardless
+   * of enforcement mode — only the consequence changes.
+   */
+  const hallmarkViolations = findHallmarkViolations(billingItems, tags, hallmarkPolicy);
+  const hallmarkGate = applyHallmarkGate(hallmarkViolations, hallmarkPolicy);
   const oldGoldValue = Math.round(oldGoldWeight * oldGoldRate);
   const netAmountDue = settleOldGold(invoiceTotal, oldGoldValue);
   const finalGrandTotal = netAmountDue; // actual amount collected from the customer, after old-gold settlement
@@ -465,6 +478,15 @@ export default function BillingEstimator({
 
     if (filledItems.length === 0) {
       setValidationError("Please add at least one item with a valid name or weight.");
+      return;
+    }
+
+    // Non-hallmarked sale guard (Milestone 25, PRD §11.3). Checked BEFORE the PAN/tender gates:
+    // if a piece legally cannot be sold at all, there is no point collecting a PAN or a payment
+    // for it. An ESTIMATE is a quotation, not a supply, so it is quoted freely — the guard
+    // re-applies when that estimate is converted into a real tax invoice.
+    if (!isEstimate && hallmarkGate.blocked) {
+      setValidationError(hallmarkGate.message);
       return;
     }
 
@@ -1513,6 +1535,28 @@ export default function BillingEstimator({
                   <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 leading-snug">
                     Non-fiscal quotation — no invoice number is consumed, no stock is deducted, and no payment is collected. Convert it from the registry when the customer commits.
                   </p>
+                )}
+
+                {/* Non-hallmarked sale guard (Milestone 25, PRD §11.3). Surfaced while the bill is
+                    being built, not at the till — and on an estimate too, as a heads-up that the
+                    piece cannot be converted until it is hallmarked. */}
+                {hallmarkViolations.length > 0 && hallmarkPolicy.enforcement !== 'OFF' && (
+                  <div className={`text-[10px] rounded-lg px-2.5 py-2 leading-snug border space-y-1 ${
+                    hallmarkGate.blocked
+                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400'
+                      : 'bg-amber-500/10 border-amber-500/30 text-[#8C6D34] dark:text-[#C5A059]'
+                  }`}>
+                    <p className="font-bold flex items-center gap-1">
+                      <ShieldAlert className="w-3 h-3 shrink-0" />
+                      {hallmarkGate.blocked ? 'Cannot be billed — BIS HUID missing' : 'Compliance warning — BIS HUID missing'}
+                    </p>
+                    {hallmarkViolations.map(v => (
+                      <p key={v.lineIndex}>{v.message}</p>
+                    ))}
+                    {isEstimate && (
+                      <p className="italic opacity-80">Quoting is allowed; this must be resolved before the estimate can be converted.</p>
+                    )}
+                  </div>
                 )}
               </div>
 

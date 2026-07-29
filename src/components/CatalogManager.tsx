@@ -25,7 +25,7 @@ import { ALL_TAG_STATUSES, TAG_STATUS_LABEL, canTransition, nextLegalStatuses, t
 import { TagBarcode, TagQRCode } from './ui/TagCode';
 import StockAuditPanel from './StockAuditPanel';
 import StockTransferPanel from './StockTransferPanel';
-import type { StockTransfer, Branch, MetalRate, HallmarkBatch } from '../types';
+import type { StockTransfer, Branch, MetalRate, HallmarkBatch, HallmarkPolicy } from '../types';
 import HallmarkingPanel from './HallmarkingPanel';
 
 interface CatalogManagerProps {
@@ -45,6 +45,8 @@ interface CatalogManagerProps {
   /** AHC dispatch register (Milestone 24). */
   hallmarkBatches: HallmarkBatch[];
   setHallmarkBatches: React.Dispatch<React.SetStateAction<HallmarkBatch[]>>;
+  hallmarkPolicy: HallmarkPolicy;
+  setHallmarkPolicy: React.Dispatch<React.SetStateAction<HallmarkPolicy>>;
 }
 
 const CATEGORIES: ItemCategory[] = ['Rings', 'Necklaces', 'Earrings', 'Bangles', 'Bracelets', 'Chains', 'Coins'];
@@ -76,7 +78,9 @@ export default function CatalogManager({
   activeBranch,
   metalRates,
   hallmarkBatches,
-  setHallmarkBatches
+  setHallmarkBatches,
+  hallmarkPolicy,
+  setHallmarkPolicy
 }: CatalogManagerProps) {
   const { theme } = useTheme();
 
@@ -368,6 +372,8 @@ export default function CatalogManager({
           batches={hallmarkBatches}
           setBatches={setHallmarkBatches}
           activeBranch={activeBranch}
+          policy={hallmarkPolicy}
+          setPolicy={setHallmarkPolicy}
         />
       ) : activeTab === 'transfers' ? (
         <StockTransferPanel

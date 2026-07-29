@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
+import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
 
 // Custom layouts & Auth pages
 import Sidebar from './components/Sidebar';
@@ -136,6 +137,14 @@ function AppContent() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Non-hallmarked sale guard policy (Milestone 25). PRD §11.3 requires this be configurable
+  // rather than absolute, because mandatory hallmarking has genuine exemptions.
+  const [hallmarkPolicy, setHallmarkPolicy] = useState<HallmarkPolicy>(() => {
+    const saved = localStorage.getItem('stitch_hallmark_policy');
+    // Merge over the default so a policy saved before a new field was added still loads.
+    return saved ? { ...DEFAULT_HALLMARK_POLICY, ...JSON.parse(saved) } : DEFAULT_HALLMARK_POLICY;
+  });
+
   // Inter-branch stock transfers (Milestone 20). Deliberately NOT branch-scoped: a transfer
   // belongs to two branches at once, and the destination must be able to see it arriving.
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
@@ -215,6 +224,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_hallmark_batches', JSON.stringify(hallmarkBatches));
   }, [hallmarkBatches]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_hallmark_policy', JSON.stringify(hallmarkPolicy));
+  }, [hallmarkPolicy]);
 
   useEffect(() => {
     if (activeBranchId) localStorage.setItem('stitch_active_branch', activeBranchId);
@@ -456,6 +469,8 @@ function AppContent() {
                     metalRates={projectedRates}
                     hallmarkBatches={hallmarkBatches}
                     setHallmarkBatches={setHallmarkBatches}
+                    hallmarkPolicy={hallmarkPolicy}
+                    setHallmarkPolicy={setHallmarkPolicy}
                   />
                 }
               />
@@ -484,6 +499,7 @@ function AppContent() {
                     taxRates={taxRates}
                     setTaxRates={setTaxRates}
                     itemDesigns={itemDesigns}
+                    hallmarkPolicy={hallmarkPolicy}
                   />
                 }
               />
