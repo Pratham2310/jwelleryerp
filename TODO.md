@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-29 — **Milestones 1–23 and 48 complete; Phases 1–7 all done** (see `CHANGELOG.md`). **M48 (Rate Master) was pulled forward out of Phase 15 and is now done**, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Milestone 24 (BIS Hallmarking & HUID assignment) is next. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-29 — **Milestones 1–24 and 48 complete; Phases 1–7 all done, Phase 8 started** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Milestone 25 (non-hallmarked sale guard) is next, and its dependency is now satisfied since M24 supplies real HUIDs. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -390,12 +390,13 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ## 🏁 Phase 8: Hallmarking & Gold Savings Schemes (Milestones 24 – 27)
 
-### 📍 Milestone 24: AHC Dispatch & HUID Assignment
+### ✅ Milestone 24: AHC Dispatch & HUID Assignment
 - **Goal:** Real hallmarking dispatch/receive workflow assigning a genuine, unique HUID per tag.
 - **Dependencies:** Milestone 4 (needs the `PendingHallmark`/`Hallmarked` states from the Tag state machine).
 - **Tasks:**
   1. Build an AHC dispatch/receive batch UI: select `Tag[]` in `PendingHallmark`, dispatch, then receive assigns a 6-char `huid` (validated globally unique against all existing tags) and transitions to `Hallmarked`.
 - **Testable via:** Assigning a HUID that collides with an existing one is rejected; a successfully hallmarked tag shows its real HUID (replacing the current hardcoded mock string) in Catalog.
+- **Done:** `src/lib/hallmarking.ts` + a fifth Catalog tab. Uniqueness is enforced **globally across every tag** and *separately* within the batch being received — two pieces received together are not persisted yet, so a tag-level check alone would miss that collision. The AHC's **certified purity** is captured and compared to the declared fineness: a shortfall beyond measurement tolerance is flagged for karigar accountability (PRD §11.3), while over-delivery is reported but not treated as an integrity question, since conflating the two would bury the one that matters. **Required a state-machine edge**: `PendingHallmark` could only reach `Hallmarked` or `DamagedOrMelted`, so a failed piece had nowhere to go but the melting pot; it now returns to `ReceivedFromKarigar` for rework and can be re-submitted.
 
 ### 📍 Milestone 25: Non-Hallmarked Sale Prevention Guard
 - **Goal:** Block billing of un-hallmarked gold items above the exemption threshold (PRD §11.4).

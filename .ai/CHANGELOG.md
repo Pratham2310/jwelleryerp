@@ -4,6 +4,29 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-29 — Milestone 24: AHC Dispatch Register & HUID Assignment
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+HUID is a **legal** requirement, not a nicety: gold jewellery sold in India above the exemption thresholds must carry a BIS Hallmark and a unique 6-character HUID allotted by an Assaying & Hallmarking Centre. `Tag.huid` already existed and printed on the invoice, but nothing populated it except someone typing a string — there was no dispatch register, no uniqueness enforcement, and no record of what purity the AHC actually certified.
+
+Batches now run `Draft → AtAHC → Received | PartiallyReceived`, surfaced as a fifth Catalog tab, with a per-piece outcome recorded on receipt.
+
+**Two rules carry the weight here.**
+
+A HUID is unique to one physical piece and **can never be reused** (PRD §11.1). Uniqueness is therefore checked globally across every tag — and *separately* within the batch being received, because two pieces received together are not persisted yet and a tag-level check alone would miss that collision. Reuse is what a substituted or diverted piece looks like in the data, so this is worth catching twice.
+
+A failed assay is an **accountability event, not a clerical one** (PRD §11.3). The AHC certifies actual fineness, which can come back below what the piece was declared as — meaning the shop was about to sell under-karat gold and the karigar who made it owes an explanation. A shortfall beyond measurement tolerance is surfaced on the receipt form as it is typed and again as a standing banner. Over-delivery is reported too, but deliberately *not* treated as an integrity question: it is a margin leak (the shop gave away metal it did not charge for), and conflating the two would bury the one that matters.
+
+**A missing state-machine edge had to be added.** `PendingHallmark` could only reach `Hallmarked` or `DamagedOrMelted`, so a piece that failed the purity test had nowhere legal to go except the melting pot — which would have destroyed both a rectifiable ornament and the evidence of the shortfall. It now returns to `ReceivedFromKarigar` for rework and can be re-submitted for hallmarking. It still cannot reach sellable stock directly from the AHC.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **468 tests passing across 20 suites** (up from 423); `npm run build` clean. Playwright-verified end to end: dispatch requires an AHC name and at least one piece; a malformed HUID, one colliding with an existing tag, and two identical HUIDs inside one batch are each rejected with the offending piece named; a failure recorded with no reason is refused; a 3-point purity shortfall warns live as it is typed; and on confirmation the passed pieces become `Hallmarked` carrying their HUIDs while the failed piece returns as `ReceivedFromKarigar` with none. Regression across 8 screens × 2 themes, all 5 Catalog tabs × 2 themes, and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+**Still open:** a piece with no HUID can still be billed. The non-hallmarked sale guard is Milestone 25, which this unblocks.
+
+---
+
 ## 2026-07-29 — Milestone 48 (pulled forward): Metal Rate Master & Append-Only History
 
 **Author:** AI agent (Claude Code), pair programming with USER.
