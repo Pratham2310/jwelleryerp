@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-29 — **Milestones 1–23 complete; Phases 1–7 all done** (see `CHANGELOG.md`). Milestone 24 (BIS Hallmarking & HUID assignment) is next. See the Sequencing Note below — M48 (Rate Master) still warrants pulling forward, as decision **D-4** (append-only rate history) remains violated for *metal* rates; note the Tax Master built in M21 already follows that pattern and is a working reference for it. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-29 — **Milestones 1–23 and 48 complete; Phases 1–7 all done** (see `CHANGELOG.md`). **M48 (Rate Master) was pulled forward out of Phase 15 and is now done**, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Milestone 24 (BIS Hallmarking & HUID assignment) is next. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -612,7 +612,7 @@ three statutory financial statements, which were never scheduled._
 
 ## 🏁 Phase 15: Masters & Admin Depth (Milestones 48 – 53)
 
-### 📍 Milestone 48: Rate Master Screen & Append-Only Rate History
+### ✅ Milestone 48: Rate Master Screen & Append-Only Rate History — done 2026-07-29, pulled forward
 - **Goal:** A real Rate Master with versioned history, replacing the Dashboard's in-place inline edit.
 - **Dependencies:** None beyond Milestone 1. **The current inline-edit behaviour violates decision D-4, so this is higher priority than its number suggests.**
 - **Tasks:**
@@ -620,6 +620,7 @@ three statutory financial statements, which were never scheduled._
   2. Rate Master screen: current rate per metal/purity, full history, and a fat-finger guard requiring confirmation when a new rate deviates >2–5% from the previous one (PRD §4.2).
   3. Auto-derive 22K/18K from the 24K base rate, with a manual per-purity override.
 - **Testable via:** Editing a rate creates a new version rather than overwriting; an old invoice still resolves the rate version it was billed at; a 20% rate jump is blocked pending confirmation.
+- **Done:** `src/lib/rateMaster.ts` + rate history on the Dashboard rate cards. `effectiveFrom` is a full **timestamp**, not a date, because gold moves intraday and same-day rates must still order deterministically. The fat-finger guard sits at **5%** — the outer bound of PRD §4.2's 2–5% range, deliberately, because gold genuinely moves a few percent daily and a tighter default would train staff to click through the warning. Past it a written reason is mandatory; beyond 50% the message names a misplaced decimal point specifically. It never hard-blocks: a real spike must remain recordable. `MetalRate` is now **projected** from the versions (same pattern as M16's derived karigar balances), so every existing screen consumes it unchanged, and `history24h` — previously a decorative array — is now the real recorded versions. Purity derivation from the 24K base is a **suggestion, never applied**: a shop's counter rate absorbs local premium (seed is 7250/6650 where derivation gives 6648), so overwriting it with arithmetic would change what customers are charged.
 
 ### 📍 Milestone 49: User Management
 - **Goal:** Create/edit/deactivate operator accounts — distinct from *defining* roles (Milestone 32).

@@ -4,6 +4,33 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-29 — Milestone 48 (pulled forward): Metal Rate Master & Append-Only History
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+Built out of roadmap order, ahead of Phase 8, because it replaced a **live defect** rather than adding a missing feature — `TODO.md`'s own dependency line already said so: *"the current inline-edit behaviour violates decision D-4, so this is higher priority than its number suggests."*
+
+The Dashboard let anyone overwrite `MetalRate.ratePerGram` in place, and that one field drives metal value on every invoice line, old-gold buyback valuation, and stock-transfer declared value (and therefore the e-Way Bill threshold). Three things were wrong simultaneously:
+
+1. **No history.** "Why was this bill priced at ₹6,650/g?" became unanswerable the moment the rate moved — which is precisely what a disputed invoice or an audit asks for.
+2. **No sanity check.** Any positive number was accepted, so typing `66500` instead of `6650` silently mispriced every subsequent sale until a human noticed. PRD §4.2 requires a deviation guard; there was none.
+3. **D-4 violated.** The Rate Master is specified as append-only/event-sourced and was being `UPDATE`d. The Tax Master built in M21 already did this correctly for tax rates, so this brings metal rates into line and makes the pattern consistent across both masters. **This closes the last standing D-4 violation.**
+
+Rates are now append-only `MetalRateVersion` rows. `effectiveFrom` is a full **timestamp** rather than a date, because gold moves intraday and two rates on the same day must still order deterministically — `resolveRateAt()` returns the rate live at any given instant, so an old invoice resolves what it was actually billed at instead of today's figure.
+
+The fat-finger guard sits at **5%**, the outer bound of PRD §4.2's "2–5%" range, and that choice is deliberate: gold genuinely moves a few percent in a day, so a tighter default would cry wolf on real movements and train counter staff to click through the warning — worse than having no warning. Beyond the threshold a written reason is mandatory; beyond 50% the message names a misplaced decimal point specifically. It is never a **hard** block, because a real spike can happen and the shop must still be able to trade.
+
+`MetalRate` is now **projected** from the version history rather than edited directly, mirroring how Milestone 16 made karigar balances derived rather than stored, so every existing screen consumes it unchanged. One consequence worth recording: `history24h` was previously a decorative array that shifted a value in on each edit, and is now the real recorded versions — the sparkline finally shows actual movement. Shops predating this milestone have their existing sparkline points reconstructed into an opening trail, marked `MIGRATED` so a reconstructed timestamp is never mistaken for a genuinely recorded one.
+
+Purity derivation from the 24K base (PRD §4.2) is offered as a **suggestion, never applied**. A shop's 22K counter rate is not exactly 91.6% of its 24K rate — the seed data is 7250 and 6650 where strict derivation gives 6648 — because the quoted rate absorbs local premium and rounding. Silently overwriting a deliberately-set counter rate with arithmetic would change what customers are charged.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **423 tests passing across 19 suites** (up from 383); `npm run build` clean. Playwright-verified: a normal move records with no ceremony; `67000` entered against `6700` warns about a decimal point and is refused without a reason, leaving the rate untouched; a 7.46% move is accepted with one; a no-op that would clutter the audit trail is refused; and the history retains all ten versions including superseded rates, the recorded reason, and the migrated opening row. Regression across 8 screens × 2 themes and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+**Still open on this module:** a rate change records a reason but requires no second person to approve it. Maker-checker depends on RBAC (M32/M45).
+
+---
+
 ## 2026-07-29 — Phase 7 Complete: Milestones 21–23 (GST Compliance)
 
 **Author:** AI agent (Claude Code), pair programming with USER.
