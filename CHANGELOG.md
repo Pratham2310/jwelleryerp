@@ -4,6 +4,31 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-29 — Milestones 26–27: Gold Savings Scheme Master, Enrolment & Passbook
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+Replaces the single hardcoded "Swarna Nidhi" — three loose fields on `Customer` with a mutable balance that billing decremented directly — with a real scheme master, enrolments, instalment receipts and a printable passbook. Two seeded schemes now differ deliberately (11-month fixed with a free instalment; 18-month flexible with an 8% bonus) so both bonus types are exercised.
+
+**Balances are DERIVED, never stored.** They fold from the append-only instalment receipts, the same as karigar balances (M16) and metal rates (M48). A stored balance cannot answer *"which instalments make this up"*, which is precisely what a customer disputing their passbook asks — and PRD §12.4 calls the total a balance-sheet figure, so it should not be a number anyone can edit.
+
+**The maturity bonus accrues only when the scheme has matured AND the tenure was paid in full.** Crediting it earlier would overstate both the customer's balance and the shop's liability, and would let someone collect the shop's contribution by paying a single instalment and waiting for the maturity date. Redemption is gated on the same condition, and the block reason names either the maturity date or the count of unpaid instalments rather than just refusing.
+
+Dues are counted from the **start date** rather than from the last payment, so a customer who stopped in month 3 of 11 reads as 8 missed rather than merely idle. That is what drives the collection-overdue figure (PRD §12.4).
+
+The `EXTRA_INSTALMENT` bonus ("pay 11, get the 12th free") is computed from the **enrolled** instalment amount rather than from what was actually paid, because that is what the customer was promised at enrolment.
+
+**There is deliberately no cash-out function anywhere in this module.** Under the Banning of Unregulated Deposit Schemes Act 2019, these collections are advances against future goods; refunding them as cash would make them deposits, which an unregistered shop cannot lawfully accept (Handbook §1.6.1 / D-11). Premature closure forfeits the bonus, deducts the configured penalty, and returns the residue as *jewellery credit*. The reason is stated on the panel and on every printed passbook rather than left implicit — that absence is intentional, and a future contributor should not read it as a missing feature. The notice is a single shared constant so every surface words it identically.
+
+The passbook shows the shop's bonus as **its own final row** rather than folded into the last instalment, because that contribution is the scheme's whole selling point and the customer needs to see it stated separately.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **556 tests passing across 22 suites** (up from 501); `npm run build` clean. Playwright-verified: the seeded liability of ₹52,000 and overdue collections of ₹28,000 both tie to the underlying receipts; a duplicate scheme code, a bonus exceeding the tenure, and a second live enrolment in the same scheme are each rejected; a newly created 6-month ₹4,000 scheme accrues independently of the original 11+1 (the milestone's own acceptance criterion); a fixed instalment is read-only at the counter; and the passbook runs ₹5,000 through ₹30,000 with the early-exit maths and the statutory notice on it. Regression across 8 screens × 2 themes, both Customer tabs × 2 themes, and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+**Follow-up, recorded not hidden:** scheme redemption at billing still debits the legacy `Customer.savingsSchemeBalance` rather than a specific enrollment. Both work, but they are two books; wiring redemption to consume a matured enrollment is the natural next step for this module.
+
+---
+
 ## 2026-07-29 — Milestone 25: Non-Hallmarked Sale Prevention Guard
 
 **Author:** AI agent (Claude Code), pair programming with USER.
