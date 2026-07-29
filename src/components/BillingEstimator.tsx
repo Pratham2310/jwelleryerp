@@ -30,6 +30,7 @@ import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD,
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
 import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
 import TaxMasterPanel from './TaxMasterPanel';
+import GstReturnsPanel from './GstReturnsPanel';
 import {
   isEInvoiceApplicable,
   submitForIrn,
@@ -198,7 +199,7 @@ export default function BillingEstimator({
   const { theme } = useTheme();
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'create' | 'registry' | 'taxmaster'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'registry' | 'taxmaster' | 'returns'>('create');
 
   // Sync tab with URL parameter
   useEffect(() => {
@@ -207,6 +208,8 @@ export default function BillingEstimator({
       setActiveTab('registry');
     } else if (params.get('tab') === 'tax') {
       setActiveTab('taxmaster');
+    } else if (params.get('tab') === 'returns') {
+      setActiveTab('returns');
     }
   }, [window.location.search]);
 
@@ -942,6 +945,22 @@ export default function BillingEstimator({
           >
             Tax Master (HSN)
             {activeTab === 'taxmaster' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('returns');
+              window.history.replaceState({}, '', '/billing?tab=returns');
+            }}
+            className={`pb-3 text-sm font-bold transition relative cursor-pointer ${
+              activeTab === 'returns'
+                ? 'text-amber-500'
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            GST Returns
+            {activeTab === 'returns' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />
             )}
           </button>
@@ -1872,6 +1891,13 @@ export default function BillingEstimator({
         </div>
       ) : activeTab === 'taxmaster' ? (
         <TaxMasterPanel taxRates={taxRates} setTaxRates={setTaxRates} />
+      ) : activeTab === 'returns' ? (
+        <GstReturnsPanel
+          invoices={invoices}
+          customers={customers}
+          activeBranch={activeBranch}
+          taxRates={taxRates}
+        />
       ) : (
         /* SALES INVOICE REGISTRY & HISTORY TAB */
         <div className="space-y-6">
