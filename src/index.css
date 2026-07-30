@@ -268,7 +268,7 @@ html.light,
 body.light, 
 .light #root,
 .light .bg-\[\#0A0A0B\] {
-  background-color: #F6F6F9 !important;
+  background-color: #FAF8F3 !important;
   color: #18181C !important;
 }
 
@@ -286,7 +286,7 @@ body.light,
 .light .bg-slate-50\/40,
 .light .bg-slate-50\/50,
 .light .bg-slate-200 {
-  background-color: #F4F4F6 !important;
+  background-color: #F7F3EC !important;
 }
 
 .light .bg-amber-50,
@@ -302,12 +302,12 @@ body.light,
 }
 
 .light aside .bg-\[\#0D0D0E\] {
-  background-color: #F9F9FB !important;
+  background-color: #FCFAF5 !important;
   border-bottom: 1px solid #E4E4E7 !important;
 }
 
 .light aside .bg-\[\#141416\]\/80 {
-  background-color: #F4F4F6 !important;
+  background-color: #F7F3EC !important;
   border-color: #E4E4E7 !important;
 }
 
@@ -401,7 +401,7 @@ body.light,
 .light .hover\:bg-slate-100:hover,
 .light .hover\:bg-\[\#141416\]:hover,
 .light .hover\:bg-amber-50\/20:hover {
-  background-color: #F4F4F6 !important;
+  background-color: #F7F3EC !important;
 }
 
 /* Backdrop */
@@ -413,8 +413,52 @@ body.light,
 
 /* Active highlights on white sidebars */
 .light aside nav button:not(.bg-amber-500):hover {
-  background-color: #F4F4F6 !important;
+  background-color: #F7F3EC !important;
   color: #000000 !important;
+}
+
+/**
+ * Sidebar navigation in LIGHT mode — ink and gold, not white.
+ *
+ * The nav items are <Link> anchors, so the `aside nav button:hover` rule above never reached
+ * them. Their Tailwind `hover:text-white` stayed white while `hover:bg-[#141416]` was remapped
+ * to the near-white #F4F4F6 above, leaving white text on a near-white row: invisible.
+ *
+ * Resting labels were also too faint (#A1A1AA on #F6F6F9 is 2.4:1). A jewellery counter is a
+ * bright room, so light mode leans on ink for the label and the brand gold for emphasis rather
+ * than on pale greys.
+ */
+/* The ACTIVE item keeps its dark plaque on hover, so these only target inactive rows. */
+.light aside nav a:not([class*="bg-[#1C1917]"]):hover {
+  background-color: #FDFBF5 !important;   /* warm ivory, not cold grey */
+  border-color: #E8DCC0 !important;
+}
+.light aside nav a:not([class*="bg-[#1C1917]"]):hover span:first-child {
+  color: #1C1917 !important;              /* ink title */
+}
+.light aside nav a:not([class*="bg-[#1C1917]"]):hover span:last-child {
+  color: #8C6D34 !important;              /* muted gold subtitle */
+}
+
+/* Resting state: readable ink-grey label, warm grey subtitle. */
+.light aside nav a:not([class*="bg-[#1C1917]"]) span:first-child {
+  color: #3F3A34 !important;
+}
+.light aside nav a span:last-child {
+  color: #78716C !important;
+}
+
+/* The ACTIVE item keeps the dark plaque, so its own text must stay light. */
+.light aside nav a[class*="bg-[#1C1917]"] span:first-child {
+  color: #E9D9AE !important;
+}
+.light aside nav a[class*="bg-[#1C1917]"] span:last-child {
+  color: #C5A059 !important;
+}
+
+/* Live gold-rate strip: #A1A1AA on #F4F4F6 was 2.3:1. */
+.light aside .text-\[\#A1A1AA\] {
+  color: #57534E !important;
 }
 
 /* Maintain soft gold graphs Stop in Light mode */
@@ -432,7 +476,8 @@ body.light,
   color: #18181C !important;
 }
 .light .bg-slate-900.p-5.rounded-2xl .text-amber-400 {
-  color: #C5A059 !important;
+  /* This card is white in light mode, so the figure needs the deeper gold to stay readable. */
+  color: #8C6D34 !important;
 }
 .light .bg-slate-900.p-5.rounded-2xl .text-slate-400 {
   color: #71717A !important;
@@ -504,7 +549,67 @@ body.light,
 
 /* Sidebar operator container light mode adjustments */
 .light aside .bg-\[\#0D0D0E\]\/50 {
-  background-color: #F9F9FB !important;
+  background-color: #FCFAF5 !important;
   border-top-color: #E4E4E7 !important;
 }
 
+/**
+ * Gold as *text* on a white card is about 2.5:1 — fine for a decorative accent, not for a
+ * figure someone has to read. Light mode therefore uses the deeper antique gold for text and
+ * keeps the bright #C5A059 for fills, borders and icons.
+ */
+.light .text-amber-400,
+.light .text-amber-300,
+.light .text-\[\#C5A059\]\/70,
+.light .text-\[\#D9B875\],
+.light .text-\[\#E9D9AE\] {
+  color: #8C6D34 !important;
+}
+
+/**
+ * ...except inside a panel that is itself gold in light mode (`.bg-slate-900` is repainted
+ * #C5A059 near the top of this file). Deeper gold on gold is 2:1; ink on gold is 9:1.
+ */
+.light .bg-slate-900 .text-amber-400,
+.light .bg-slate-900 .text-amber-300 {
+  color: #1C1917 !important;
+}
+
+/* Status colours were 500-weight on 50-weight tints (~2.4:1). Deepen the text only. */
+.light .text-emerald-500 { color: #047857 !important; }
+.light .text-orange-500  { color: #C2410C !important; }
+.light .text-rose-500    { color: #BE123C !important; }
+.light .text-sky-500     { color: #0369A1 !important; }
+.light .text-indigo-500  { color: #4338CA !important; }
+.light .text-violet-500  { color: #6D28D9 !important; }
+
+/**
+ * ─── Light-mode palette: a showroom, not a dashboard ───────────────────────────────
+ *
+ * Neutrals are warmed from blue-grey to ivory/champagne above, because cold grey sitting
+ * beside gold reads as an admin console rather than a jewellery counter. Semantic colours
+ * (rose = urgent, emerald = good, amber = attention) keep their meaning and are only
+ * deepened for contrast — recolouring those would cost information.
+ */
+
+/* Borders and dividers follow the warm neutral rather than staying cold. */
+.light .border-slate-150,
+.light .border-slate-200,
+.light .border-slate-100 {
+  border-color: #EAE3D7 !important;
+}
+
+/* "Normal" priority read as washed-out grey beside the rose and gold pills. A warm bronze
+   tint makes it look deliberate while keeping it visually quieter than the urgent states. */
+.light .bg-stone-100 {
+  background-color: #F2EDE3 !important;
+}
+.light .text-stone-700 {
+  color: #57493A !important;
+}
+
+/* Muted body text: warm stone instead of cold zinc, at a readable weight. */
+.light .text-zinc-500,
+.light .text-slate-500 {
+  color: #6B6055 !important;
+}
