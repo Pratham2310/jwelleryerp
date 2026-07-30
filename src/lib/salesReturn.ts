@@ -2,6 +2,8 @@
 // A credit note reverses part or all of a prior tax invoice. Every figure it carries is
 // negative, so a credit note can simply be summed alongside invoices to yield net revenue.
 
+import { sumMoney, multiplyMoney, roundMoney } from './money';
+
 const GST_RATE = 0.03; // must match billingCalculations.ts's composite jewellery rate
 
 // Negation that never yields -0. JavaScript's `-0` is truthy-equal to 0 but formats as "-0",
@@ -30,27 +32,48 @@ export interface CreditNoteTotals {
  *
  * GST is then computed on the post-discount returned value, mirroring the forward direction
  * (PRD §7.4 / Milestone 7) so a full return nets exactly to zero against the original.
+ *
+ * Successive partial returns used to leak. Each note rounded its own share independently, so
+ * returning three lines of 3333/3333/3334 against a ₹1,000 discount reversed 333+333+333 = ₹999
+ * and the invoice could never be fully closed. The share is now derived cumulatively — the
+ * discount due on everything returned so far, less what earlier notes already reversed — so the
+ * shares telescope and the final note picks up any residue.
  */
 export function calculateReturnTotals(
   lines: ReturnableLine[],
   selectedIndexes: number[],
   originalSubtotal: number,
-  originalDiscount: number
+  originalDiscount: number,
+  /**
+   * Lines already reversed by earlier credit notes against this same invoice. Supplying them is
+   * what makes successive partial returns add up — see the note above.
+   */
+  alreadyReturnedIndexes: number[] = []
 ): CreditNoteTotals {
-  const selected = selectedIndexes
-    .filter(i => i >= 0 && i < lines.length)
-    .map(i => Number(lines[i].subtotal) || 0);
+  const grossOf = (indexes: number[]) =>
+    sumMoney(indexes
+      .filter(i => i >= 0 && i < lines.length)
+      .map(i => Number(lines[i].subtotal) || 0));
 
-  const returnedGross = selected.reduce((sum, s) => sum + s, 0);
+  const returnedGross = grossOf(selectedIndexes);
+  const priorGross = grossOf(alreadyReturnedIndexes.filter(i => !selectedIndexes.includes(i)));
 
   const base = Number(originalSubtotal) || 0;
   const discount = Number(originalDiscount) || 0;
-  const proportion = base > 0 ? returnedGross / base : 0;
-  const discountShare = Math.round(discount * proportion);
 
-  const taxableValue = Math.max(0, returnedGross - discountShare);
-  const tax = Math.round(taxableValue * GST_RATE);
-  const total = taxableValue + tax;
+  // Reverse the discount CUMULATIVELY, then subtract what earlier notes already gave back. The
+  // shares therefore telescope: whatever the rounding does along the way, returning every line
+  // reverses exactly `discount`, never a rupee less.
+  const shareOf = (gross: number) =>
+    base > 0 ? roundMoney(multiplyMoney(discount, gross / base)) : 0;
+
+  const cumulativeShare = shareOf(sumMoney([priorGross, returnedGross]));
+  const priorShare = shareOf(priorGross);
+  const discountShare = roundMoney(cumulativeShare - priorShare);
+
+  const taxableValue = Math.max(0, roundMoney(returnedGross - discountShare));
+  const tax = roundMoney(multiplyMoney(taxableValue, GST_RATE));
+  const total = roundMoney(taxableValue + tax);
 
   return {
     returnedSubtotal: negate(returnedGross),

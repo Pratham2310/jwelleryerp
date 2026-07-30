@@ -20,6 +20,8 @@
  *     misfiling it as B2C silently denies them that credit.
  */
 
+import { sumMoney } from './money';
+
 import type { SaleInvoice, TaxRate } from '../types';
 import { summariseByHsn, type HsnSummaryRow } from './taxMaster';
 
@@ -209,7 +211,7 @@ export function buildHsnSummary(invoices: SaleInvoice[], taxRates: TaxRate[] = [
     const invoiceTaxable = taxableOf(inv);
     // Apportion the bill-level tax across lines by their share of the taxable value, so an
     // invoice with a bill-level discount still reconciles line-to-total.
-    const lineTotal = inv.items.reduce((s, i) => s + i.subtotal, 0) || 1;
+    const lineTotal = sumMoney(inv.items.map(i => i.subtotal)) || 1;
     return inv.items.map(item => {
       const share = item.subtotal / lineTotal;
       return {
@@ -282,8 +284,8 @@ export interface ReconciliationCheck {
 }
 
 export function reconcile(invoices: SaleInvoice[], summary: Gstr3bSummary): ReconciliationCheck {
-  const registerTax = invoices.reduce((s, inv) => s + inv.tax, 0);
-  const registerTaxable = invoices.reduce((s, inv) => s + taxableOf(inv), 0);
+  const registerTax = sumMoney(invoices.map(inv => inv.tax));
+  const registerTaxable = sumMoney(invoices.map(inv => taxableOf(inv)));
   const taxDifference = registerTax - summary.totalTax;
   const taxableDifference = registerTaxable - summary.taxableValue;
   return {

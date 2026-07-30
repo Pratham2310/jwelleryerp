@@ -6,6 +6,8 @@
 
 import type { JobWork, JobWorkStage } from '../types';
 
+import { sumWeight } from './money';
+
 /** Ordered production pipeline. `Issued` is the state a job is in before work starts. */
 export const STAGE_ORDER: JobWorkStage[] = [
   'Issued',
@@ -93,7 +95,7 @@ export function summariseJobWork(jobs: JobWork[]): JobWorkSummary {
     onFloor: onFloor.length,
     urgent: onFloor.filter(j => j.priority === 'Urgent' || j.priority === 'Express').length,
     awaitingReceipt: jobs.filter(j => j.stage === 'Completed' && j.receiptStatus === 'Pending').length,
-    metalInProduction: Number(onFloor.reduce((s, j) => s + j.goldIssued, 0).toFixed(3)),
+    metalInProduction: sumWeight(onFloor.map(j => j.goldIssued)),
     averageStageLoss: withLoss.length
       ? Number((withLoss.reduce((s, j) => s + j.metalLossRecorded, 0) / withLoss.length).toFixed(3))
       : 0,

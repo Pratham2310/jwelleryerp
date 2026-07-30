@@ -3,6 +3,8 @@ import type { Tag } from '../types';
 // Physical Stock Audit / Reconciliation (Milestone 6). Pure, unit-tested reconciliation
 // of a scanned-tray sequence against the system's expected on-premises Tag list.
 
+import { sumWeight } from './money';
+
 export interface AuditExtraScan {
   code: string;
   tag: Tag | null; // null = the scanned code doesn't match any Tag in the system at all
@@ -50,8 +52,8 @@ export function auditDiscrepancySummary(result: AuditResult): AuditSummary {
   return {
     matchedCount: result.matchedTags.length,
     missingCount: result.missingTags.length,
-    missingWeight: result.missingTags.reduce((sum, t) => sum + t.netWeight, 0),
+    missingWeight: sumWeight(result.missingTags.map(t => t.netWeight)),
     extraCount: result.extraScans.length,
-    extraWeight: result.extraScans.reduce((sum, e) => sum + (e.tag?.netWeight || 0), 0),
+    extraWeight: sumWeight(result.extraScans.map(e => e.tag?.netWeight || 0)),
   };
 }

@@ -82,3 +82,54 @@ describe('salesReturn selection guards', () => {
     expect(validateReturnSelection([0, 2], [1])).toBeNull();
   });
 });
+
+describe('successive partial returns must close the invoice exactly', () => {
+  const lines = [{ subtotal: 3333 }, { subtotal: 3333 }, { subtotal: 3334 }];
+
+  it('reverses the whole discount across three separate credit notes', () => {
+    // Independently-rounded shares gave 333+333+333 = 999 against a 1,000 discount, so the
+    // invoice could never be fully closed and the customer was a rupee short.
+    const covered: number[] = [];
+    let reversed = 0;
+    for (const i of [0, 1, 2]) {
+      reversed += calculateReturnTotals(lines, [i], 10000, 1000, [...covered]).discountReversed;
+      covered.push(i);
+    }
+    expect(reversed).toBe(-1000);
+  });
+
+  it('matches a single full return, whichever way the customer gets there', () => {
+    const inOneGo = calculateReturnTotals(lines, [0, 1, 2], 10000, 1000);
+    const covered: number[] = [];
+    let gross = 0, discount = 0, tax = 0;
+    for (const i of [0, 1, 2]) {
+      const t = calculateReturnTotals(lines, [i], 10000, 1000, [...covered]);
+      gross += t.returnedSubtotal; discount += t.discountReversed; tax += t.returnedTax;
+      covered.push(i);
+    }
+    expect(gross).toBe(inOneGo.returnedSubtotal);
+    expect(discount).toBe(inOneGo.discountReversed);
+  });
+
+  it('is unchanged for a first return, where there is nothing prior', () => {
+    expect(calculateReturnTotals(lines, [0], 10000, 1000, []))
+      .toEqual(calculateReturnTotals(lines, [0], 10000, 1000));
+  });
+
+  it('ignores an already-returned index that is also in this selection', () => {
+    // Defensive: the caller should not do this, but double-counting would halve the reversal.
+    expect(calculateReturnTotals(lines, [0], 10000, 1000, [0]))
+      .toEqual(calculateReturnTotals(lines, [0], 10000, 1000, []));
+  });
+
+  it('holds for an awkward three-way split too', () => {
+    const odd = [{ subtotal: 1 }, { subtotal: 1 }, { subtotal: 1 }];
+    const covered: number[] = [];
+    let reversed = 0;
+    for (const i of [0, 1, 2]) {
+      reversed += calculateReturnTotals(odd, [i], 3, 100, [...covered]).discountReversed;
+      covered.push(i);
+    }
+    expect(reversed).toBe(-100);
+  });
+});

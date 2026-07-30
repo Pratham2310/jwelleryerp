@@ -34,6 +34,8 @@ import type {
   SchemeEnrollmentStatus,
 } from '../types';
 
+import { sumMoney } from './money';
+
 /** Adds whole months, clamping the day so 31 Jan + 1 month lands on 28/29 Feb rather than 3 Mar. */
 export function addMonths(isoDate: string, months: number): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
@@ -113,7 +115,7 @@ export function deriveEnrollmentBalance(
   today: string = new Date().toISOString().slice(0, 10)
 ): EnrollmentBalance {
   const mine = instalments.filter(i => i.enrollmentId === enrollment.id);
-  const principalPaid = mine.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const principalPaid = sumMoney(mine.map(i => Number(i.amount) || 0));
   const instalmentsPaid = mine.length;
 
   const matures = maturityDate(enrollment, scheme);

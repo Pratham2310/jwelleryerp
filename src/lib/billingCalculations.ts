@@ -16,6 +16,8 @@
 
 import { splitGst, computeRoundOff, type SupplyType, type GstSplit } from './taxMaster';
 
+import { sumMoney } from './money';
+
 export type MakingChargeType = 'per-gram' | 'flat';
 
 export interface LineItemInput {
@@ -113,7 +115,8 @@ export function calculateInvoiceTotals(
     : DEFAULT_GST_RATE_PERCENT;
   const supplyType: SupplyType = tax.supplyType ?? 'INTRA_STATE';
 
-  const subtotal = lineSubtotals.reduce((sum, s) => sum + s, 0);
+  // Summed in paisa: a long bill of float products otherwise drifts off the true total.
+  const subtotal = sumMoney(lineSubtotals);
   const discountAmount = Number(discount) || 0;
   const taxableValue = Math.max(0, subtotal - discountAmount);
 
@@ -163,7 +166,7 @@ export interface PaymentSplitValidation {
  */
 export function validatePaymentSplit(amountDue: number, entries: PaymentSplitEntry[]): PaymentSplitValidation {
   const due = Number(amountDue) || 0;
-  const totalPaid = entries.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  const totalPaid = sumMoney(entries.map(e => Number(e.amount) || 0));
   const shortfall = Math.round((due - totalPaid) * 100) / 100;
 
   if (entries.some(e => (Number(e.amount) || 0) < 0)) {

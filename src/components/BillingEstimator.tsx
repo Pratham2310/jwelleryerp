@@ -773,7 +773,10 @@ export default function BillingEstimator({
       original.items,
       returnLineSelection,
       original.subtotal,
-      original.discount
+      original.discount,
+      // Earlier credit notes against this invoice, so the discount shares telescope and a
+      // fully-returned invoice reverses its discount exactly rather than a rupee short.
+      original.returnedLineIndexesCovered || []
     );
 
     const returnedItems = returnLineSelection.map(i => original.items[i]);
@@ -2234,7 +2237,8 @@ export default function BillingEstimator({
           invoiceToReturn.items,
           returnLineSelection,
           invoiceToReturn.subtotal,
-          invoiceToReturn.discount
+          invoiceToReturn.discount,
+          alreadyReturned
         );
         return (
           <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">

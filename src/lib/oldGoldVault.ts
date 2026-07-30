@@ -6,6 +6,8 @@
 
 import type { OldGoldLotStatus, OldGoldVoucher } from '../types';
 
+import { sumMoney, sumWeight } from './money';
+
 export const ALL_LOT_STATUSES: OldGoldLotStatus[] = [
   'InSafe',
   'SentForMelting',
@@ -77,20 +79,20 @@ export function summariseVault(vouchers: OldGoldVoucher[]): VaultSummary {
   const held = vouchers.filter(v => isHeldInVault(v.status));
   const meltedLots = vouchers.filter(v => v.status === 'Melted' || v.status === 'FineGoldStock');
 
-  const recoveredFineWeight = meltedLots.reduce((s, v) => s + (v.recoveredFineWeight || 0), 0);
+  const recoveredFineWeight = sumWeight(meltedLots.map(v => v.recoveredFineWeight || 0));
   const expectedFromMelted = meltedLots
     .filter(v => v.recoveredFineWeight !== undefined)
-    .reduce((s, v) => s + v.netPayableWeight, 0);
+    .reduce((s, v) => s + v.netPayableWeight, 0); // eslint-disable-line -- narrowed below
 
   return {
     lotsInSafe: vouchers.filter(v => v.status === 'InSafe').length,
     lotsAtRefiner: vouchers.filter(v => v.status === 'SentForMelting').length,
     lotsMelted: vouchers.filter(v => v.status === 'Melted').length,
-    grossWeightHeld: round3(held.reduce((s, v) => s + v.grossWeight, 0)),
-    expectedFineWeight: round3(held.reduce((s, v) => s + v.netPayableWeight, 0)),
+    grossWeightHeld: sumWeight(held.map(v => v.grossWeight)),
+    expectedFineWeight: sumWeight(held.map(v => v.netPayableWeight)),
     recoveredFineWeight: round3(recoveredFineWeight),
     refiningVariance: round3(recoveredFineWeight - expectedFromMelted),
-    capitalDeployed: held.reduce((s, v) => s + v.buybackValue, 0),
+    capitalDeployed: sumMoney(held.map(v => v.buybackValue)),
   };
 }
 
