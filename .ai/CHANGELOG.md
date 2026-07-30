@@ -4,6 +4,29 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-30 — Milestone 28: Accounting Ledgers & Auto-Journal Posting
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+PRD §10.1 requires the books to be correct *"without manual journal entries"*, so nothing here is hand-posted. Every voucher is **derived** from a business document that already exists, which makes the accounts a projection of the transaction log rather than a second set of records that can drift from it — the same principle as derived karigar balances (M16), metal rates (M48) and scheme balances (M26). Re-deriving the same documents yields byte-identical books, and a test asserts it.
+
+**Three domain rules the postings deliberately respect:**
+
+1. **Old gold is a purchase, not a discount** (decision **D-10**). It gets its own voucher — `Dr Old Gold Purchase / Cr Cash` — and never touches the sale's taxable value. Netting it into the sale would understate output GST, the exact bug Milestone 2 fixed in the forward direction; posting it as a contra-sale here would have quietly reintroduced it in the ledgers.
+2. **Scheme collections are a liability, not income** (PRD §12.3). An instalment posts `Dr Cash / Cr Scheme Collection Liability`. Booking it as income would recognise revenue the shop has not earned and inflate both the P&L and the tax due on it.
+3. **Weight never enters the money books** (decision **D-2**). "Karigar Metal Payable" sits in PRD §10.2's chart as a *grams-tracked memo* and is deliberately not posted — valuing an artisan's outstanding metal into rupees would net the two ledgers. A weight-only karigar entry posts nothing at all.
+
+Screens: **Day Book**, **Trial Balance**, **Ledger Statement** and **Chart of Accounts**, on a new Accounting route. Ledger balances run in each account's natural direction, so a liability the shop owes reads positive rather than negative.
+
+**A presentation defect browser testing turned up, worth naming.** The Day Book total read ₹1,09,512 against invoices of ₹1,08,012. That is correct double-entry — a discounted sale debits Discount Given as well as cash — but it does not *reconcile* the way the milestone requires, and an owner comparing the two figures would reasonably conclude the books were wrong. Added `reconcileDayBook()`, which states what genuinely ties (income credited for the day against the gross value of the documents raised for it) and shows the discount that explains the gap. The header KPI was relabelled **Gross Postings (Dr)** for the same reason: sitting beside a different trial-balance figure, "Total Posted" read as a second, conflicting total.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **631 tests passing across 23 suites** (up from 586); `npm run build` clean. Playwright-verified: 20 vouchers derived from the seed data with **zero unbalanced**, the Trial Balance agreeing at ₹3,85,034 on both sides, scheme instalments landing in the liability ledger rather than income, and the karigar payable carrying only money entries. Regression across all 9 screens × 2 themes and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+**Not built here:** the P&L and Balance Sheet themselves (Milestone 47), and stock valuation for the balance sheet (PRD §10.4), which needs a costing method decision before it can be posted.
+
+---
+
 ## 2026-07-30 — Money & Weight Arithmetic Foundation (Phase 9 prerequisite)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-29 — **Milestones 1–27 and 48 complete; Phases 1–8 all done** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Milestone 28 (Accounting Ledgers & Auto-Journal Posting) is next, opening Phase 9. Note `HANDOFF.md`: the money-as-float fix should land before the accounting work rather than after it. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-30 — **Milestones 1–28 and 48 complete; Phases 1–8 done, Phase 9 started** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Milestone 29 (Tally Prime export) is next. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -428,13 +428,15 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ## 🏁 Phase 9: Accounting (Milestones 28 – 29)
 
-### 📍 Milestone 28: Accounting Ledgers & Auto-Journal Posting
+### ✅ Milestone 28: Accounting Ledgers & Auto-Journal Posting
 - **Goal:** Auto-post double-entry journal entries behind every transaction.
 - **Dependencies:** Milestone 2 (invoices), Milestone 16 (karigar labor payable), Milestone 14 (old gold purchase entries).
 - **Tasks:**
   1. Implement `src/lib/journalPosting.ts` (unit-tested): every invoice/old-gold/karigar-receipt event posts a balanced `{debit, credit}` journal-entry pair.
   2. Build Chart of Accounts, Ledger Statement, and Day Book viewer screens.
 - **Testable via:** Every posted journal entry balances (`Σdebit = Σcredit`); a Day Book total reconciles against the sum of the day's invoices.
+- **Done:** `src/lib/journalPosting.ts` + an Accounting route with Day Book, Trial Balance, Ledger Statement and Chart of Accounts. Vouchers are **derived** from the documents, never stored, so the books cannot drift from the transactions (PRD §10.1) — re-deriving is idempotent and tested. Three rules are structurally respected: old gold posts its own purchase voucher and never contras Sales (**D-10**); scheme instalments credit a **liability, not income** (PRD §12.3); and a weight-only karigar entry posts **nothing**, keeping metal out of the money books (**D-2**).
+- **Note on the reconciliation:** gross postings are *not* the day's sales value — a discounted sale debits Discount Given, so total debits exceed what the customer paid. `reconcileDayBook()` states what genuinely ties (income credited vs gross value of documents raised) and shows the discount that explains the difference, rather than leaving an owner to find two figures that were never meant to match.
 
 ### 📍 Milestone 29: Tally Prime Export
 - **Goal:** One-click accounting sync export.
