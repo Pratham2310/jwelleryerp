@@ -4,6 +4,32 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-07-30 — Money & Weight Arithmetic Foundation (Phase 9 prerequisite)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual change.
+
+Built ahead of Milestone 28 because double-entry postings have to balance to the paisa, and the app's arithmetic could not guarantee that. Investigating it turned up a **live defect**, so this is a bug fix as much as a foundation.
+
+**Why float bites here.** Every figure is a JavaScript double. That is fine for one multiplication and a `Math.round`, which is precisely why nothing had visibly broken. It stops being fine in two places:
+
+1. **Accumulation.** `8.2 × 6650` is `54529.99999999999`, not `54530`. Summing `0.10` a thousand times gives `99.9999999999986`; a thousand weights of `8.245g` gives `8244.99999999991`.
+2. **Splitting.** Rounding each part of an apportionment independently does not reproduce the whole. ₹1,000 across lines of 3333/3333/3334 by `round(share)` yields 333+333+333 = **999**.
+
+**The defect that second point was already causing.** Successive partial returns against one invoice each rounded their own share of the bill-level discount. Returning all three lines of a 3333/3333/3334 invoice against a ₹1,000 discount reversed only ₹999 — the customer was a rupee short and the invoice could never be fully closed. That is the exact shape of a book that does not balance, which is why this had to land *before* the accounting phase rather than after it.
+
+`src/lib/money.ts` does money in integer **paisa** and weight in integer **milligrams**. The load-bearing piece is `allocate()`, which apportions by the largest-remainder method so the parts sum to the total **by construction** rather than by luck; ties break toward the earlier bucket so a re-run cannot reshuffle a customer's figures. `moneyEquals()` exists because "does this payment split settle the invoice" is a float comparison, and `0.1 + 0.2 === 0.3` is false.
+
+`salesReturn` now derives the discount share **cumulatively** — what is due on everything returned so far, less what earlier notes already reversed — so the shares telescope and the final note picks up any residue. Returning every line reverses exactly the discount given, whether in one credit note or three.
+
+Retrofitted the accumulation sites where drift compounds across many records rather than one bill: invoice subtotals and the tender-split check, the GSTR figures that must reconcile against a filed return, the scheme principal that PRD §12.4 puts on the balance sheet, old-gold fine-weight totals feeding refining variance, stock-audit weight discrepancies, and metal on the factory floor.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **586 tests passing across 22 suites** (up from 556); `npm run build` clean. **No existing test was changed**, which is the signal that mattered for a cross-cutting retrofit: it is behaviour-preserving everywhere the old arithmetic was already right, and differs only where it was wrong. Regression across 8 screens × 2 themes and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+**Not done:** this is the foundation and the sites that demonstrably drift, not a wholesale conversion of every number in the app. UI-level display arithmetic still uses plain numbers; the rule going forward is that anything summing a list or splitting a total uses these helpers.
+
+---
+
 ## 2026-07-29 — Milestones 26–27: Gold Savings Scheme Master, Enrolment & Passbook
 
 **Author:** AI agent (Claude Code), pair programming with USER.
