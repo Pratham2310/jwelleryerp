@@ -22,6 +22,7 @@ import KarigarManager from './components/KarigarManager';
 import JobBagManager from './components/JobBagManager';
 import CustomerManager from './components/CustomerManager';
 import OldGoldManager from './components/OldGoldManager';
+import AccountingManager from './components/AccountingManager';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -584,6 +585,18 @@ function AppContent() {
                     setVouchers={setOldGoldVouchers}
                     customers={customers}
                     metalRates={projectedRates}
+                  />
+                }
+              />
+              <Route
+                path="/accounting"
+                element={
+                  <AccountingManager
+                    invoices={invoices}
+                    oldGoldVouchers={oldGoldVouchers}
+                    schemeInstalments={schemeInstalments}
+                    karigarLedger={karigarLedger}
+                    karigars={karigars}
                   />
                 }
               />
