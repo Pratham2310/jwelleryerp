@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-30 — **Milestones 1–28 and 48 complete; Phases 1–8 done, Phase 9 started** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Milestone 29 (Tally Prime export) is next. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-30 — **Milestones 1–28, 37–41 and 48 complete; Phases 1–8 and 12 done, Phase 9 started** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Phase 12 (Procurement) is complete — the app can now buy stock, and GST has both an output and an input side. Milestone 29 (Tally Prime export) is next, and now has complete books to export. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -514,49 +514,54 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ---
 
-## 🏁 Phase 12: Procurement & Supplier (Milestones 37 – 41)
+## 🏁 Phase 12: Procurement & Supplier (Milestones 37 – 41) — ✅ COMPLETE (2026-08-01)
 
 _Added 2026-07-26. PRD §6.1 defines the full chain (Purchase Order → Goods Receipt → Purchase
 Invoice → stock update) and §9.6 requires a Purchase Register for ITC reconciliation, but the
 original roadmap never scheduled any of it. This was the largest coverage gap found._
 
-### 📍 Milestone 37: Supplier Master (Party Master extension)
+### ✅ Milestone 37: Supplier Master (Party Master extension)
 - **Goal:** Introduce Supplier as a real party type so purchases have someone to be booked against.
 - **Dependencies:** None beyond Milestone 1 (state-lifting pattern).
 - **Tasks:**
   1. Extend the party model with `Supplier` (name, GSTIN, PAN, state code, opening balance, credit terms). Per Handbook D-5, Party Master is tenant-wide and must **never** carry a `branch_id`.
   2. Add PAN/GSTIN/Aadhaar/KYC fields to `Customer` at the same time — PRD §4.3 requires them and they are currently absent from the type entirely.
 - **Testable via:** A supplier can be created and selected on a purchase document; a customer record round-trips its GSTIN/PAN.
+- **Done:** `src/lib/supplier.ts`. A GSTIN **encodes** the state code (chars 1–2) and the PAN (chars 3–12), so those are cross-checked and auto-derived rather than typed twice. A state contradicting the GSTIN is the dangerous case: M21 picks CGST+SGST vs IGST from it, so a mistype misfiles tax on every document for that party and stays invisible until filing. A bullion dealer must be registered, since ITC cannot be claimed without a supplier GSTIN. `Customer` also gained the PAN/Aadhaar/KYC fields PRD §4.4 requires; Aadhaar is masked on display.
 
-### 📍 Milestone 38: Purchase Order
+### ✅ Milestone 38: Purchase Order
 - **Goal:** Raise and track POs to bullion dealers / finished-goods suppliers.
 - **Dependencies:** Milestone 37.
 - **Tasks:**
   1. PO entry (supplier, expected metal/purity/weight or design lines, rate basis, delivery date) with its own `PO-<FY>` sequence and a `Draft → Sent → PartiallyReceived → Closed → Cancelled` status.
 - **Testable via:** A PO can be raised, then referenced when receiving goods; receiving part of it moves it to PartiallyReceived rather than Closed.
+- **Done:** `src/lib/purchaseOrder.ts`. **Unfixed-rate orders return `null`, not 0** — bullion is commonly booked now and priced later, so such an order has a weight but no knowable value; zero would understate the commitment and today's rate would be a guess dressed as a fact. A fully-received PO does **not** auto-close (closing is a decision), and over-receipt is flagged rather than clamped because bullion genuinely arrives heavy.
 
-### 📍 Milestone 39: Goods Receipt (GRN)
+### ✅ Milestone 39: Goods Receipt (GRN)
 - **Goal:** Receive physical metal/goods against a PO (or without one), capturing real weight and tested purity.
 - **Dependencies:** Milestone 38; Milestone 3 (a finished-goods receipt must create real `Tag` records).
 - **Tasks:**
   1. GRN entry capturing gross/net weight and **tested** purity per line, with a variance flag when received weight/purity differs from the PO.
   2. On save: raw metal increments the metal register; finished goods create `Tag` records entering the lifecycle at the appropriate state via the Milestone 4 state machine.
 - **Testable via:** Receiving finished goods against a PO produces the right number of real Tags; a purity variance is surfaced, not silently accepted.
+- **Done:** `src/lib/goodsReceipt.ts`. **Tested purity vs contracted purity is money**: 100g at 99.9% delivered at 99.5% is 0.4g of fine gold ≈ ₹2,900, surfaced live in grams and rupees. Tolerance is 0.05 points, tighter than hallmarking's 0.2, because bullion is bought *to* a spec. Received goods **enter the lifecycle**: raw metal at `RawMetal` (a state nothing had ever produced), finished goods at `PendingHallmark` unless supplier-hallmarked — entering at `InStock` would bypass the M25 guard. Each piece is weighed individually (D-6).
 
-### 📍 Milestone 40: Purchase Invoice & ITC Booking
+### ✅ Milestone 40: Purchase Invoice & ITC Booking
 - **Goal:** Book the supplier's tax invoice and record claimable Input Tax Credit.
 - **Dependencies:** Milestone 39; Milestone 21 (needs the Tax Master for correct input-tax rates).
 - **Tasks:**
   1. Purchase Invoice entry linked to a GRN, splitting taxable value and input CGST/SGST/IGST, stored as ITC receivable.
   2. Add an **RCM (Reverse Charge)** flag for notified services from unregistered suppliers — PRD §9.7 requires this recorded separately, since the shop pays the GST itself and then claims it.
 - **Testable via:** A booked purchase invoice appears in the Purchase Register with its ITC split; an RCM-flagged invoice is distinguishable from a normal one.
+- **Done:** `src/lib/purchaseInvoice.ts`. **Reverse charge posts two legs** — an output liability and an input credit — which net to zero in cash, and that is exactly why booking only the credit is the inviting mistake: the books balance while the shop under-declares tax it owes. Both are shown before committing and reported separately. A supplier's invoice number is *theirs*, so a repeat of (supplier, their number) is refused — booking it twice claims the same credit twice. Supply type compares the **supplier's** state to the branch's, the mirror of M21.
 
-### 📍 Milestone 41: Purchase Return / Debit Note
+### ✅ Milestone 41: Purchase Return / Debit Note
 - **Goal:** Return goods to a supplier and issue a debit note reversing the purchase and its ITC.
 - **Dependencies:** Milestone 40; Milestone 12 (mirrors the credit-note reversal already built for sales).
 - **Tasks:**
   1. Purchase Return against a booked purchase invoice, with its own `DBN-<FY>` sequence, reversing stock and ITC proportionally — reuse `salesReturn.ts`'s pro-rata approach rather than re-deriving it.
 - **Testable via:** A full purchase return nets the purchase and its ITC to zero; a partial return reverses proportionally.
+- **Done:** `src/lib/purchaseReturn.ts`. Reuses `salesReturn.ts`'s **cumulative** share derivation, so successive partial returns reverse exactly the credit claimed — 3333+3333+3334 against a ₹10,000 purchase reverses ₹300, not ₹299. Reversal goes back into the **same heads** it was claimed under (an IGST claim cannot be reversed as CGST+SGST). **Required a new terminal Tag state, `ReturnedToSupplier`** — the only terminal state was `DamagedOrMelted`, and recording goods sent back to a dealer as goods destroyed is false in the stock ledger and wrong in the valuation.
 
 ---
 

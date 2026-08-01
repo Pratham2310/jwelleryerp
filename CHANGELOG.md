@@ -27,6 +27,29 @@ Screens: **Day Book**, **Trial Balance**, **Ledger Statement** and **Chart of Ac
 
 ---
 
+## 2026-08-01 — Phase 12 Complete: Milestones 37–41 (Procurement & Supplier)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation.
+
+The largest coverage gap in the roadmap, and the one that made two other modules structurally incomplete. Until now the app had **no way to buy stock** — inventory existed only because the seed data said so — and GST had an output side with no input side, so a GSTR-3B declared everything collected and nothing paid.
+
+**M37 — Supplier Master.** PRD §4.4 frames customers and suppliers as one "Party" ledger; they stay separate records here but share one KYC shape and validator set. Per **D-5** the Party Master is tenant-wide with no `branchId` — a supplier delivering to two branches is one creditor. The load-bearing insight: **a GSTIN is not opaque.** Characters 1–2 are the state code and 3–12 are the PAN, so both are cross-checked against what was typed and auto-derived when blank. A state contradicting the GSTIN is the dangerous case, because M21 picks CGST+SGST vs IGST from it — a mistype misfiles tax on every document for that party and stays invisible until a return is filed. A bullion dealer is required to be registered, since ITC cannot be claimed without a supplier GSTIN. `Customer` also gained the PAN/Aadhaar/credit-limit/KYC fields PRD §4.4 requires and the type never had.
+
+**M38 — Purchase Order.** Bullion is commonly bought **unfixed**: the metal is booked now and priced later. Such an order has a weight but **no knowable rupee value**, so `poValue()` returns `null` rather than 0 — zero would understate the commitment, and pricing it at today's rate would be a guess dressed as a fact. A fully-received PO does *not* auto-close, because closing is a decision (a shop may hold one open pending the invoice, or close it short); and over-receipt is flagged rather than clamped, because bullion genuinely arrives heavy.
+
+**M39 — Goods Receipt.** The milestone that actually closes the hole. **Tested purity is not contracted purity, and the difference is money**: 100g at 99.9% delivered at 99.5% is 0.4g of fine gold, about ₹2,900 — surfaced live in grams *and* rupees so it reads as a claim against the supplier. The tolerance is 0.05 points, deliberately tighter than hallmarking's 0.2, because bullion is bought *to* a stated fineness rather than assayed after the fact. Received goods **enter the Tag lifecycle**: raw metal at `RawMetal` (a state the machine always had and nothing had ever produced), finished goods at `PendingHallmark` — **not** `InStock` — unless supplier-hallmarked, because entering at stock would let a purchased piece bypass the M25 guard entirely. Each piece is weighed individually per **D-6**.
+
+**M40 — Purchase Invoice & ITC.** **Reverse charge posts two legs, not one**: an output liability the shop owes and an input credit it can claim. They net to zero in cash, which is exactly why recording only the credit is the inviting mistake — the books balance while the shop under-declares tax it legally owes. Both are shown before committing and reported separately so they can never be summed. A supplier's invoice number is *theirs*, so a repeat of (supplier, their number) is refused: booking it twice claims the same credit twice. Supply type compares the **supplier's** state to the branch's — the mirror of M21's customer comparison, and reversing that direction would file every inter-state purchase as CGST+SGST, which cannot be set off the way IGST can.
+
+**M41 — Purchase Return & Debit Note.** Reuses `salesReturn.ts`'s arithmetic, and specifically reuses **the fix**: shares are derived cumulatively so successive partial returns telescope. Verified — ₹10,000 returned as 3333+3333+3334 reverses exactly ₹300 of credit, not ₹299; a residue would sit on the books as credit against goods that are gone. Reversal goes back into the same heads it was claimed under. This **required a new terminal Tag state, `ReturnedToSupplier`** — the only terminal state was `DamagedOrMelted`, and recording goods sent back to a dealer as goods destroyed is false in the stock ledger and wrong in the valuation. That changed an existing invariant (one terminal state → two), and the test was updated to assert the new one rather than weakened.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **813 tests passing across 28 suites** (up from 631); `npm run build` clean. Every milestone browser-verified end to end. Regression across 10 screens × 2 themes, all 4 Purchases sub-tabs × 2 themes, and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+**Scope note:** the "reverse charge refused on a registered supplier" rule is covered by unit test but not by the browser pass — that step hit the duplicate-invoice-number error first, since validation short-circuits there.
+
+---
+
 ## 2026-07-30 — Money & Weight Arithmetic Foundation (Phase 9 prerequisite)
 
 **Author:** AI agent (Claude Code), pair programming with USER.
