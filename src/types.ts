@@ -187,6 +187,30 @@ export interface PurchaseInvoice {
 }
 
 /**
+ * Manual Payment / Receipt / Contra voucher (PRD §10.3/§10.5, Milestone 45).
+ *
+ * For money movements no business document covers — rent paid, a deposit into the bank. Posts
+ * through the same journal engine as everything else, so the books stay one set of records.
+ * A CONTRA is cash↔bank only and must never touch an income or expense account, or a movement
+ * that changed nothing would create profit or loss.
+ */
+export type ManualVoucherType = 'PAYMENT' | 'RECEIPT' | 'CONTRA';
+
+export interface ManualVoucher {
+  id: string;
+  voucherNo: string; // PAY-/REC-/CON-<FY>-nnn
+  type: ManualVoucherType;
+  date: string;
+  /** The cash or bank account the money moves through. */
+  moneyAccount: string;
+  /** The other side — an expense, income, liability or (for a Contra) the other money account. */
+  againstAccount: string;
+  amount: number;
+  narration: string;
+  branchId?: string;
+}
+
+/**
  * Purchase Return / Debit Note (PRD §6.1, Milestone 41) — the mirror of the sales credit note.
  *
  * Every figure is negative so a debit note can be summed alongside purchases to net them, the

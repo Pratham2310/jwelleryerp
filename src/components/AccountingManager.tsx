@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, Scale, Landmark, ListTree, AlertTriangle, CheckCircle2, Download } from 'lucide-react';
+import { BookOpen, Scale, Landmark, ListTree, AlertTriangle, CheckCircle2, Download, Wallet, ArrowLeftRight, TrendingUp } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import type { SaleInvoice, OldGoldVoucher, SchemeInstalment, KarigarLedgerEntry, Karigar } from '../types';
+import type { SaleInvoice, OldGoldVoucher, SchemeInstalment, KarigarLedgerEntry, Karigar, ManualVoucher, Branch } from '../types';
+import ManualVoucherPanel from './ManualVoucherPanel';
+import FinancialStatementsPanel from './FinancialStatementsPanel';
+import { postManualVoucher } from '../lib/manualVoucher';
 import {
   CHART_OF_ACCOUNTS,
   deriveJournal,
@@ -29,12 +32,17 @@ interface AccountingManagerProps {
   schemeInstalments: SchemeInstalment[];
   karigarLedger: KarigarLedgerEntry[];
   karigars: Karigar[];
+  /** Manual Payment/Receipt/Contra vouchers (Milestone 45) — posted into the same journal. */
+  manualVouchers: ManualVoucher[];
+  setManualVouchers: React.Dispatch<React.SetStateAction<ManualVoucher[]>>;
+  activeBranch: Branch | null;
 }
 
-type Tab = 'daybook' | 'trial' | 'ledger' | 'chart' | 'tally';
+type Tab = 'daybook' | 'cashbook' | 'trial' | 'pl' | 'balancesheet' | 'ledger' | 'vouchers' | 'chart' | 'tally';
 
 export default function AccountingManager({
   invoices, oldGoldVouchers, schemeInstalments, karigarLedger, karigars,
+  manualVouchers, setManualVouchers, activeBranch,
 }: AccountingManagerProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -56,13 +64,23 @@ export default function AccountingManager({
 
   // The books are DERIVED from the documents, never stored — re-deriving on every render is what
   // guarantees they can't drift from the transactions they describe (PRD §10.1).
-  const journal = useMemo(() => deriveJournal({
+  const derivedJournal = useMemo(() => deriveJournal({
     invoices,
     oldGoldVouchers,
     schemeInstalments,
     karigarLedger,
     karigarNameById: (id) => karigars.find(k => k.id === id)?.name ?? 'Karigar',
   }), [invoices, oldGoldVouchers, schemeInstalments, karigarLedger, karigars]);
+
+  /**
+   * Manual vouchers join the SAME journal rather than living alongside it. Keeping them separate
+   * would mean the Trial Balance and the Balance Sheet disagreed with the Day Book.
+   */
+  const journal = useMemo(
+    () => [...derivedJournal, ...manualVouchers.map(postManualVoucher)]
+      .sort((a, b) => a.date.localeCompare(b.date) || a.voucherNo.localeCompare(b.voucherNo)),
+    [derivedJournal, manualVouchers]
+  );
 
   const summary = summariseJournal(journal);
   const trial = buildTrialBalance(journal);
@@ -81,7 +99,11 @@ export default function AccountingManager({
 
   const TABS: { key: Tab; label: string; icon: typeof BookOpen }[] = [
     { key: 'daybook', label: 'Day Book', icon: BookOpen },
+    { key: 'cashbook', label: 'Cash Book', icon: Wallet },
+    { key: 'vouchers', label: 'Vouchers', icon: ArrowLeftRight },
     { key: 'trial', label: 'Trial Balance', icon: Scale },
+    { key: 'pl', label: 'Profit & Loss', icon: TrendingUp },
+    { key: 'balancesheet', label: 'Balance Sheet', icon: Scale },
     { key: 'ledger', label: 'Ledger Statement', icon: Landmark },
     { key: 'chart', label: 'Chart of Accounts', icon: ListTree },
     { key: 'tally', label: 'Tally Export', icon: Download },
@@ -456,6 +478,18 @@ export default function AccountingManager({
           </div>
         );
       })()}
+
+      {tab === 'vouchers' && (
+        <ManualVoucherPanel
+          vouchers={manualVouchers}
+          setVouchers={setManualVouchers}
+          activeBranch={activeBranch}
+        />
+      )}
+
+      {tab === 'cashbook' && <FinancialStatementsPanel journal={journal} view="cashbook" />}
+      {tab === 'pl' && <FinancialStatementsPanel journal={journal} view="pl" />}
+      {tab === 'balancesheet' && <FinancialStatementsPanel journal={journal} view="balancesheet" />}
 
       {tab === 'chart' && (
         <div className={`rounded-2xl border shadow-sm overflow-hidden ${cardCls}`}>
