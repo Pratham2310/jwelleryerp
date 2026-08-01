@@ -3,6 +3,11 @@ import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers, initialPurchaseOrders } from './data/mockData';
 import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt, PurchaseInvoice, PurchaseReturn, ManualVoucher, StatutoryParameters, ApprovalRecord } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { HardwareProvider } from './contexts/HardwareContext';
+import HardwarePanel from './components/HardwarePanel';
+import OfflineQueueDrawer from './components/OfflineQueueDrawer';
+import { syncQueue, summariseQueue, queueSale, type QueuedSale } from './lib/offlineQueue';
+import { nextBranchInvoiceNumber } from './lib/branch';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
 import { DEFAULT_ROLES, roleByName, canAccessRoute, type Role } from './lib/permissions';
@@ -237,6 +242,14 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Offline POS queue (Milestone 36). A sale raised while the terminal is offline is held here
+  // rather than in the register, because it has no confirmed place in the invoice series yet.
+  const [offlineQueue, setOfflineQueue] = useState<QueuedSale[]>(() => {
+    const saved = localStorage.getItem('stitch_offline_queue');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [isQueueDrawerOpen, setQueueDrawerOpen] = useState(false);
+
   // Inter-branch stock transfers (Milestone 20). Deliberately NOT branch-scoped: a transfer
   // belongs to two branches at once, and the destination must be able to see it arriving.
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
@@ -250,6 +263,30 @@ function AppContent() {
     const saved = localStorage.getItem('stitch_karigar_ledger');
     return saved ? JSON.parse(saved) : initialKarigarLedger;
   });
+
+  /**
+   * Drains the offline queue into the register (Milestone 36). Partial by design: a clean bill
+   * lands even when another conflicts, because holding a good sale hostage to an unrelated
+   * collision leaves the books understated for as long as the conflict goes unresolved.
+   */
+  const runQueueSync = React.useCallback(() => {
+    const result = syncQueue(offlineQueue, invoices);
+    if (result.invoicesToCommit.length > 0) {
+      setInvoices(prev => [...result.invoicesToCommit, ...prev]);
+    }
+    // Rebuilt in the order the sales were made, so the drawer reads as a till roll rather than
+    // resorting itself every time one entry changes state.
+    const byId = new Map([...result.synced, ...result.conflicts].map(q => [q.id, q]));
+    setOfflineQueue(offlineQueue.map(q => byId.get(q.id) ?? q));
+  }, [offlineQueue, invoices]);
+
+  // Coming back online drains the queue by itself. A counter that has to remember to press a
+  // button is a counter that leaves sales out of the books.
+  const wasOffline = React.useRef(forceOffline);
+  useEffect(() => {
+    if (wasOffline.current && !forceOffline) runQueueSync();
+    wasOffline.current = forceOffline;
+  }, [forceOffline, runQueueSync]);
 
   // Global popup controllers
   const [isAddModalOpen, setAddModalOpen] = useState(false);
@@ -312,6 +349,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_supervisor_pins', JSON.stringify(supervisorPins));
   }, [supervisorPins]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_offline_queue', JSON.stringify(offlineQueue));
+  }, [offlineQueue]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -400,6 +441,16 @@ function AppContent() {
 
   /** The signed-in user's role. An unrecognised name resolves to null, which grants nothing. */
   const currentRole = useMemo(() => roleByName(roles, user?.role || ''), [roles, user]);
+  const queueSummary = useMemo(() => summariseQueue(offlineQueue), [offlineQueue]);
+
+  /**
+   * The counter keeps selling through an outage (Milestone 36). Blanking the billing screen when
+   * the connection drops is what an offline queue exists to prevent — a shop cannot tell a
+   * customer holding a chain to come back when the server is up. Every other screen is a read or
+   * a report that genuinely needs the server, so those still show the outage.
+   */
+  const OFFLINE_CAPABLE_ROUTES = ['/billing'];
+  const isOfflineCapableRoute = OFFLINE_CAPABLE_ROUTES.includes(location.pathname);
 
   /**
    * Hiding a nav link is not a guard — a typed URL would still render the screen. This bounces
@@ -480,7 +531,7 @@ function AppContent() {
         <main className={`flex-1 overflow-y-auto p-4 md:p-8 relative transition-colors duration-200 ${
           theme === 'light' ? 'bg-zinc-50' : 'bg-[#0A0A0B]'
         }`}>
-          {apiError ? (
+          {apiError && !isOfflineCapableRoute ? (
             /* ENTERPRISE SIMULATED ERROR STATE */
             <div className={`max-w-xl mx-auto my-12 border p-6 md:p-8 rounded-2xl shadow-2xl text-center space-y-6 ${
               theme === 'light' ? 'bg-white border-red-200' : 'bg-[#110C0C] border-[#3F1A1A]'
@@ -664,6 +715,8 @@ function AppContent() {
                     supervisors={supervisorPins}
                     currentUserName={user?.name || 'Counter'}
                     onApprovalRecorded={record => setApprovals(prev => [record, ...prev])}
+                    isOffline={forceOffline}
+                    onQueueSale={invoice => setOfflineQueue(prev => [...prev, queueSale(invoice)])}
                   />
                 }
               />
@@ -807,6 +860,13 @@ function AppContent() {
         >
           <span className={`w-2 h-2 rounded-full ${forceOffline ? 'bg-red-500' : 'bg-emerald-500'} animate-pulse`} />
           <span className="font-sans font-bold">Simulation Desk</span>
+          {queueSummary.pending + queueSummary.conflicts > 0 && (
+            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-black ${
+              queueSummary.conflicts > 0 ? 'bg-rose-500 text-white' : 'bg-amber-500 text-[#0A0A0B]'
+            }`}>
+              {queueSummary.pending + queueSummary.conflicts}
+            </span>
+          )}
         </button>
         
         {isDeskOpen && (
@@ -872,6 +932,38 @@ function AppContent() {
                 </button>
               </div>
 
+              {/* Offline sales queue (Milestone 36) */}
+              <div className="pt-2.5 border-t border-[#262626] space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase font-bold">Offline Sales Queue</span>
+                  <span className={`text-[9px] font-mono font-bold uppercase ${
+                    queueSummary.conflicts > 0 ? 'text-rose-400'
+                      : queueSummary.pending > 0 ? 'text-amber-400' : 'text-zinc-600'
+                  }`}>
+                    {queueSummary.conflicts > 0
+                      ? `${queueSummary.conflicts} conflict${queueSummary.conflicts === 1 ? '' : 's'}`
+                      : queueSummary.pending > 0 ? `${queueSummary.pending} pending` : 'clear'}
+                  </span>
+                </div>
+                {queueSummary.pendingValue > 0 && (
+                  <p className="text-[9px] text-zinc-600 font-mono leading-relaxed">
+                    ₹{queueSummary.pendingValue.toLocaleString('en-IN')} not yet in the register
+                  </p>
+                )}
+                <button
+                  onClick={() => setQueueDrawerOpen(true)}
+                  className="w-full py-1.5 rounded-lg border border-zinc-800 bg-zinc-900 hover:border-zinc-700 text-[10px] font-mono font-bold text-zinc-400 transition"
+                >
+                  Open Queue{queueSummary.conflicts > 0 ? ' — Resolve Conflicts' : ''}
+                </button>
+              </div>
+
+              {/* Simulated hardware (Milestone 35) */}
+              <div className="pt-2.5 border-t border-[#262626]">
+                <p className="text-[10px] font-mono text-zinc-500 uppercase font-bold mb-2.5">Peripherals</p>
+                <HardwarePanel />
+              </div>
+
               {/* Reset database */}
               <div className="pt-2.5 border-t border-[#262626]">
                 <button
@@ -890,6 +982,18 @@ function AppContent() {
           </div>
         )}
       </div>
+
+      {isQueueDrawerOpen && (
+        <OfflineQueueDrawer
+          queue={offlineQueue}
+          setQueue={setOfflineQueue}
+          invoices={invoices}
+          nextInvoiceNumber={() => nextBranchInvoiceNumber(activeBranch)}
+          onSync={runQueueSync}
+          isOffline={forceOffline}
+          onClose={() => setQueueDrawerOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -897,9 +1001,11 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <HardwareProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </HardwareProvider>
     </ThemeProvider>
   );
 }

@@ -20,7 +20,8 @@ import {
   Sparkles,
   X,
   ShieldAlert,
-  ShieldCheck
+  ShieldCheck,
+  CloudOff
 } from 'lucide-react';
 import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch, TaxRate, ItemDesign, HallmarkPolicy, StatutoryParameters, ApprovalRecord } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -35,6 +36,7 @@ import {
   type SupervisorPin,
 } from '../lib/statutoryParameters';
 import SupervisorPinModal from './SupervisorPinModal';
+import { useHardware } from '../contexts/HardwareContext';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
 import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
 import TaxMasterPanel from './TaxMasterPanel';
@@ -79,6 +81,9 @@ interface BillingEstimatorProps {
   /** The signed-in person, recorded as the requester on any approval. */
   currentUserName: string;
   onApprovalRecorded: (record: ApprovalRecord) => void;
+  /** Terminal is offline (Milestone 36): a completed sale is queued rather than registered. */
+  isOffline: boolean;
+  onQueueSale: (invoice: SaleInvoice) => void;
 }
 
 // NOTE: the old shop-wide `nextInvoiceNumber()` was removed in Milestone 19. GST Rule 46
@@ -214,12 +219,15 @@ export default function BillingEstimator({
   statutoryParameters,
   supervisors,
   currentUserName,
-  onApprovalRecorded
+  onApprovalRecorded,
+  isOffline,
+  onQueueSale
 }: BillingEstimatorProps) {
   // Available stock in showroom — only Tags in a legally sellable lifecycle state (Milestone 4)
   const availableStock = tags.filter(i => isSellable(i.status));
 
   const { theme } = useTheme();
+  const { registerWeightField } = useHardware();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'create' | 'registry' | 'taxmaster' | 'returns'>('create');
@@ -656,8 +664,15 @@ export default function BillingEstimator({
       approvals: discountApprovalCovers && discountApproval ? [discountApproval] : undefined
     };
 
-    // Update state
-    setInvoices(prev => [invoice, ...prev]);
+    // Offline, a tax invoice goes to the queue instead of the register (Milestone 36). It has no
+    // confirmed place in the series yet — another terminal may have taken the number — so writing
+    // it straight into the register would assert a sequence this terminal cannot vouch for. An
+    // estimate is non-fiscal and consumes no series, so it registers normally either way.
+    if (isOffline && !isEstimate) {
+      onQueueSale(invoice);
+    } else {
+      setInvoices(prev => [invoice, ...prev]);
+    }
 
     // Mark catalogue tags in stock as "Sold" — only ever via a legal state-machine transition
     // (Milestone 4, Handbook D-7). An estimate reserves nothing and must not deduct stock.
@@ -1414,6 +1429,10 @@ export default function BillingEstimator({
                           className="w-full text-xs font-mono px-2.5 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:border-amber-500 bg-white"
                           value={item.netWeight || ''}
                           onChange={(e) => updateItemField(index, 'netWeight', parseFloat(e.target.value) || 0)}
+                          onFocus={() => registerWeightField(
+                            `Billing line ${index + 1} — net weight`,
+                            (grams) => updateItemField(index, 'netWeight', grams)
+                          )}
                         />
                       </div>
                     </div>
@@ -1889,6 +1908,18 @@ export default function BillingEstimator({
                   </div>
                 )}
               </div>
+
+              {/* Offline mode (Milestone 36) — said before checkout, not discovered after it */}
+              {isOffline && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-[11px] rounded-xl border border-amber-200 dark:border-amber-900/50 flex items-start gap-2 font-medium leading-relaxed">
+                  <CloudOff className="w-4 h-4 shrink-0 mt-px text-amber-600" />
+                  <span>
+                    This terminal is offline. The sale still completes and the customer still gets
+                    their bill — it is held in the sync queue and enters the register when the
+                    connection returns.
+                  </span>
+                </div>
+              )}
 
               {/* Inline Validation Alert */}
               {validationError && (

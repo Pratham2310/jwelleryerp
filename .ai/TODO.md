@@ -68,8 +68,8 @@ Phase 11: Admin, Security & Hardware
   ├── M32 Admin Role & Permission Management ✅
   ├── M33 Supervisor PIN Approval Modal ✅
   ├── M34 Statutory Parameters Configuration Screen ✅
-  ├── M35 Digital Scale & Hardware Connection UI (Simulated)
-  └── M36 Offline POS Queue Sync UI (Simulated)
+  ├── M35 Digital Scale & Hardware Connection UI (Simulated) ✅
+  └── M36 Offline POS Queue Sync UI (Simulated) ✅
 
 Phase 12: Procurement & Supplier            [ADDED 2026-07-26 — gap found in coverage audit]
   ├── M37 Supplier Master (Party Master extension)
@@ -509,19 +509,23 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 - **Decisions:** an unconfigured threshold **falls back to the statutory default, never to zero** — zero would demand a PAN on every sale and stop the shop trading, a worse failure than the one the check guards against; validation refuses a zero PAN threshold outright and flags the likely PAN/TCS transposition; and the PMLA cash-transaction flag applies to the **cash component only**, because a ₹15,00,000 sale settled by bank transfer is not a cash transaction and flagging it would bury the genuine cases in noise.
 - **Note:** `statutoryChecks.PAN_THRESHOLD` stays as the shipped default so `reports.ts` and `OldGoldManager` keep working unchanged; a test asserts the two never drift apart.
 
-### 📍 Milestone 35: Digital Scale & Hardware Connection UI (Simulated)
+### ✅ Milestone 35: Digital Scale & Hardware Connection UI (Simulated)
 - **Goal:** Cosmetic hardware-connection indicators, extending the existing Simulation Desk pattern.
 - **Dependencies:** Milestone 1 (Simulation Desk).
 - **Tasks:**
   1. Add Digital Scale / Thermal Printer "connection status" indicators + a mock "Fetch Weight" button to the Simulation Desk panel in `App.tsx`.
 - **Testable via:** Toggling the simulated connection state updates the indicator; "Fetch Weight" populates a mock value into the active form field.
+- **Done:** `src/lib/hardware.ts` + `HardwareContext` + a Peripherals panel on the Simulation Desk. Built beyond "cosmetic" deliberately: what is worth simulating is the **discipline of weighing**, because the failure modes are real money on gold. **An unsettled reading cannot be captured** — the pan swings and decays, and capture is refused until the last samples agree to within one division, the same reason an assistant waits for the beep. Connection is a **three-state machine** (a device mid-handshake is neither connected nor disconnected, and a capture against it must fail rather than block). A capture carries its **tare** and refuses a negative net, because weighing a piece in a tray and forgetting the tray is the commonest counter error. Readings quantise to 1 mg — finer is false precision.
+- **Note:** The settling is deterministic given a seed, so the tests assert that a pan *settles* rather than hoping it does. Weight fields register themselves on focus (billing net weight, old-gold gross weight); the desk names the destination before firing, so nothing lands by surprise.
 
-### 📍 Milestone 36: Offline POS Queue Sync UI (Simulated)
+### ✅ Milestone 36: Offline POS Queue Sync UI (Simulated)
 - **Goal:** Visualize an offline invoice queue and reconnect/sync behavior (still no real offline persistence layer — this is a frontend-only prototype).
 - **Dependencies:** Milestone 1 (Simulation Desk's `forceOffline` toggle).
 - **Tasks:**
   1. Add an Offline Queue Sync indicator + conflict-resolution drawer, driven by the existing `forceOffline` simulation toggle.
 - **Testable via:** Enabling Force Offline and completing a "sale" queues it visibly; disabling offline mode shows it "syncing" and clearing from the queue.
+- **Done:** `src/lib/offlineQueue.ts` + an Offline Sales Queue drawer, with the queue count on the desk badge. The storage half is free here (everything is already `localStorage`); the half worth building is **the invoice number**. Rule 46 requires a unique consecutive series per GSTIN, and an offline terminal cannot know another counter has taken the number it just used — so two bills come back bearing the same one. Three rules: a queued sale is **never dropped** (the customer already walked out with that bill; discarding it loses a real transaction and understates output GST), a conflict is resolved **only by renumbering**, and the **original number is kept** so the gap in the series explains itself to an auditor. Sync is **partial** — a clean bill lands even when another conflicts, because holding a good sale hostage leaves the books understated for as long as the conflict goes unresolved. Reconnecting drains the queue automatically; a counter that has to remember to press a button is a counter that leaves sales out of the books.
+- **Defect found and fixed while building this:** `forceOffline` blanked *every* screen with the API-outage state, including Billing — which defeats the purpose of an offline queue, since a shop cannot tell a customer holding a chain to come back when the server is up. `/billing` is now exempt and shows an offline banner instead; every other screen is a read or a report that genuinely needs the server, so those still show the outage.
 
 ---
 

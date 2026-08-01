@@ -4,6 +4,38 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-08-01 — Phase 11 Complete: Milestones 35–36 (Simulated Hardware & Offline POS Queue)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+Both milestones are labelled "simulated" in the roadmap, and both were built past the label, because in each case the interesting half is a domain rule rather than an indicator light.
+
+**Milestone 35 — what is worth simulating is the discipline of weighing.** There is no serial port here and never will be. The failure modes, however, are real money on gold:
+
+- **An unsettled reading cannot be captured.** The pan swings and decays; capture is refused until the last four samples agree to within one division. A scale that hands you a number mid-swing is worse than no scale, because the number looks authoritative. The settling is deterministic given a seed, so the tests assert that a pan *settles* rather than hoping it does.
+- **Connection is a three-state machine**, not a boolean. A device mid-handshake is neither connected nor disconnected, and a capture attempted against it must fail rather than block.
+- **A capture carries its tare** and refuses a negative net. Weighing a piece in a tray and forgetting the tray is the commonest counter error, and it must never reach a bill.
+- Readings quantise to 1 mg. Finer is false precision.
+
+Weight fields register themselves on focus (billing net weight, old-gold gross weight) and the desk names the destination before firing, so nothing lands in a field by surprise.
+
+**Milestone 36 — the real problem is not storage, it is the invoice number.** Keeping selling through an outage is free in this build; everything already lives in `localStorage`. What needed care is coming back. GST Rule 46 requires a unique consecutive series per GSTIN, and an offline terminal has no way to know another counter has meanwhile issued the number it just used. Three rules follow:
+
+1. **A queued sale is never dropped.** The customer already walked out with that bill; discarding it loses a real transaction and understates output GST. A conflict is resolved by renumbering, never by deletion.
+2. **The number is the only thing renumbering may change.** The items, weights, tax and tender are what actually happened at the counter — rewriting any of them to make a sync succeed would be falsifying a fiscal document.
+3. **The original number is kept.** An auditor asking why the series jumps needs the answer in the record, not in someone's memory.
+
+Sync is deliberately **partial**: a clean bill lands even when another conflicts, because holding a good sale hostage to an unrelated collision leaves the register understated for as long as the conflict goes unresolved. Reconnecting drains the queue by itself — a counter that has to remember to press a button is a counter that leaves sales out of the books. The drawer names what is missing **in money**, and counts conflicted bills as unsynced too, since counting only PENDING would make a stuck queue look harmless.
+
+**A defect this milestone exposed, worth naming.** `forceOffline` blanked *every* screen with the API-outage state, Billing included. That defeats the entire purpose of an offline queue: a shop cannot tell a customer holding a chain to come back when the server is up. `/billing` is now exempt and shows an offline banner explaining that the sale completes and the bill is held for sync; every other screen is a read or a report that genuinely needs the server, so those still show the outage.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **1046 tests passing across 35 suites** (up from 1000); `npm run build` clean. Playwright-verified end to end. M35: linking the scale moved DISCONNECTED → CONNECTED, a capture attempted mid-swing was refused with "the reading has not settled", and a settled 41.300 g reading landed in the focused billing weight field. M36: with Force Offline on, a completed sale was held in the queue with the register untouched; a rival invoice was then injected on that number to reproduce a real collision; reconnecting auto-synced, flagged the conflict rather than committing it, and renumbering MUM-2026-1001 → MUM-2026-1002 (original preserved on the record) let it sync into the register with no duplicate number. Regression across all 13 screens × 2 themes: zero contrast failures, zero console errors; the queue drawer was checked separately in both themes with all three entry states rendered.
+
+**Phase 11 is now complete.** Remaining unbuilt: M42–M44, M49–M53.
+
+---
+
 ## 2026-08-01 — Milestones 33–34: Supervisor PIN Approval & Statutory Parameters
 
 **Author:** AI agent (Claude Code), pair programming with USER.

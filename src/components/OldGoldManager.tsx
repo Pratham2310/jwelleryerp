@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { OldGoldVoucher, OldGoldSettlementMode, Customer, MetalRate } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useHardware } from '../contexts/HardwareContext';
 import {
   calculateOldGoldValuation,
   validateOldGoldValuation,
@@ -65,6 +66,7 @@ const LOT_STATUS_BADGE: Record<OldGoldLotStatus, string> = {
 
 export default function OldGoldManager({ vouchers, setVouchers, customers, metalRates }: OldGoldManagerProps) {
   const { theme } = useTheme();
+  const { registerWeightField } = useHardware();
   const dark = theme === 'dark';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -598,6 +600,10 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
                       className={`w-full text-xs font-mono px-3 py-2 rounded-lg border focus:outline-none focus:border-amber-500 ${inputCls}`}
                       value={form.grossWeight || ''}
                       onChange={(e) => setForm(p => ({ ...p, grossWeight: parseFloat(e.target.value) || 0 }))}
+                      onFocus={() => registerWeightField(
+                        'Old gold — gross weight received',
+                        (grams) => setForm(p => ({ ...p, grossWeight: grams }))
+                      )}
                     />
                   </div>
                   <div>
