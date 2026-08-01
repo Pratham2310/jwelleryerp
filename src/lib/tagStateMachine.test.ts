@@ -64,10 +64,20 @@ describe('tagStateMachine.canTransition', () => {
     expect(canTransition(from, to)).toBe(false);
   });
 
-  it('DamagedOrMelted is the only fully terminal state; every other status has a way forward', () => {
-    expect(nextLegalStatuses('DamagedOrMelted')).toEqual([]);
+  it('has exactly two terminal states, both meaning the piece has left the shop', () => {
+    /**
+     * `ReturnedToSupplier` joined `DamagedOrMelted` in Milestone 41. Both are terminal for the
+     * same reason — the ornament is physically gone — but they are deliberately NOT the same
+     * status: goods sent back to a dealer are not goods destroyed, and conflating them would
+     * misstate both the stock ledger and the valuation.
+     *
+     * Every other status must retain a way forward, or stock could become permanently stranded.
+     */
+    const terminal = ALL_TAG_STATUSES.filter(s => nextLegalStatuses(s).length === 0);
+    expect(terminal.sort()).toEqual(['DamagedOrMelted', 'ReturnedToSupplier']);
+
     for (const s of ALL_TAG_STATUSES) {
-      if (s === 'DamagedOrMelted') continue;
+      if (terminal.includes(s)) continue;
       expect(nextLegalStatuses(s).length).toBeGreaterThan(0);
     }
   });

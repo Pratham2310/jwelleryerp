@@ -187,6 +187,31 @@ export interface PurchaseInvoice {
 }
 
 /**
+ * Purchase Return / Debit Note (PRD §6.1, Milestone 41) — the mirror of the sales credit note.
+ *
+ * Every figure is negative so a debit note can be summed alongside purchases to net them, the
+ * same convention Milestone 12 uses for credit notes. The ITC reversal is proportional and
+ * derived cumulatively, so successive partial returns reverse exactly what was claimed.
+ */
+export interface PurchaseReturn {
+  id: string;
+  debitNoteNo: string; // DBN-<FY>-nnn
+  purchaseInvoiceId: string;
+  supplierId: string;
+  returnDate: string;
+  reason: string;
+  returnedTaxableValue: number; // negative
+  reversedCgst: number; // negative
+  reversedSgst: number; // negative
+  reversedIgst: number; // negative
+  reversedTotalTax: number; // negative
+  debitNoteTotal: number; // negative
+  /** Pieces physically sent back; they move to `ReturnedToSupplier`. */
+  returnedTagIds: string[];
+  branchId?: string;
+}
+
+/**
  * Goods Receipt Note (PRD §6.1, Milestone 39) — where bought goods become real stock.
  *
  * `testedPurityPercent` is the assayed fineness of what actually arrived, held separately from

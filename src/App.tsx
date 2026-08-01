@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers, initialPurchaseOrders } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt, PurchaseInvoice } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt, PurchaseInvoice, PurchaseReturn } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
@@ -144,6 +144,12 @@ function AppContent() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
     const saved = localStorage.getItem('stitch_purchase_orders');
     return saved ? JSON.parse(saved) : initialPurchaseOrders;
+  });
+
+  // Purchase returns / debit notes (Milestone 41) — reverses stock AND the ITC claimed on it.
+  const [purchaseReturns, setPurchaseReturns] = useState<PurchaseReturn[]>(() => {
+    const saved = localStorage.getItem('stitch_purchase_returns');
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Supplier invoices & input tax credit (Milestone 40) — the purchase side of GST.
@@ -289,6 +295,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_purchase_invoices', JSON.stringify(purchaseInvoices));
   }, [purchaseInvoices]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_purchase_returns', JSON.stringify(purchaseReturns));
+  }, [purchaseReturns]);
 
   useEffect(() => {
     localStorage.setItem('stitch_savings_schemes', JSON.stringify(savingsSchemes));
@@ -648,6 +658,8 @@ function AppContent() {
                     setTags={setTags}
                     purchaseInvoices={purchaseInvoices}
                     setPurchaseInvoices={setPurchaseInvoices}
+                    purchaseReturns={purchaseReturns}
+                    setPurchaseReturns={setPurchaseReturns}
                   />
                 }
               />
