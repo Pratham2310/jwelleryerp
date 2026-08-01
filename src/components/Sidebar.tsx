@@ -14,10 +14,12 @@ import {
   Coins,
   Scale,
   ClipboardList,
+  ShieldCheck,
   X
 } from 'lucide-react';
 import { MetalRate, Branch } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { canAccessRoute, type Role } from '../lib/permissions';
 
 interface SidebarProps {
   metalRates: MetalRate[];
@@ -26,9 +28,11 @@ interface SidebarProps {
   operatorName: string;
   sidebarOpen?: boolean;
   setSidebarOpen?: (open: boolean) => void;
+  /** The signed-in user's role (Milestone 32); null hides every gated screen. */
+  currentRole?: Role | null;
 }
 
-export default function Sidebar({ metalRates, activeBranch, operatorName, sidebarOpen, setSidebarOpen }: SidebarProps) {
+export default function Sidebar({ metalRates, activeBranch, operatorName, sidebarOpen, setSidebarOpen, currentRole = null }: SidebarProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -45,6 +49,7 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
     { id: '/customers', name: 'Customers & Schemes', icon: Users, desc: 'CRM Swarna Nidhi scheme' },
     { id: '/purchases', name: 'Purchases', icon: ClipboardList, desc: 'Orders, receipts & supplier bills' },
     { id: '/accounting', name: 'Accounting', icon: Scale, desc: 'Day book, ledgers & trial balance' },
+    { id: '/roles', name: 'Roles & Access', icon: ShieldCheck, desc: 'Permission matrix' },
   ];
 
   return (
@@ -106,7 +111,9 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
 
       {/* Navigation Links */}
       <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-        {menuItems.map((item) => {
+        {/* Screens the role cannot reach are hidden rather than shown-and-refused: an
+            affordance that always errors is worse than one that is not offered. */}
+        {menuItems.filter(item => canAccessRoute(currentRole, item.id)).map((item) => {
           const Icon = item.icon;
           const isActive = currentPath === item.id || (item.id === '/dashboard' && currentPath === '/');
           return (

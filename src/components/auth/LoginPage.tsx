@@ -4,6 +4,7 @@ import { Sparkles, Key, Mail, Lock, User, Eye, EyeOff, ShieldCheck } from 'lucid
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Card } from '../ui/Card';
+import { DEFAULT_ROLES } from '../../lib/permissions';
 
 interface LoginPageProps {
   onLoginSuccess: (user: { name: string; role: string; branch: string }) => void;
@@ -16,6 +17,8 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Which role to sign in as — the permission matrix is only observable if you can pick one.
+  const [demoRole, setDemoRole] = useState('Store Manager');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +32,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       // Successful login mock
       onLoginSuccess({
         name: 'Prathamesh S.',
-        role: 'Store Manager',
+        role: demoRole,
         branch: 'Mumbai BST'
       });
       setIsLoading(false);
@@ -42,7 +45,9 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setTimeout(() => {
       onLoginSuccess({
         name: 'Prathamesh S.',
-        role: 'Store Manager (Guest)',
+        // Must match a role in the permission matrix (Milestone 32). An unrecognised name
+        // resolves to no role at all, which by design grants nothing.
+        role: demoRole,
         branch: 'Mumbai BST'
       });
       setIsLoading(false);
@@ -160,6 +165,24 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                   <span className="flex-shrink mx-3 text-[10px] text-[#71717A] uppercase font-mono tracking-widest">or sandbox access</span>
                   <div className="flex-grow border-t border-[#262626]"></div>
                 </div>
+
+                {/* Role picker (Milestone 32) — the permission matrix is only observable if you
+                    can sign in as something other than the fully-privileged role. */}
+                <label className="block space-y-1">
+                  <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-[#71717A]">
+                    Sign in as
+                  </span>
+                  <select
+                    value={demoRole}
+                    onChange={(e) => setDemoRole(e.target.value)}
+                    aria-label="Sign in as role"
+                    className="w-full text-xs px-3 py-2.5 rounded-xl bg-[#141416] border border-[#262626] text-[#E5E5E5] focus:outline-none focus:border-[#C5A059]"
+                  >
+                    {DEFAULT_ROLES.map(r => (
+                      <option key={r.id} value={r.name}>{r.name} — {r.description}</option>
+                    ))}
+                  </select>
+                </label>
 
                 <Button
                   type="button"

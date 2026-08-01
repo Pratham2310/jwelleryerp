@@ -5,6 +5,8 @@ import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, Lo
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
+import { DEFAULT_ROLES, roleByName, canAccessRoute, type Role } from './lib/permissions';
+import RoleManager from './components/RoleManager';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
 
 // Custom layouts & Auth pages
@@ -144,6 +146,12 @@ function AppContent() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
     const saved = localStorage.getItem('stitch_purchase_orders');
     return saved ? JSON.parse(saved) : initialPurchaseOrders;
+  });
+
+  // Roles & permissions (Milestone 32). Gates the interface only — see src/lib/permissions.ts.
+  const [roles, setRoles] = useState<Role[]>(() => {
+    const saved = localStorage.getItem('stitch_roles');
+    return saved ? JSON.parse(saved) : DEFAULT_ROLES;
   });
 
   // Manual Payment/Receipt/Contra vouchers (Milestone 45) — posted into the same journal.
@@ -311,6 +319,10 @@ function AppContent() {
   }, [manualVouchers]);
 
   useEffect(() => {
+    localStorage.setItem('stitch_roles', JSON.stringify(roles));
+  }, [roles]);
+
+  useEffect(() => {
     localStorage.setItem('stitch_savings_schemes', JSON.stringify(savingsSchemes));
   }, [savingsSchemes]);
 
@@ -346,6 +358,21 @@ function AppContent() {
   }, [location.pathname, forceOffline, latency, user]);
 
   const activeBranch = getActiveBranch(branches, activeBranchId);
+
+  /** The signed-in user's role. An unrecognised name resolves to null, which grants nothing. */
+  const currentRole = useMemo(() => roleByName(roles, user?.role || ''), [roles, user]);
+
+  /**
+   * Hiding a nav link is not a guard — a typed URL would still render the screen. This bounces
+   * any route the role cannot reach back to the Dashboard, which is deliberately ungated so a
+   * denied user always lands somewhere rather than on a blank page.
+   */
+  useEffect(() => {
+    if (!user) return;
+    if (!canAccessRoute(currentRole, location.pathname)) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, currentRole, location.pathname, navigate]);
   const fallbackBranchId = primaryBranchId(branches);
 
   // Branch-scoped views of stock-bearing records (Milestone 19). Party masters (customers,
@@ -390,6 +417,7 @@ function AppContent() {
         operatorName={user.name} 
         sidebarOpen={sidebarOpen} 
         setSidebarOpen={setSidebarOpen} 
+        currentRole={currentRole}
       />
 
       {/* RIGHT MAIN CONTAINER */}
@@ -685,6 +713,17 @@ function AppContent() {
                     manualVouchers={manualVouchers}
                     setManualVouchers={setManualVouchers}
                     activeBranch={activeBranch}
+                  />
+                }
+              />
+              <Route
+                path="/roles"
+                element={
+                  <RoleManager
+                    roles={roles}
+                    setRoles={setRoles}
+                    assignedRoleNames={user?.role ? [user.role] : []}
+                    currentRole={currentRole}
                   />
                 }
               />
