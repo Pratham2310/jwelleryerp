@@ -27,6 +27,29 @@ Screens: **Day Book**, **Trial Balance**, **Ledger Statement** and **Chart of Ac
 
 ---
 
+## 2026-08-01 — Milestone 32: Roles & Permissions
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation.
+
+Every screen was reachable by anyone and the login role was decorative. This adds a real permission matrix, gates navigation and routes by it, and lets roles be created and edited.
+
+**It gates the interface, not the data** — stated in the module header and on the screen itself. There is no backend, everything lives in `localStorage`, and anyone with a console can rewrite it. So this is a control against *mistakes and process violations*, which is what a shop actually needs day to day, not against a determined actor. That is written down rather than implied because the failure mode is someone later treating a checkbox here as though it enforced security. The permission names are chosen to port unchanged to a server, so re-asserting them there is a re-implementation rather than a redesign.
+
+**Three decisions worth recording:**
+
+- **An unknown role gets nothing, not everything.** Defaulting an unrecognised role to full access is the classic way a permission system quietly stops working — one typo in a role name would silently unlock the whole app.
+- **At least one role must always keep `admin.roles`.** Remove it from the last one and nobody can ever grant it back: the shop would be locked out of its own permission screen with no recovery short of clearing storage. Both the edit and the delete path refuse it, and say why.
+- **Gated screens are hidden, and the route is guarded too.** Hiding a nav link is not a guard — a typed URL would still render. A denied route bounces to the Dashboard, which is deliberately ungated so a denied user always lands somewhere rather than on a blank page.
+
+`billing.discount` and `billing.override` are separate permissions on purpose: an override changes the calculated rate itself, which is why Milestone 10 makes it require a logged reason. Login now offers a role, because the matrix is only observable if you can sign in as something other than the fully-privileged one.
+
+**Two of my own defects, caught in the browser pass and fixed:** a React key warning from an unkeyed `<>` in the grouped matrix, and the unchecked-permission marker measuring 1.76:1 in dark mode — subdued is fine, illegible is not, since that mark carries the actual answer.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **926 tests passing across 31 suites** (up from 888); `npm run build` clean. Browser-verified across roles: Owner sees 11 screens, Counter Staff 6, and all five hidden ones stay hidden when their URLs are typed directly; the Accountant has the books but not billing; stripping `admin.roles` from the only administrator is refused by name. Full sweep across both themes and mobile: zero contrast failures, zero console errors.
+
+---
+
 ## 2026-08-01 — Phase 14 Complete: Milestones 45–47 (Accounting Depth)
 
 **Author:** AI agent (Claude Code), pair programming with USER.
