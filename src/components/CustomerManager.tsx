@@ -14,8 +14,9 @@ import {
   Clock,
   UserCheck
 } from 'lucide-react';
-import { Customer, SavingsScheme, SchemeEnrollment, SchemeInstalment, Branch } from '../types';
+import { Customer, SavingsScheme, SchemeEnrollment, SchemeInstalment, Branch, Supplier } from '../types';
 import SchemeManager from './SchemeManager';
+import SupplierManager from './SupplierManager';
 
 interface CustomerManagerProps {
   customers: Customer[];
@@ -29,13 +30,16 @@ interface CustomerManagerProps {
   instalments: SchemeInstalment[];
   setInstalments: React.Dispatch<React.SetStateAction<SchemeInstalment[]>>;
   activeBranch: Branch | null;
+  /** Supplier Master (Milestone 37) — the creditor side of the same Party Master. */
+  suppliers: Supplier[];
+  setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
 }
 
 export default function CustomerManager({
   customers, setCustomers, schemes, setSchemes, enrollments, setEnrollments,
-  instalments, setInstalments, activeBranch,
+  instalments, setInstalments, activeBranch, suppliers, setSuppliers,
 }: CustomerManagerProps) {
-  const [activeTab, setActiveTab] = useState<'customers' | 'schemes'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'schemes' | 'suppliers'>('customers');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   
@@ -127,6 +131,7 @@ export default function CustomerManager({
         {([
           { key: 'customers', label: 'Customer Directory' },
           { key: 'schemes', label: 'Gold Savings Schemes' },
+          { key: 'suppliers', label: 'Suppliers' },
         ] as const).map(t => (
           <button
             key={t.key}
@@ -141,7 +146,9 @@ export default function CustomerManager({
         ))}
       </div>
 
-      {activeTab === 'schemes' ? (
+      {activeTab === 'suppliers' ? (
+        <SupplierManager suppliers={suppliers} setSuppliers={setSuppliers} />
+      ) : activeTab === 'schemes' ? (
         <SchemeManager
           customers={customers}
           schemes={schemes}

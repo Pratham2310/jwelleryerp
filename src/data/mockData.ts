@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, TaxRate, SavingsScheme, SchemeEnrollment, SchemeInstalment } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, TaxRate, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -996,4 +996,58 @@ export const initialSchemeInstalments: SchemeInstalment[] = [
     mode: 'Cash' as const,
     receiptNo: `SR-2026-002${i + 1}`
   }))
+];
+
+/**
+ * Supplier Master (PRD §4.4, Milestone 37). Tenant-wide — no `branchId`, per decision D-5.
+ * Deliberately mixed: two registered dealers in different states so the intra/inter-state tax
+ * split has something to exercise, and one unregistered service provider so reverse-charge
+ * exposure (PRD §9.7, Milestone 40) is visible from day one.
+ */
+export const initialSuppliers: Supplier[] = [
+  {
+    id: 'sup-1',
+    supplierCode: 'SUP-0001',
+    name: 'Zaveri Bullion & Refinery Co.',
+    supplierType: 'BULLION_DEALER',
+    phone: '9820011223',
+    email: 'trade@zaveribullion.in',
+    address: '14, Sheikh Memon Street, Zaveri Bazaar, Mumbai, MH - 400002',
+    gstin: '27AACCS9948H1Z1',
+    pan: 'AACCS9948H',
+    stateCode: '27',
+    openingBalance: 485000, // shop owes them
+    creditTermsDays: 30,
+    isActive: true
+  },
+  {
+    id: 'sup-2',
+    supplierCode: 'SUP-0002',
+    name: 'Rajwada Jewels Wholesale',
+    supplierType: 'WHOLESALER',
+    phone: '9845067890',
+    email: 'orders@rajwadajewels.com',
+    address: '221, Chickpet Main Road, Bengaluru, KA - 560053',
+    // Karnataka (29) — an inter-state purchase, so this attracts IGST rather than CGST+SGST.
+    gstin: '29AADCR2233K1ZP',
+    pan: 'AADCR2233K',
+    stateCode: '29',
+    openingBalance: 0,
+    creditTermsDays: 45,
+    isActive: true
+  },
+  {
+    id: 'sup-3',
+    supplierCode: 'SUP-0003',
+    name: 'Suresh Polishing Works',
+    supplierType: 'SERVICE',
+    phone: '9769123456',
+    address: 'Shop 4, Kalbadevi, Mumbai, MH - 400002',
+    // Unregistered on purpose: a notified service from an unregistered supplier is where
+    // Reverse Charge bites (PRD §9.7). Milestone 40 books it.
+    stateCode: '27',
+    openingBalance: -12000, // an advance sits with them
+    creditTermsDays: 0,
+    isActive: true
+  }
 ];

@@ -96,6 +96,48 @@ export interface Customer {
   // (intra-state) rather than guessing. Deliberately NOT branch-scoped, per decision D-5.
   stateCode?: string; // GST state code, e.g. '27' Maharashtra, '29' Karnataka
   gstin?: string; // only for a B2B buyer; Rule 46 requires it printed on the invoice
+
+  /**
+   * Milestone 37 — PRD §4.4 requires these on the Party Master and the type carried none of
+   * them. PAN is not cosmetic: Rule 114B makes it mandatory at ₹2,00,000 and Milestone 8 already
+   * blocks checkout without a declaration, so holding it here saves a returning buyer producing
+   * it at every high-value sale. Aadhaar is optional and PMLA-related; it is masked on display.
+   */
+  pan?: string;
+  aadhaar?: string;
+  customerType?: 'RETAIL' | 'WHOLESALE' | 'SCHEME';
+  creditLimit?: number;
+  kycNote?: string;
+}
+
+/**
+ * Supplier — the creditor side of the Party Master (PRD §4.4, Milestone 37).
+ *
+ * PRD §4.4 treats customers and suppliers as one "Party" ledger concept because the same person
+ * may buy from the shop and sell old gold to it. They are separate records here (a supplier
+ * carries credit terms a retail buyer does not) but share one KYC shape and one validator set.
+ *
+ * Per decision **D-5** this is tenant-wide and deliberately carries NO `branchId`: a supplier
+ * delivering to two branches is one creditor, and splitting that balance per branch would make
+ * both halves wrong.
+ */
+export interface Supplier {
+  id: string;
+  supplierCode: string; // SUP-nnnn
+  name: string;
+  supplierType: 'BULLION_DEALER' | 'WHOLESALER' | 'SERVICE';
+  phone: string;
+  email?: string;
+  address?: string;
+  /** A GSTIN encodes both the state code and the PAN — see `src/lib/supplier.ts`. */
+  gstin?: string;
+  pan?: string;
+  stateCode?: string;
+  /** Positive = the shop owes the supplier. Negative = an advance sits with them. */
+  openingBalance: number;
+  creditTermsDays: number;
+  isActive: boolean;
+  notes?: string;
 }
 
 export interface Karigar {

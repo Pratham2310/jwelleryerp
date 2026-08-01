@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
@@ -138,6 +138,12 @@ function AppContent() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Supplier Master (Milestone 37). Tenant-wide, no branchId — decision D-5.
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    const saved = localStorage.getItem('stitch_suppliers');
+    return saved ? JSON.parse(saved) : initialSuppliers;
+  });
+
   // Gold Savings Schemes (Milestones 26-27). Tenant-wide like the other masters (D-5): a
   // customer's scheme follows them across branches. The balance is NOT stored anywhere — it is
   // folded from `schemeInstalments`, the same way karigar balances and metal rates work.
@@ -247,6 +253,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_hallmark_policy', JSON.stringify(hallmarkPolicy));
   }, [hallmarkPolicy]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_suppliers', JSON.stringify(suppliers));
+  }, [suppliers]);
 
   useEffect(() => {
     localStorage.setItem('stitch_savings_schemes', JSON.stringify(savingsSchemes));
@@ -574,6 +584,8 @@ function AppContent() {
                     instalments={schemeInstalments}
                     setInstalments={setSchemeInstalments}
                     activeBranch={activeBranch}
+                    suppliers={suppliers}
+                    setSuppliers={setSuppliers}
                   />
                 }
               />
