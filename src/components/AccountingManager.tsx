@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, Scale, Landmark, ListTree, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Scale, Landmark, ListTree, AlertTriangle, CheckCircle2, Download } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import type { SaleInvoice, OldGoldVoucher, SchemeInstalment, KarigarLedgerEntry, Karigar } from '../types';
 import {
@@ -15,6 +15,13 @@ import {
   accountName,
   normalBalanceOf,
 } from '../lib/journalPosting';
+import {
+  buildTallyXml,
+  vouchersInPeriod,
+  summariseExport,
+  validateExportRange,
+  exportFileName,
+} from '../lib/tallyExport';
 
 interface AccountingManagerProps {
   invoices: SaleInvoice[];
@@ -24,7 +31,7 @@ interface AccountingManagerProps {
   karigars: Karigar[];
 }
 
-type Tab = 'daybook' | 'trial' | 'ledger' | 'chart';
+type Tab = 'daybook' | 'trial' | 'ledger' | 'chart' | 'tally';
 
 export default function AccountingManager({
   invoices, oldGoldVouchers, schemeInstalments, karigarLedger, karigars,
@@ -33,6 +40,12 @@ export default function AccountingManager({
   const dark = theme === 'dark';
 
   const [tab, setTab] = useState<Tab>('daybook');
+
+  // Tally export period (Milestone 29). Defaults to the current month.
+  const monthStart = new Date().toISOString().slice(0, 8) + '01';
+  const [exportFrom, setExportFrom] = useState(monthStart);
+  const [exportTo, setExportTo] = useState(new Date().toISOString().slice(0, 10));
+  const [exportError, setExportError] = useState('');
   const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
   const [ledgerCode, setLedgerCode] = useState('1100');
 
@@ -71,6 +84,7 @@ export default function AccountingManager({
     { key: 'trial', label: 'Trial Balance', icon: Scale },
     { key: 'ledger', label: 'Ledger Statement', icon: Landmark },
     { key: 'chart', label: 'Chart of Accounts', icon: ListTree },
+    { key: 'tally', label: 'Tally Export', icon: Download },
   ];
 
   return (
@@ -336,6 +350,112 @@ export default function AccountingManager({
           </div>
         </div>
       )}
+
+      {tab === 'tally' && (() => {
+        const selected = vouchersInPeriod(journal, exportFrom, exportTo);
+        const exp = summariseExport(selected);
+
+        const download = () => {
+          const err = validateExportRange(exportFrom, exportTo);
+          if (err) { setExportError(err); return; }
+          const xml = buildTallyXml(selected, {
+            companyName: 'Stitch Jewellery House',
+            fromDate: exportFrom,
+            toDate: exportTo,
+          });
+          // Client-side only — no Tally integration, no network call (simulation ground rule).
+          const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = exportFileName(exportFrom, exportTo);
+          a.click();
+          URL.revokeObjectURL(url);
+          setExportError('');
+        };
+
+        return (
+          <div className={`p-5 rounded-2xl border shadow-sm space-y-4 ${cardCls}`}>
+            <div>
+              <p className="text-xs font-bold">Tally Prime Export</p>
+              <p className={`text-[11px] mt-0.5 ${mutedCls}`}>
+                A downloaded XML file only — there is no Tally integration and no network call.
+                Vouchers are written with Tally's own conventions: dates as YYYYMMDD, and debits
+                as <span className="font-bold">negative</span> amounts marked deemed-positive,
+                which reads backwards but is what Tally expects.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <label className="space-y-1 block">
+                <span className={`text-[10px] uppercase font-mono font-bold tracking-wider block ${mutedCls}`}>From</span>
+                <input type="date" value={exportFrom}
+                  onChange={e => { setExportFrom(e.target.value); setExportError(''); }}
+                  className={`w-full text-xs font-mono px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`} />
+              </label>
+              <label className="space-y-1 block">
+                <span className={`text-[10px] uppercase font-mono font-bold tracking-wider block ${mutedCls}`}>To</span>
+                <input type="date" value={exportTo}
+                  onChange={e => { setExportTo(e.target.value); setExportError(''); }}
+                  className={`w-full text-xs font-mono px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`} />
+              </label>
+              <div className="flex items-end">
+                <button onClick={download}
+                  disabled={exp.exportable === 0}
+                  className="w-full flex items-center justify-center gap-2 py-2 bg-[#C5A059] hover:bg-[#B08D4A] disabled:opacity-40 disabled:cursor-not-allowed text-[#0A0A0B] text-xs font-bold rounded-xl transition">
+                  <Download className="w-4 h-4" /> Download XML
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'Vouchers in Period', value: String(exp.totalVouchers) },
+                { label: 'Will Export', value: String(exp.exportable), accent: true },
+                { label: 'Total Debit', value: money(exp.totalDebit) },
+                { label: 'Total Credit', value: money(exp.totalCredit) },
+              ].map(k => (
+                <div key={k.label} className={`p-4 rounded-xl border text-center ${
+                  k.accent ? 'border-amber-500/40 bg-amber-500/5'
+                    : dark ? 'border-[#262626] bg-zinc-900/30' : 'border-slate-150 bg-slate-50/60'
+                }`}>
+                  <p className={`text-lg font-black font-mono ${k.accent ? 'text-amber-500' : ''}`}>{k.value}</p>
+                  <p className={`text-[9px] uppercase font-mono font-bold tracking-wider mt-0.5 ${mutedCls}`}>{k.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {exp.byType.length > 0 && (
+              <div className={`p-3 rounded-xl border text-[11px] ${dark ? 'border-zinc-800 bg-zinc-900/40' : 'border-slate-150 bg-slate-50/60'}`}>
+                {exp.byType.map(t => (
+                  <div key={t.type} className="flex justify-between">
+                    <span className={mutedCls}>{t.type}</span>
+                    <span className="font-mono">{t.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {exp.excludedUnbalanced > 0 && (
+              <p className={`text-[11px] ${dark ? 'text-rose-300' : 'text-rose-700'}`}>
+                {exp.excludedUnbalanced} voucher(s) excluded because their debits and credits
+                disagree. Tally rejects an entire import if any voucher is unbalanced, so they are
+                left out and reported here rather than silently shipped.
+              </p>
+            )}
+
+            {exp.exportable === 0 && (
+              <p className={`text-[11px] ${mutedCls}`}>Nothing to export in this period.</p>
+            )}
+
+            {exportError && (
+              <p className="text-[11px] font-bold text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
+                {exportError}
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {tab === 'chart' && (
         <div className={`rounded-2xl border shadow-sm overflow-hidden ${cardCls}`}>
