@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { ClipboardList, Plus, X, Trash2, AlertTriangle, Ban } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import type {
-  PurchaseOrder, PurchaseOrderLine, Supplier, Branch, MetalStandard, ItemDesign, GoodsReceipt, Tag,
+  PurchaseOrder, PurchaseOrderLine, Supplier, Branch, MetalStandard, ItemDesign, GoodsReceipt, Tag, PurchaseInvoice,
 } from '../types';
 import GoodsReceiptPanel from './GoodsReceiptPanel';
+import PurchaseInvoicePanel from './PurchaseInvoicePanel';
 import {
   nextPoNumber,
   validatePoDraft,
@@ -31,6 +32,9 @@ interface PurchaseManagerProps {
   setGoodsReceipts: React.Dispatch<React.SetStateAction<GoodsReceipt[]>>;
   allTags: Tag[];
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
+  /** Supplier invoices and the input credit they carry (Milestone 40). */
+  purchaseInvoices: PurchaseInvoice[];
+  setPurchaseInvoices: React.Dispatch<React.SetStateAction<PurchaseInvoice[]>>;
 }
 
 const METALS: MetalStandard[] = ['Gold (24K)', 'Gold (22K)', 'Gold (18K)', 'Silver (999)', 'Platinum (950)'];
@@ -51,11 +55,11 @@ const blankLine = (): PurchaseOrderLine => ({
 
 export default function PurchaseManager({
   purchaseOrders, setPurchaseOrders, suppliers, itemDesigns, branches, activeBranch,
-  goodsReceipts, setGoodsReceipts, allTags, setTags,
+  goodsReceipts, setGoodsReceipts, allTags, setTags, purchaseInvoices, setPurchaseInvoices,
 }: PurchaseManagerProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
-  const [activeTab, setActiveTab] = useState<'orders' | 'receipts'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'receipts' | 'invoices'>('orders');
 
   const [isOpen, setOpen] = useState(false);
   const [supplierId, setSupplierId] = useState('');
@@ -140,6 +144,7 @@ export default function PurchaseManager({
         {([
           { key: 'orders', label: 'Purchase Orders' },
           { key: 'receipts', label: 'Goods Receipts' },
+          { key: 'invoices', label: 'Supplier Invoices & ITC' },
         ] as const).map(t => (
           <button
             key={t.key}
@@ -154,7 +159,15 @@ export default function PurchaseManager({
         ))}
       </div>
 
-      {activeTab === 'receipts' ? (
+      {activeTab === 'invoices' ? (
+        <PurchaseInvoicePanel
+          invoices={purchaseInvoices}
+          setInvoices={setPurchaseInvoices}
+          goodsReceipts={goodsReceipts}
+          suppliers={suppliers}
+          activeBranch={activeBranch}
+        />
+      ) : activeTab === 'receipts' ? (
         <GoodsReceiptPanel
           receipts={goodsReceipts}
           setReceipts={setGoodsReceipts}

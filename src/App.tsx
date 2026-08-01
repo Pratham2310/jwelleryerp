@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers, initialPurchaseOrders } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt, PurchaseInvoice } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
@@ -146,6 +146,12 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialPurchaseOrders;
   });
 
+  // Supplier invoices & input tax credit (Milestone 40) — the purchase side of GST.
+  const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>(() => {
+    const saved = localStorage.getItem('stitch_purchase_invoices');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Goods Receipts (Milestone 39). Branch-scoped, and the origin of purchased Tag records.
   const [goodsReceipts, setGoodsReceipts] = useState<GoodsReceipt[]>(() => {
     const saved = localStorage.getItem('stitch_goods_receipts');
@@ -279,6 +285,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_goods_receipts', JSON.stringify(goodsReceipts));
   }, [goodsReceipts]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_purchase_invoices', JSON.stringify(purchaseInvoices));
+  }, [purchaseInvoices]);
 
   useEffect(() => {
     localStorage.setItem('stitch_savings_schemes', JSON.stringify(savingsSchemes));
@@ -636,6 +646,8 @@ function AppContent() {
                     setGoodsReceipts={setGoodsReceipts}
                     allTags={tags}
                     setTags={setTags}
+                    purchaseInvoices={purchaseInvoices}
+                    setPurchaseInvoices={setPurchaseInvoices}
                   />
                 }
               />

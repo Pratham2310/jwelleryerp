@@ -154,6 +154,39 @@ export interface PurchaseOrder {
 }
 
 /**
+ * Purchase Invoice & Input Tax Credit (PRD §6.1/§9.6/§9.7, Milestone 40).
+ *
+ * `supplierInvoiceNo` is the supplier's own number, not ours — booking the same one twice would
+ * claim the same credit twice, so it is unique per supplier. `internalRef` is our reference.
+ *
+ * On a reverse-charge invoice the supplier charges nothing and the shop pays that GST itself,
+ * so the tax is BOTH an output liability and an input credit. Recording only the credit is the
+ * inviting mistake — see `purchaseInvoice.ts`.
+ */
+export interface PurchaseInvoice {
+  id: string;
+  internalRef: string; // PINV-<FY>-nnn
+  supplierId: string;
+  supplierInvoiceNo: string;
+  supplierInvoiceDate: string;
+  /** The receipt this bills, when the goods arrived first. */
+  goodsReceiptId?: string;
+  taxableValue: number;
+  gstRatePercent: number;
+  isReverseCharge: boolean;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  totalTax: number;
+  /** Excludes tax on a reverse-charge invoice — the supplier is not owed it. */
+  invoiceTotal: number;
+  itcEligible: boolean;
+  itcIneligibleReason?: string;
+  postedOn: string;
+  branchId?: string;
+}
+
+/**
  * Goods Receipt Note (PRD §6.1, Milestone 39) — where bought goods become real stock.
  *
  * `testedPurityPercent` is the assayed fineness of what actually arrived, held separately from
