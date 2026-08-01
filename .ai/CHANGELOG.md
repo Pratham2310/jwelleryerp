@@ -27,6 +27,29 @@ Screens: **Day Book**, **Trial Balance**, **Ledger Statement** and **Chart of Ac
 
 ---
 
+## 2026-08-01 — Phase 9 Complete: Milestone 29 (Tally Prime Export)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation.
+
+Closes the accounting phase. A downloaded XML file only — no Tally integration and no network call, per the simulation ground rule — but shaped the way Tally's import actually expects, because an accountant drops it straight in and a malformed voucher fails the **entire** import rather than just itself.
+
+Deliberately built after Procurement rather than before: run in roadmap order it would have exported only the sales half of the books, since input tax and purchases did not exist until M40.
+
+**Three conventions that yield a plausible-looking but wrong file when missed:**
+
+1. **Tally's sign convention is inverted from the ledger's.** A DEBIT carries a NEGATIVE `<AMOUNT>` with `<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>`; a CREDIT carries a positive amount with `No`. That reads backwards to anyone who has just written a double-entry engine, and reversing it produces a file that imports **cleanly** while putting every figure on the wrong side of every account.
+2. **Dates are `YYYYMMDD`**, no separators. `2026-07-20` is rejected outright.
+3. **Ledger names must be XML-escaped.** Not hypothetical: the seeded supplier is "Zaveri Bullion & Refinery Co.", and a raw `&` makes the document malformed so Tally refuses everything.
+
+**Unbalanced vouchers are excluded and reported, never silently shipped.** Tally rejects an import whose debits and credits disagree, and a file that fails at the accountant's desk with no explanation is worse than one that is short a voucher and says so on screen.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **849 tests passing across 29 suites** (up from 813); `npm run build` clean. Verified against the **actual downloaded file**, not just the generator: 20 vouchers over the seeded period, correct envelope and period header, dates in `YYYYMMDD`, debits negative and deemed-positive, credits positive and not, every amount to two decimals, no unescaped ampersand, and every voucher's amounts netting to exactly zero. All 5 Accounting tabs × 2 themes and the full 10-screen sweep: zero contrast failures, zero console errors.
+
+**Test-scope note:** the suite runs in Node with no `DOMParser`, and jsdom is not a dependency. Rather than add one for a single assertion, the well-formedness test checks the two properties that actually break an import — no bare ampersand and balanced tags — driven through reserved characters in a narration. A real parse was done on the downloaded file in the browser pass instead.
+
+---
+
 ## 2026-08-01 — Phase 12 Complete: Milestones 37–41 (Procurement & Supplier)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

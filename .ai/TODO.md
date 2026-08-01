@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-30 — **Milestones 1–28, 37–41 and 48 complete; Phases 1–8 and 12 done, Phase 9 started** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Phase 12 (Procurement) is complete — the app can now buy stock, and GST has both an output and an input side. Milestone 29 (Tally Prime export) is next, and now has complete books to export. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-30 — **Milestones 1–29, 37–41 and 48 complete; Phases 1–9 and 12 done** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Phase 12 (Procurement) is complete — the app can now buy stock, and GST has both an output and an input side. Phase 9 (Accounting) is complete. Next by dependency is **Phase 14 (M45–47)** — the P&L and Balance Sheet are finally meaningful now that purchases exist to cost against revenue — or **M32 (RBAC)**, which unlocks M33, M34, M49 and the maker-checker approval left open in M48. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -426,7 +426,7 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ---
 
-## 🏁 Phase 9: Accounting (Milestones 28 – 29)
+## 🏁 Phase 9: Accounting (Milestones 28 – 29) — ✅ COMPLETE (2026-08-01)
 
 ### ✅ Milestone 28: Accounting Ledgers & Auto-Journal Posting
 - **Goal:** Auto-post double-entry journal entries behind every transaction.
@@ -438,12 +438,13 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 - **Done:** `src/lib/journalPosting.ts` + an Accounting route with Day Book, Trial Balance, Ledger Statement and Chart of Accounts. Vouchers are **derived** from the documents, never stored, so the books cannot drift from the transactions (PRD §10.1) — re-deriving is idempotent and tested. Three rules are structurally respected: old gold posts its own purchase voucher and never contras Sales (**D-10**); scheme instalments credit a **liability, not income** (PRD §12.3); and a weight-only karigar entry posts **nothing**, keeping metal out of the money books (**D-2**).
 - **Note on the reconciliation:** gross postings are *not* the day's sales value — a discounted sale debits Discount Given, so total debits exceed what the customer paid. `reconcileDayBook()` states what genuinely ties (income credited vs gross value of documents raised) and shows the discount that explains the difference, rather than leaving an owner to find two figures that were never meant to match.
 
-### 📍 Milestone 29: Tally Prime Export
+### ✅ Milestone 29: Tally Prime Export
 - **Goal:** One-click accounting sync export.
 - **Dependencies:** Milestone 28.
 - **Tasks:**
   1. Build a client-side Tally-compatible XML export button (no real Tally integration — a downloaded file, per the simulation-only ground rule).
 - **Testable via:** Exported XML validates against Tally's expected schema shape for a sample period.
+- **Done:** `src/lib/tallyExport.ts` + a Tally Export tab on Accounting. Three conventions that produce a plausible-but-wrong file if missed: **Tally's sign convention is inverted** (a DEBIT is a NEGATIVE amount with `ISDEEMEDPOSITIVE=Yes`), **dates are `YYYYMMDD`** with no separators, and **ledger names must be XML-escaped** — not hypothetical, since the seeded supplier is "Zaveri Bullion & Refinery Co." and a raw `&` makes Tally reject the whole import. Unbalanced vouchers are **excluded and reported**, never silently shipped, because Tally rejects an entire file if any voucher fails to balance.
 
 ---
 
