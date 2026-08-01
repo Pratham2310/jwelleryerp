@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { ClipboardList, Plus, X, Trash2, AlertTriangle, Ban } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import type {
-  PurchaseOrder, PurchaseOrderLine, Supplier, Branch, MetalStandard, ItemDesign,
+  PurchaseOrder, PurchaseOrderLine, Supplier, Branch, MetalStandard, ItemDesign, GoodsReceipt, Tag,
 } from '../types';
+import GoodsReceiptPanel from './GoodsReceiptPanel';
 import {
   nextPoNumber,
   validatePoDraft,
@@ -25,6 +26,11 @@ interface PurchaseManagerProps {
   itemDesigns: ItemDesign[];
   branches: Branch[];
   activeBranch: Branch | null;
+  /** Goods receipts (Milestone 39) — where a purchase becomes real stock. */
+  goodsReceipts: GoodsReceipt[];
+  setGoodsReceipts: React.Dispatch<React.SetStateAction<GoodsReceipt[]>>;
+  allTags: Tag[];
+  setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
 }
 
 const METALS: MetalStandard[] = ['Gold (24K)', 'Gold (22K)', 'Gold (18K)', 'Silver (999)', 'Platinum (950)'];
@@ -45,9 +51,11 @@ const blankLine = (): PurchaseOrderLine => ({
 
 export default function PurchaseManager({
   purchaseOrders, setPurchaseOrders, suppliers, itemDesigns, branches, activeBranch,
+  goodsReceipts, setGoodsReceipts, allTags, setTags,
 }: PurchaseManagerProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
+  const [activeTab, setActiveTab] = useState<'orders' | 'receipts'>('orders');
 
   const [isOpen, setOpen] = useState(false);
   const [supplierId, setSupplierId] = useState('');
@@ -127,6 +135,39 @@ export default function PurchaseManager({
 
   return (
     <div className="space-y-6">
+      {/* The procurement chain in order: what was ordered, then what actually arrived. */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 pb-px gap-6 items-center">
+        {([
+          { key: 'orders', label: 'Purchase Orders' },
+          { key: 'receipts', label: 'Goods Receipts' },
+        ] as const).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`pb-3 text-sm font-bold transition relative cursor-pointer ${
+              activeTab === t.key ? 'text-amber-500' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            {t.label}
+            {activeTab === t.key && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full" />}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'receipts' ? (
+        <GoodsReceiptPanel
+          receipts={goodsReceipts}
+          setReceipts={setGoodsReceipts}
+          purchaseOrders={purchaseOrders}
+          setPurchaseOrders={setPurchaseOrders}
+          suppliers={suppliers}
+          allTags={allTags}
+          setTags={setTags}
+          itemDesigns={itemDesigns}
+          activeBranch={activeBranch}
+        />
+      ) : (
+      <div className="space-y-6">
       <div className={`p-5 rounded-2xl border shadow-sm ${cardCls}`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
@@ -455,6 +496,8 @@ export default function PurchaseManager({
             </div>
           </div>
         </div>
+      )}
+      </div>
       )}
     </div>
   );

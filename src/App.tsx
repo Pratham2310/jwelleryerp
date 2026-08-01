@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers, initialPurchaseOrders } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
@@ -146,6 +146,12 @@ function AppContent() {
     return saved ? JSON.parse(saved) : initialPurchaseOrders;
   });
 
+  // Goods Receipts (Milestone 39). Branch-scoped, and the origin of purchased Tag records.
+  const [goodsReceipts, setGoodsReceipts] = useState<GoodsReceipt[]>(() => {
+    const saved = localStorage.getItem('stitch_goods_receipts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Supplier Master (Milestone 37). Tenant-wide, no branchId — decision D-5.
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
     const saved = localStorage.getItem('stitch_suppliers');
@@ -269,6 +275,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_purchase_orders', JSON.stringify(purchaseOrders));
   }, [purchaseOrders]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_goods_receipts', JSON.stringify(goodsReceipts));
+  }, [goodsReceipts]);
 
   useEffect(() => {
     localStorage.setItem('stitch_savings_schemes', JSON.stringify(savingsSchemes));
@@ -622,6 +632,10 @@ function AppContent() {
                     itemDesigns={itemDesigns}
                     branches={branches}
                     activeBranch={activeBranch}
+                    goodsReceipts={goodsReceipts}
+                    setGoodsReceipts={setGoodsReceipts}
+                    allTags={tags}
+                    setTags={setTags}
                   />
                 }
               />

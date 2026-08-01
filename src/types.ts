@@ -154,6 +154,50 @@ export interface PurchaseOrder {
 }
 
 /**
+ * Goods Receipt Note (PRD §6.1, Milestone 39) — where bought goods become real stock.
+ *
+ * `testedPurityPercent` is the assayed fineness of what actually arrived, held separately from
+ * the `orderedPurityPercent` it was contracted at. The gap between them is a claim against the
+ * supplier measured in fine grams and rupees, not a rounding curiosity — see `goodsReceipt.ts`.
+ */
+export interface GoodsReceiptLine {
+  id: string;
+  kind: 'RAW_METAL' | 'FINISHED_GOODS';
+  description: string;
+  /** Links back to the PO line this fulfils, when the receipt is against an order. */
+  purchaseOrderLineId?: string;
+
+  // Raw metal
+  metalType?: string;
+  receivedWeight?: number;
+  orderedPurityPercent?: number;
+  testedPurityPercent?: number;
+  ratePerGram?: number;
+
+  // Finished goods — weighed individually, per decision D-6
+  itemDesignId?: string;
+  receivedQty?: number;
+  pieceWeights?: number[];
+  /** Optional HUIDs already engraved by the supplier; validated for global uniqueness. */
+  pieceHuids?: string[];
+}
+
+export interface GoodsReceipt {
+  id: string;
+  grnNumber: string; // GRN-<FY>-nnn
+  supplierId: string;
+  receiptDate: string;
+  /** Absent for a direct purchase with no prior order. */
+  purchaseOrderId?: string;
+  supplierDcNumber?: string;
+  lines: GoodsReceiptLine[];
+  /** Tag ids this receipt brought into existence, so the effect is traceable. */
+  createdTagIds: string[];
+  notes?: string;
+  branchId?: string;
+}
+
+/**
  * Supplier — the creditor side of the Party Master (PRD §4.4, Milestone 37).
  *
  * PRD §4.4 treats customers and suppliers as one "Party" ledger concept because the same person
