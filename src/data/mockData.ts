@@ -170,6 +170,7 @@ export const initialTags: Tag[] = [
   {
     id: 'item-1',
     branchId: 'br-1',
+    taggedOn: '2026-07-02',
     sku: 'RNG-22K-001',
     itemDesignId: 'design-1',
     name: 'Antique Peacock Royal Ring',
@@ -192,6 +193,7 @@ export const initialTags: Tag[] = [
   {
     id: 'item-2',
     branchId: 'br-1',
+    taggedOn: '2026-06-18',
     sku: 'NEC-22K-042',
     itemDesignId: 'design-2',
     name: 'Temple Heritage Kundan Choker',
@@ -214,6 +216,7 @@ export const initialTags: Tag[] = [
   {
     id: 'item-3',
     branchId: 'br-1',
+    taggedOn: '2026-04-05',
     sku: 'EAR-18K-109',
     itemDesignId: 'design-3',
     name: 'Solitaire Halo Diamond Studs',
@@ -235,6 +238,7 @@ export const initialTags: Tag[] = [
   {
     id: 'item-4',
     branchId: 'br-2',
+    taggedOn: '2026-01-12',
     sku: 'BGL-22K-081',
     itemDesignId: 'design-4',
     name: 'Bridal Filigree Kada Bangles (Pair)',
@@ -257,6 +261,7 @@ export const initialTags: Tag[] = [
   {
     id: 'item-5',
     branchId: 'br-2',
+    taggedOn: '2025-11-20',
     sku: 'NEC-18K-005',
     itemDesignId: 'design-5',
     name: 'Modernist Diamond Drop Pendant',
@@ -278,6 +283,7 @@ export const initialTags: Tag[] = [
   {
     id: 'item-6',
     branchId: 'br-1',
+    taggedOn: '2026-07-15',
     sku: 'RNG-SLV-002',
     itemDesignId: 'design-6',
     name: 'Classic Vintage Marquise Silver Ring',
@@ -321,6 +327,7 @@ export const initialTags: Tag[] = [
   {
     id: 'item-8',
     branchId: 'br-1',
+    taggedOn: '2025-09-08',
     sku: 'COI-24K-001',
     itemDesignId: 'design-8',
     name: 'Goddess Lakshmi Gold Coin 10g',

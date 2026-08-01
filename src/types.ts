@@ -54,6 +54,13 @@ export interface Tag {
   imageUrl?: string;
   /** Which branch physically holds this piece (Milestone 19). Absent = pre-M19 record. */
   branchId?: string;
+  /**
+   * When the piece was tagged into stock (Milestone 30). Drives inventory ageing, which is how
+   * a shop finds capital sitting in slow-moving stock. Optional because records predate it —
+   * and an undated tag is reported as "unknown age", never as new: defaulting to today would
+   * make the ageing report show zero old stock, hiding the exact problem it exists to surface.
+   */
+  taggedOn?: string;
 }
 
 /**

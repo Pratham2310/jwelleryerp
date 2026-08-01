@@ -14,9 +14,10 @@ import {
   Clock,
   UserCheck
 } from 'lucide-react';
-import { Customer, SavingsScheme, SchemeEnrollment, SchemeInstalment, Branch, Supplier } from '../types';
+import { Customer, SavingsScheme, SchemeEnrollment, SchemeInstalment, Branch, Supplier, SaleInvoice } from '../types';
 import SchemeManager from './SchemeManager';
 import SupplierManager from './SupplierManager';
+import Customer360Drawer from './Customer360Drawer';
 
 interface CustomerManagerProps {
   customers: Customer[];
@@ -33,12 +34,15 @@ interface CustomerManagerProps {
   /** Supplier Master (Milestone 37) — the creditor side of the same Party Master. */
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+  /** Customer 360 (Milestone 31) — history is derived from the invoice register. */
+  invoices: SaleInvoice[];
 }
 
 export default function CustomerManager({
   customers, setCustomers, schemes, setSchemes, enrollments, setEnrollments,
-  instalments, setInstalments, activeBranch, suppliers, setSuppliers,
+  instalments, setInstalments, activeBranch, suppliers, setSuppliers, invoices,
 }: CustomerManagerProps) {
+  const [profileCustomerId, setProfileCustomerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'customers' | 'schemes' | 'suppliers'>('customers');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setAddModalOpen] = useState(false);
@@ -231,12 +235,20 @@ export default function CustomerManager({
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <button
-                        className="text-xs font-bold text-amber-700 hover:underline"
-                        onClick={() => setSelectedCustomerId(cust.id)}
-                      >
-                        Track Scheme
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          className="text-xs font-bold text-amber-700 hover:underline"
+                          onClick={() => setProfileCustomerId(cust.id)}
+                        >
+                          Customer 360
+                        </button>
+                        <button
+                          className="text-xs font-bold text-amber-700 hover:underline"
+                          onClick={() => setSelectedCustomerId(cust.id)}
+                        >
+                          Track Scheme
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -463,6 +475,19 @@ export default function CustomerManager({
           </div>
         </div>
       )}
+      {profileCustomerId && (() => {
+        const c = customers.find(x => x.id === profileCustomerId);
+        return c ? (
+          <Customer360Drawer
+            customer={c}
+            invoices={invoices}
+            schemes={schemes}
+            enrollments={enrollments}
+            instalments={instalments}
+            onClose={() => setProfileCustomerId(null)}
+          />
+        ) : null;
+      })()}
       </div>
       )}
     </div>

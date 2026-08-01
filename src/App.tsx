@@ -7,6 +7,7 @@ import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
 import { DEFAULT_ROLES, roleByName, canAccessRoute, type Role } from './lib/permissions';
 import RoleManager from './components/RoleManager';
+import ReportsHub from './components/ReportsHub';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
 
 // Custom layouts & Auth pages
@@ -666,6 +667,7 @@ function AppContent() {
                     activeBranch={activeBranch}
                     suppliers={suppliers}
                     setSuppliers={setSuppliers}
+                    invoices={invoices}
                   />
                 }
               />
@@ -713,6 +715,22 @@ function AppContent() {
                     manualVouchers={manualVouchers}
                     setManualVouchers={setManualVouchers}
                     activeBranch={activeBranch}
+                  />
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <ReportsHub
+                    invoices={invoices}
+                    tags={tags}
+                    customers={customers}
+                    suppliers={suppliers}
+                    karigars={karigars}
+                    karigarLedger={karigarLedger}
+                    purchaseInvoices={purchaseInvoices}
+                    branches={branches}
+                    metalRates={projectedRates}
                   />
                 }
               />

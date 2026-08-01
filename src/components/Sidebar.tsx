@@ -15,6 +15,7 @@ import {
   Scale,
   ClipboardList,
   ShieldCheck,
+  BarChart3,
   X
 } from 'lucide-react';
 import { MetalRate, Branch } from '../types';
@@ -49,6 +50,7 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
     { id: '/customers', name: 'Customers & Schemes', icon: Users, desc: 'CRM Swarna Nidhi scheme' },
     { id: '/purchases', name: 'Purchases', icon: ClipboardList, desc: 'Orders, receipts & supplier bills' },
     { id: '/accounting', name: 'Accounting', icon: Scale, desc: 'Day book, ledgers & trial balance' },
+    { id: '/reports', name: 'Reports', icon: BarChart3, desc: 'Sales, stock & compliance' },
     { id: '/roles', name: 'Roles & Access', icon: ShieldCheck, desc: 'Permission matrix' },
   ];
 
