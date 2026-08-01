@@ -27,6 +27,33 @@ Screens: **Day Book**, **Trial Balance**, **Ledger Statement** and **Chart of Ac
 
 ---
 
+## 2026-08-01 — Phase 14 Complete: Milestones 45–47 (Accounting Depth)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation.
+
+Completes the accounting story. Milestone 28 derived journals from business documents; this adds the money movements no document covers, and the three statements PRD §10.5 / §14.7 require. Built after Procurement deliberately — a P&L before purchases existed would have shown revenue with no cost of goods.
+
+**M45 — Payment / Receipt / Contra vouchers.** Posted through the **same** journal engine as everything else, so the books stay one set of records rather than two that can disagree. A **Contra is validated differently on purpose**: depositing takings into the bank does not make the shop richer, so both legs must be cash or bank. Allowing an income or expense account there would turn a movement that changed nothing into profit or loss — which makes *"a contra never touches P&L"* a structural guarantee rather than a convention. The reverse is caught too: a cash↔bank move booked as a Payment is redirected to Contra. Narration is mandatory, because a manual voucher has no source document behind it and is therefore its own only audit trail.
+
+**M46 — Cash Book.** The opening balance carries everything posted **before** the window, so the book is continuous. One that restarts at zero each period would show a closing balance with nothing to do with what is actually in the drawer. `opening + receipts − payments = closing` is asserted and displayed rather than assumed.
+
+**M47 — Profit & Loss and Balance Sheet**, both derived from the journal.
+
+**The load-bearing point is why the Balance Sheet balances at all.** Since every voucher balances, across the whole book:
+
+    Assets − Liabilities = Income − Expenses = Net Profit
+
+So the sheet balances **only because the P&L result is carried into it** as retained earnings. Omitting it leaves the sheet out by exactly the profit — and the instinct is then to plug the difference somewhere, which buries the real cause. `buildBalanceSheet()` carries it explicitly and reports `isBalanced`, so the identity is checked rather than trusted. The chart of accounts previously had no equity side at all, which is why it could never have balanced: there was nowhere for profit to land.
+
+Two distinctions kept deliberately apart, both easy to collapse: the **P&L is a period statement** while the **Balance Sheet is cumulative to a date** (so retained earnings carries every prior period, not just this month's); and **GST collected is a liability, never income**, so it does not reach the P&L.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **888 tests passing across 30 suites** (up from 849); `npm run build` clean. Browser-verified: the Balance Sheet balances at ₹92,826 on both sides on seeded data and still balances after posting vouchers; a Contra offers only cash and bank on its far side; the Cash Book reconciles. One result looked wrong and was chased down rather than accepted — the Balance Sheet total was unchanged after posting two vouchers, which turned out to be correct because the test's Payment was against Sundry Debtors, an asset-to-asset move. Re-running against an expense account moved **both** sides to ₹87,826, confirming the vouchers were not being ignored. All 9 Accounting tabs × 2 themes, the 10-screen sweep and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+**Not done, and recorded rather than glossed:** PRD §10.4's at-cost vs at-market closing-stock valuation. Stock movements are not yet costed into the ledger, so the closing-stock figure that task asks for has nothing to draw on — it belongs with the inventory valuation work (M44).
+
+---
+
 ## 2026-08-01 — Phase 9 Complete: Milestone 29 (Tally Prime Export)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-30 — **Milestones 1–29, 37–41 and 48 complete; Phases 1–9 and 12 done** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Phase 12 (Procurement) is complete — the app can now buy stock, and GST has both an output and an input side. Phase 9 (Accounting) is complete. Next by dependency is **Phase 14 (M45–47)** — the P&L and Balance Sheet are finally meaningful now that purchases exist to cost against revenue — or **M32 (RBAC)**, which unlocks M33, M34, M49 and the maker-checker approval left open in M48. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-30 — **Milestones 1–29, 37–41, 45–48 complete; Phases 1–9, 12 and 14 done** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Phase 12 (Procurement) is complete — the app can now buy stock, and GST has both an output and an input side. Phases 9 and 14 (Accounting, end to end) are complete. Next is **M32 (RBAC)**, which unlocks M33, M34, M49 and the maker-checker approval left open in M48 — today every screen is reachable by anyone and the login role is cosmetic. **Phase 10 (M30–31, Reports & Customer 360)** is the alternative. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -592,34 +592,38 @@ original roadmap never scheduled any of it. This was the largest coverage gap fo
 
 ---
 
-## 🏁 Phase 14: Accounting Depth (Milestones 45 – 47)
+## 🏁 Phase 14: Accounting Depth (Milestones 45 – 47) — ✅ COMPLETE (2026-08-01)
 
 _Added 2026-07-26. Milestone 28 covers auto-posted journals, the Chart of Accounts, the Ledger
 Statement and the Day Book — but PRD §10.5 and §14.7 also require manual voucher entry and the
 three statutory financial statements, which were never scheduled._
 
-### 📍 Milestone 45: Payment / Receipt / Contra Vouchers
+### ✅ Milestone 45: Payment / Receipt / Contra Vouchers
 - **Goal:** Manual voucher entry for money movements that aren't a sale or a purchase.
 - **Dependencies:** Milestone 28 (posts through the same journal engine).
 - **Tasks:**
   1. Payment (money out), Receipt (money in) and Contra (cash↔bank transfer) voucher screens, each posting a balanced double-entry pair via `journalPosting.ts`.
   2. Support the contra-style "Stock with Karigar" sub-ledger treatment noted in PRD §10.3.
 - **Testable via:** Every voucher posts `Σdebit = Σcredit`; a contra entry moves value between cash and bank without touching P&L.
+- **Done:** `src/lib/manualVoucher.ts`. Posts through the **same** journal engine as M28, so the books are one set of records. A Contra is restricted to cash↔bank on **both** legs — allowing an income or expense account there would turn a movement that changed nothing into profit or loss, so "a contra never touches P&L" is structural rather than conventional. The reverse is caught too: a cash↔bank move booked as a Payment is redirected. Narration is mandatory, since a manual voucher has no source document and it is the only audit trail.
 
-### 📍 Milestone 46: Cash Book & Day Book
+### ✅ Milestone 46: Cash Book & Day Book
 - **Goal:** Chronological cash/bank movement views for daily closing.
 - **Dependencies:** Milestone 45.
 - **Tasks:**
   1. Cash Book (cash/bank running balance) and Day Book (all vouchers for a date), both with opening/closing balance reconciliation.
 - **Testable via:** The Cash Book's closing balance equals opening plus the day's receipts minus payments; the Day Book total reconciles against the day's invoices.
+- **Done:** `buildCashBook()` in `src/lib/financialStatements.ts`. The **opening balance carries everything posted before the window** — a book that restarts at zero each period would show a closing balance with nothing to do with what is in the drawer. The reconciliation is asserted and displayed, not assumed. (The Day Book itself landed in M28.)
 
-### 📍 Milestone 47: Trial Balance, P&L & Balance Sheet
+### ✅ Milestone 47: Trial Balance, P&L & Balance Sheet
 - **Goal:** The three statutory financial statements (PRD §10.5, §14.7).
 - **Dependencies:** Milestone 28, Milestone 45.
 - **Tasks:**
   1. Trial Balance (all ledger balances, must tie), Profit & Loss, and Balance Sheet, all derived from posted journal entries — never hand-computed.
   2. Use PRD §10.4's stock valuation basis (at-cost vs at-market) consistently for the closing-stock figure.
 - **Testable via:** The Trial Balance's debit and credit columns are equal; the Balance Sheet balances; P&L closing stock matches the inventory valuation on the same date.
+- **Done:** `buildProfitAndLoss()` and `buildBalanceSheet()`. **The Balance Sheet balances only because the P&L result is carried into it** as retained earnings — since every voucher balances, `Assets − Liabilities = Income − Expenses = Net Profit`. Omitting it leaves the sheet out by exactly the profit, and the instinct is then to plug the gap, burying the cause; `isBalanced` is therefore checked and reported. Two distinctions kept apart: the **P&L is periodic**, the **Balance Sheet cumulative** (so retained earnings carries every prior period), and **GST collected is a liability, never income**.
+- **Not done:** the PRD §10.4 at-cost vs at-market closing-stock valuation. Stock movements are not yet costed into the ledger, so the closing-stock figure that task asks for has nothing to draw on — it belongs with the inventory valuation work (M44), not here.
 
 ---
 
