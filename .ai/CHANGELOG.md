@@ -27,6 +27,27 @@ Screens: **Day Book**, **Trial Balance**, **Ledger Statement** and **Chart of Ac
 
 ---
 
+## 2026-08-01 — Phase 10 Complete: Milestones 30–31 (Reports Hub & Customer 360)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation.
+
+**M30 — Reports Hub.** Every figure is derived from the transactional state, never stored, and the milestone's own acceptance criterion — that each report reconciles against what it came from — is made **executable** rather than asserted: `reconcileReports()` runs five checks and the hub displays the result, so a mismatch is visible on screen instead of assumed away.
+
+**Two rules decide whether a sales report is right or quietly wrong**, and both have been the recurring trap since Milestone 11: an ESTIMATE is a quotation, not a supply, so it must never count; a CREDIT_NOTE carries negative figures, so *including* it is what makes revenue net of returns automatically. Get either backwards and every sales number in the app is wrong in a way that still looks entirely reasonable.
+
+**Ageing needed a tagging date that `Tag` did not have.** Added `taggedOn` as optional — and an undated tag reports as **"unknown age", never as new**. Defaulting a missing date to today would show zero old stock, hiding precisely the capital problem the report is opened to find. Unknowns get their own bucket and are counted in the reconciliation, so silently dropping them would fail a check rather than pass quietly.
+
+Six families ship: Sales, Purchase, Inventory, Customer, Karigar and Branch. Each carries the distinctions its underlying module established — reverse-charge liability stays apart from claimable ITC, karigar weight and money are never netted (**D-2**), and stock is valued at metal plus stones excluding making charge, the same basis as a branch transfer.
+
+**M31 — Customer 360.** History newest-first, because the question a counter asks is *"what did they just do"*. Lifetime value is net of returns with estimates excluded — but estimates are still **listed**, since a quotation is part of the customer's story even though it is not revenue. Scheme position and a masked Aadhaar are included; the number is never shown in full, per UIDAI guidance.
+
+**Not built, and said so on screen rather than faked:** the Audit Log viewer. It needs the event store from Milestone 50 — the app reconstructs activity from current records rather than logging events as they occur, so an audit trail built on that would silently omit anything since deleted.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **959 tests passing across 32 suites** (up from 926); `npm run build` clean. All five reconciliation checks pass, and the reported sales total of ₹1,74,580 was **cross-checked independently against the raw invoice register** rather than trusted. Customer 360 ordering verified against a seeded spread — 2026-07-28, 07-10, 05-11, 03-05, newest first — with lifetime value correctly netting a credit note and excluding a ₹99,999 estimate. Full sweep across 12 screens × 2 themes and a 390×844 mobile pass: zero contrast failures, zero console errors.
+
+---
+
 ## 2026-08-01 — Milestone 32: Roles & Permissions
 
 **Author:** AI agent (Claude Code), pair programming with USER.

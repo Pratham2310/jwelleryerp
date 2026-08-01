@@ -1,6 +1,6 @@
 # TODO.md — Development Roadmap & Milestone Backlog
 
-_Last updated: 2026-07-30 — **Milestones 1–29, 32, 37–41, 45–48 complete; Phases 1–9, 12 and 14 done, Phase 11 started** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Phase 12 (Procurement) is complete — the app can now buy stock, and GST has both an output and an input side. Phases 9 and 14 (Accounting, end to end) are complete. M32 (RBAC) is done, which unblocks **M33 (Supervisor PIN)**, **M34 (Statutory Parameters)** and **M49 (User Management)** — and makes the maker-checker approval left open in M48 buildable. **Phase 10 (M30–31, Reports & Customer 360)** is the alternative. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
+_Last updated: 2026-07-30 — **Milestones 1–32, 37–41, 45–48 complete; Phases 1–10, 12 and 14 done, Phase 11 started** (see `CHANGELOG.md`). M48 (Rate Master) was pulled forward out of Phase 15, closing the last standing decision **D-4** violation — both the Tax Master (M21) and the Metal Rate Master are now append-only. Phase 12 (Procurement) is complete — the app can now buy stock, and GST has both an output and an input side. Phases 9 and 14 (Accounting, end to end) are complete. Phase 10 is complete. Next is **M33 (Supervisor PIN)** — the enforcement mechanism the `billing.override` permission implies — with **M34 (Statutory Parameters)** and **M49 (User Management)** also unblocked by M32. The money/weight arithmetic foundation landed first, as planned, and `allocate()` is available for anything that must split and still balance. **Roadmap extended to 53 milestones** after a client-supplied module list was audited against the PRD — see the Coverage Audit table below; Phases 12–15 (M37–M53) are new. Restructured into single-feature, independently-testable milestones (34 milestones, M3–M36), ordered strictly by dependency. Milestones 1 & 2 are unchanged and already complete (see `CHANGELOG.md`). Every milestone below traces back to a specific gap identified in `CURRENT_PROGRESS.md` §3 / `MODULE_STATUS.md`._
 
 **Restructuring rule applied:** the previous version of this roadmap grouped multiple unrelated features into single "session-sized" milestones (e.g. one milestone mixed PAN verification + multi-payment split + Estimate mode + Sales Return; another mixed BIS Hallmarking with Gold Savings Schemes; another mixed Admin RBAC with hardware peripheral UI). Each milestone below is now **one feature, buildable and testable on its own**, with explicit dependencies and a "Testable via" line. Related small milestones are still grouped under a shared Phase heading for readability, but the Phase grouping is not itself a dependency — read each milestone's own **Dependencies** line as the source of truth.
 
@@ -448,9 +448,9 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 
 ---
 
-## 🏁 Phase 10: Reports & Customer Insight (Milestones 30 – 31)
+## 🏁 Phase 10: Reports & Customer Insight (Milestones 30 – 31) — ✅ COMPLETE (2026-08-01)
 
-### 📍 Milestone 30: Reports Hub
+### ✅ Milestone 30: Reports Hub
 - **Goal:** Central `/reports` route covering the PRD §14.2–14.9 catalog.
 - **Dependencies:** Milestone 28 (accounting-derived margin reports), Milestone 16 (Karigar Reconciliation), Milestone 3 (Inventory Ageing needs `Tag.createdAt`).
 - **Tasks:**
@@ -465,14 +465,17 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
      - **Audit** — Audit Log Viewer
   2. Because this is a large surface, deliver it incrementally family-by-family; each family is independently testable and can ship on its own.
 - **Testable via:** Each report's totals reconcile against the underlying transactional state it's derived from.
+- **Done:** `src/lib/reports.ts` + a `/reports` hub. The acceptance criterion is **executable**, not asserted — `reconcileReports()` runs five checks and the hub shows the result, so a mismatch is visible. Six families ship: Sales, Purchase, Inventory, Customer, Karigar, Branch. **Ageing needed `Tag.taggedOn`, which did not exist** — added as optional, and an undated tag reports as *unknown age, never new*, because defaulting to today would show zero old stock and hide the capital the report exists to find.
+- **Not done:** the **Audit Log viewer**, stated on screen rather than faked. It needs the event store from M50 — the app reconstructs activity from current records rather than logging events as they occur, so a trail built on that would silently omit anything since deleted.
 - **Note:** GST reports live separately — GSTR-1/3B in Milestone 23, ITC Register & HSN Summary in Milestone 52.
 
-### 📍 Milestone 31: Customer 360 View
+### ✅ Milestone 31: Customer 360 View
 - **Goal:** A single consolidated customer profile view.
 - **Dependencies:** Milestone 2 (purchase history from `invoices`).
 - **Tasks:**
   1. Build a Customer 360 drawer in `CustomerManager.tsx`: purchase-history timeline, scheme status, loyalty tier.
 - **Testable via:** Opening the drawer for a customer with existing invoices shows an accurate, chronologically-ordered history.
+- **Done:** `Customer360Drawer.tsx`, opened from the customer row. History newest-first; lifetime value **net of returns with estimates excluded** but still listed, since a quotation is part of the story even though it is not revenue. Scheme position and masked Aadhaar included.
 
 ---
 
