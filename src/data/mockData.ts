@@ -1,4 +1,4 @@
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, TaxRate, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier } from '../types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, TaxRate, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder } from '../types';
 
 export const initialMetalRates: MetalRate[] = [
   {
@@ -1049,5 +1049,62 @@ export const initialSuppliers: Supplier[] = [
     openingBalance: -12000, // an advance sits with them
     creditTermsDays: 0,
     isActive: true
+  }
+];
+
+/**
+ * Purchase Orders (PRD §6.1, Milestone 38). One fixed-rate order and one deliberately UNFIXED,
+ * so the "committed weight but no knowable value" case is exercised from the first render.
+ */
+export const initialPurchaseOrders: PurchaseOrder[] = [
+  {
+    id: 'po-1',
+    poNumber: 'PO-2026-27-001',
+    supplierId: 'sup-1',
+    orderDate: '2026-07-05',
+    expectedDeliveryDate: '2026-07-20',
+    rateBasis: 'FIXED',
+    status: 'Sent',
+    branchId: 'br-1',
+    lines: [
+      {
+        id: 'pol-1', kind: 'RAW_METAL', description: '100g 24K bullion bar',
+        metalType: 'Gold (24K)', purityPercent: 99.9, orderedWeight: 100, ratePerGram: 7250
+      }
+    ]
+  },
+  {
+    // Rate to be fixed at delivery — the common bullion arrangement. Carries 250g of metal
+    // commitment and no rupee value at all until the rate is settled.
+    id: 'po-2',
+    poNumber: 'PO-2026-27-002',
+    supplierId: 'sup-1',
+    orderDate: '2026-07-12',
+    expectedDeliveryDate: '2026-08-01',
+    rateBasis: 'UNFIXED',
+    status: 'Sent',
+    branchId: 'br-1',
+    lines: [
+      {
+        id: 'pol-2', kind: 'RAW_METAL', description: '250g 22K casting grain',
+        metalType: 'Gold (22K)', purityPercent: 91.6, orderedWeight: 250
+      }
+    ]
+  },
+  {
+    id: 'po-3',
+    poNumber: 'PO-2026-27-003',
+    supplierId: 'sup-2',
+    orderDate: '2026-07-18',
+    expectedDeliveryDate: '2026-08-10',
+    rateBasis: 'FIXED',
+    status: 'Sent',
+    branchId: 'br-1',
+    lines: [
+      {
+        id: 'pol-3', kind: 'FINISHED_GOODS', description: 'Temple Heritage Kundan Choker',
+        itemDesignId: 'design-2', orderedQty: 3, ratePerPiece: 265000
+      }
+    ]
   }
 ];

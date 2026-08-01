@@ -111,6 +111,49 @@ export interface Customer {
 }
 
 /**
+ * Purchase Order (PRD §6.1, Milestone 38) — the first document in the procurement chain.
+ *
+ * `rateBasis` is the load-bearing field. Bullion is commonly bought UNFIXED: the shop books the
+ * metal now and fixes the rate later, because gold moves daily. An unfixed order therefore has a
+ * weight but no rupee value at all until the rate is settled — `poValue()` returns null for it
+ * rather than 0, so an unpriced commitment can never masquerade as a free one.
+ */
+export type PurchaseOrderStatus = 'Draft' | 'Sent' | 'PartiallyReceived' | 'Closed' | 'Cancelled';
+
+export interface PurchaseOrderLine {
+  id: string;
+  kind: 'RAW_METAL' | 'FINISHED_GOODS';
+  description: string;
+  // Raw metal
+  metalType?: string;
+  purityPercent?: number;
+  orderedWeight?: number; // grams
+  ratePerGram?: number; // only on a FIXED-rate order
+  // Finished goods
+  itemDesignId?: string;
+  orderedQty?: number; // pieces
+  ratePerPiece?: number; // only on a FIXED-rate order
+  // Filled by the Goods Receipt (Milestone 39)
+  receivedWeight?: number;
+  receivedQty?: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poNumber: string; // PO-<FY>-nnn, e.g. PO-2026-27-014
+  supplierId: string;
+  orderDate: string;
+  expectedDeliveryDate?: string;
+  rateBasis: 'FIXED' | 'UNFIXED';
+  status: PurchaseOrderStatus;
+  lines: PurchaseOrderLine[];
+  notes?: string;
+  cancelledReason?: string;
+  /** Where the goods are to be delivered — stock-like, so branch-scoped (unlike the supplier). */
+  branchId?: string;
+}
+
+/**
  * Supplier — the creditor side of the Party Master (PRD §4.4, Milestone 37).
  *
  * PRD §4.4 treats customers and suppliers as one "Party" ledger concept because the same person

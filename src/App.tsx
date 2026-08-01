@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier } from './types';
+import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers, initialPurchaseOrders } from './data/mockData';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
@@ -23,6 +23,7 @@ import JobBagManager from './components/JobBagManager';
 import CustomerManager from './components/CustomerManager';
 import OldGoldManager from './components/OldGoldManager';
 import AccountingManager from './components/AccountingManager';
+import PurchaseManager from './components/PurchaseManager';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -136,6 +137,13 @@ function AppContent() {
   const [hallmarkBatches, setHallmarkBatches] = useState<HallmarkBatch[]>(() => {
     const saved = localStorage.getItem('stitch_hallmark_batches');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  // Purchase Orders (Milestone 38). Branch-scoped: goods are delivered somewhere specific,
+  // unlike the supplier who supplies the whole chain.
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
+    const saved = localStorage.getItem('stitch_purchase_orders');
+    return saved ? JSON.parse(saved) : initialPurchaseOrders;
   });
 
   // Supplier Master (Milestone 37). Tenant-wide, no branchId — decision D-5.
@@ -257,6 +265,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_suppliers', JSON.stringify(suppliers));
   }, [suppliers]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_purchase_orders', JSON.stringify(purchaseOrders));
+  }, [purchaseOrders]);
 
   useEffect(() => {
     localStorage.setItem('stitch_savings_schemes', JSON.stringify(savingsSchemes));
@@ -597,6 +609,19 @@ function AppContent() {
                     setVouchers={setOldGoldVouchers}
                     customers={customers}
                     metalRates={projectedRates}
+                  />
+                }
+              />
+              <Route
+                path="/purchases"
+                element={
+                  <PurchaseManager
+                    purchaseOrders={purchaseOrders}
+                    setPurchaseOrders={setPurchaseOrders}
+                    suppliers={suppliers}
+                    itemDesigns={itemDesigns}
+                    branches={branches}
+                    activeBranch={activeBranch}
                   />
                 }
               />
