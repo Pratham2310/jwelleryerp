@@ -65,9 +65,9 @@ Phase 10: Reports & Customer Insight
   └── M31 Customer 360 View
 
 Phase 11: Admin, Security & Hardware
-  ├── M32 Admin Role & Permission Management
-  ├── M33 Supervisor PIN Approval Modal
-  ├── M34 Statutory Parameters Configuration Screen
+  ├── M32 Admin Role & Permission Management ✅
+  ├── M33 Supervisor PIN Approval Modal ✅
+  ├── M34 Statutory Parameters Configuration Screen ✅
   ├── M35 Digital Scale & Hardware Connection UI (Simulated)
   └── M36 Offline POS Queue Sync UI (Simulated)
 
@@ -490,19 +490,24 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 - **Done:** `src/lib/permissions.ts` + a Roles & Access screen, with login now offering a role so the matrix is observable. **It gates the interface, not the data** — stated in the code and on screen, because the failure mode is someone later treating a checkbox here as security. Three decisions: an **unknown role gets nothing** (defaulting to full access is how a permission system silently stops working); **at least one role must keep `admin.roles`**, or nobody can grant it back and the shop is locked out permanently; and gated screens are **hidden**, with a route guard so a typed URL bounces to the ungated Dashboard rather than rendering.
 - **Note:** `billing.discount` and `billing.override` are separate on purpose — an override changes the calculated rate itself, which is why M10 logs a reason for it.
 
-### 📍 Milestone 33: Supervisor PIN Approval Modal
+### ✅ Milestone 33: Supervisor PIN Approval Modal
 - **Goal:** Require supervisor authorization for high-value overrides.
 - **Dependencies:** Milestone 32, Milestone 10 (the override workflow it gates).
 - **Tasks:**
   1. Build a Supervisor PIN modal, triggered by Milestone 10's override workflow for rate overrides/large discounts/invoice cancellations above a configurable threshold.
 - **Testable via:** Attempting a large discount without the correct PIN is blocked; the correct PIN allows it through and logs who approved it.
+- **Done:** `src/lib/statutoryParameters.ts` + `SupervisorPinModal`, gating checkout in `BillingEstimator`. Four decisions: **approval is not a permission** — M32 answers "may this person do it", this answers "was it authorised *this time*", so a manager who legitimately holds `billing.override` still needs a second pair of eyes on a large discount; **self-approval is refused**, which is the entire point of the mechanism; an approval **covers the amount it was given for and anything smaller**, so raising the discount afterwards re-opens the gate rather than riding on a sign-off for a lesser figure; and **only roles holding `billing.override` can be named as supervisors**, otherwise the sign-off is a signature rather than authority. The approval travels with the invoice (`SaleInvoice.approvals`, optional so older bills still load) as well as into the standing log.
+- **Note:** PINs live in `localStorage` like everything else — they establish *who authorised this* for the audit trail, not secrecy. Said in the module header and on screen, for the same reason M32 says it.
 
-### 📍 Milestone 34: Statutory Parameters Configuration Screen
+### ✅ Milestone 34: Statutory Parameters Configuration Screen
 - **Goal:** Make the PAN/TCS/PMLA thresholds data-driven instead of hardcoded.
 - **Dependencies:** Milestone 8 (refactors the hardcoded ₹2,00,000 constant introduced there).
 - **Tasks:**
   1. Build a single editable Statutory Parameters screen (PAN threshold, TCS threshold, PMLA CTR threshold); have Milestone 8's PAN modal read from it instead of a literal constant.
 - **Testable via:** Changing the configured PAN threshold changes when the PAN modal triggers, without a code change.
+- **Done:** A Statutory & Approvals tab on the admin screen, with `BillingEstimator`'s PAN gate reading the configured figure. Same argument as the Tax Master (M21) and Rate Master (M48): these are **policy, not arithmetic** — they move by notification, and a shop must be able to comply the same day rather than wait for a release. Verified in the browser by dropping the PAN threshold to ₹50,000 and watching a ₹66,568 invoice start demanding a declaration, with no code change.
+- **Decisions:** an unconfigured threshold **falls back to the statutory default, never to zero** — zero would demand a PAN on every sale and stop the shop trading, a worse failure than the one the check guards against; validation refuses a zero PAN threshold outright and flags the likely PAN/TCS transposition; and the PMLA cash-transaction flag applies to the **cash component only**, because a ₹15,00,000 sale settled by bank transfer is not a cash transaction and flagging it would bury the genuine cases in noise.
+- **Note:** `statutoryChecks.PAN_THRESHOLD` stays as the shipped default so `reports.ts` and `OldGoldManager` keep working unchanged; a test asserts the two never drift apart.
 
 ### 📍 Milestone 35: Digital Scale & Hardware Connection UI (Simulated)
 - **Goal:** Cosmetic hardware-connection indicators, extending the existing Simulation Desk pattern.

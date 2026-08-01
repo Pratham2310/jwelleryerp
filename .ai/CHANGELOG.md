@@ -4,6 +4,34 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-08-01 — Milestones 33–34: Supervisor PIN Approval & Statutory Parameters
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+The two substantive halves of Phase 11. They answer adjacent questions and so ship together on one admin screen: Milestone 32 settled *who may act*; these settle *under what limits* and *whose sign-off*.
+
+**Approval is not a permission.** M32 answers "may this person do it". M33 answers "was it authorised **this time**". They are different questions — a manager may legitimately hold `billing.override` and still need a second pair of eyes on a ₹50,000 discount. Four rules follow from that:
+
+1. **Self-approval is refused.** A supervisor signing off their own request is a signature, not a second pair of eyes. Caught in the browser with the real signed-in user: the seeded operator *is* one of the seeded supervisors, and their own PIN was correctly rejected.
+2. **An approval covers the amount it was given for, and anything smaller.** Raising the discount after a sign-off re-opens the gate rather than riding on authorisation for a lesser figure.
+3. **Only roles holding `billing.override` can be named as supervisors** — authority comes from the permission matrix rather than a second list free to drift out of step with it.
+4. **The approval travels with the bill** (`SaleInvoice.approvals`, optional so invoices written before the gate still load) as well as into a standing log, so a reprint names who authorised the discount.
+
+**Thresholds are policy, not arithmetic** — the same argument the Tax Master (M21) settled for GST rates and the Rate Master (M48) for metal rates. PAN at ₹2,00,000 (Rule 114B), TCS, the PMLA cash-transaction report: these move by notification, and a shop must be able to comply the same day rather than wait for a release. Three decisions:
+
+- An unconfigured threshold **falls back to the statutory default, never to zero**. Zero would demand a PAN declaration on every sale and stop the shop trading — a worse failure than the one the check exists to prevent. Validation refuses a zero PAN threshold outright, and flags the likely PAN/TCS transposition.
+- The **PMLA flag applies to the cash component only**. A ₹15,00,000 sale settled by bank transfer is not a cash transaction, and flagging it would bury the genuine cases in noise.
+- `statutoryChecks.PAN_THRESHOLD` stays as the shipped default so `reports.ts` and `OldGoldManager` keep working unchanged; a test asserts the two never drift apart.
+
+PINs live in `localStorage` like everything else. They establish *who authorised this* for the audit trail, not secrecy — stated in the module header and on screen, for the same reason M32 says the role matrix gates the interface and not the data.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **1000 tests passing across 33 suites** (up from 959); `npm run build` clean. Playwright-verified end to end: a ₹40,000 discount blocked checkout with no invoice written; the operator's own PIN was refused as self-approval; a second supervisor's PIN approved it, the invoice was raised carrying the approval, and the standing log recorded requester, approver, role, reason and timestamp. For M34's criterion, the PAN threshold was dropped to ₹50,000 on screen and a ₹66,568 invoice immediately began demanding a declaration — no code change. Regression across all 12 screens × 2 themes, plus the new Statutory & Approvals tab (added to the sweep, which the nav click alone never reached): zero contrast failures, zero console errors.
+
+**Not built here:** M35 (Digital Scale simulation) and M36 (Offline POS Queue simulation), which close Phase 11 and are both Simulation Desk work.
+
+---
+
 ## 2026-07-30 — Milestone 28: Accounting Ledgers & Auto-Journal Posting
 
 **Author:** AI agent (Claude Code), pair programming with USER.

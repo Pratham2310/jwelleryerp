@@ -520,6 +520,11 @@ export interface SaleInvoice {
   paymentMethod: 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Mixed';
   paymentSplit?: PaymentSplitEntry[]; // multi-tender breakdown (PRD §7.5); single-mode bills record one entry
   panDeclaration?: PanDeclaration; // the PAN/Form 60 actually captured at/above the Rule 114B threshold
+  /**
+   * Supervisor sign-offs captured on this bill (Milestone 33). Optional so invoices written
+   * before the gate existed still load unchanged.
+   */
+  approvals?: ApprovalRecord[];
   convertedToInvoiceNumber?: string; // set on an ESTIMATE once it has been converted
   convertedFromEstimateNumber?: string; // set on a TAX_INVOICE created by converting an estimate
 
@@ -852,3 +857,37 @@ export interface JobBag {
   metalLossRecorded: number; // in grams
   createdAt: string;
 }
+
+/**
+ * Statutory parameters (PRD §15.3, Milestone 34) — thresholds that move by notification.
+ *
+ * These are policy, not arithmetic. Holding them as constants means a shop cannot comply with a
+ * change until a release ships, which is the same argument the Tax Master settled for GST rates.
+ */
+export interface StatutoryParameters {
+  panThreshold: number;
+  tcsThreshold: number;
+  tcsRatePercent: number;
+  pmlaCtrThreshold: number;
+  /** Shop policy rather than statute: above this an override needs a supervisor PIN (M33). */
+  supervisorApprovalThreshold: number;
+  effectiveFrom: string;
+}
+
+export type ApprovalKind = 'PRICE_OVERRIDE' | 'LARGE_DISCOUNT' | 'INVOICE_CANCELLATION';
+
+/**
+ * A supervisor authorisation (Milestone 33). Distinct from a permission: M32 answers "may this
+ * person do it", this answers "was it authorised *this time*". Records a person, not a role.
+ */
+export interface ApprovalRecord {
+  id: string;
+  kind: ApprovalKind;
+  amount: number;
+  reason: string;
+  requestedBy: string;
+  approvedBy: string;
+  approverRole: string;
+  approvedAt: string;
+}
+

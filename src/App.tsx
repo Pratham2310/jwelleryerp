@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, initialKarigars, initialJobWorks, initialInvoices, initialLooseStones, initialOldGoldVouchers, initialKarigarLedger, initialBranches, initialTaxRates, initialSavingsSchemes, initialSchemeEnrollments, initialSchemeInstalments, initialSuppliers, initialPurchaseOrders } from './data/mockData';
-import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt, PurchaseInvoice, PurchaseReturn, ManualVoucher } from './types';
+import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt, PurchaseInvoice, PurchaseReturn, ManualVoucher, StatutoryParameters, ApprovalRecord } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
 import { DEFAULT_ROLES, roleByName, canAccessRoute, type Role } from './lib/permissions';
-import RoleManager from './components/RoleManager';
+import AdminSettings from './components/AdminSettings';
+import {
+  DEFAULT_STATUTORY_PARAMETERS,
+  DEFAULT_SUPERVISOR_PINS,
+  type SupervisorPin,
+} from './lib/statutoryParameters';
 import ReportsHub from './components/ReportsHub';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
 
@@ -211,6 +216,27 @@ function AppContent() {
     return saved ? { ...DEFAULT_HALLMARK_POLICY, ...JSON.parse(saved) } : DEFAULT_HALLMARK_POLICY;
   });
 
+  // Statutory thresholds (Milestone 34). Held as data rather than constants because they move by
+  // notification — a shop must be able to comply the same day, not wait for a release.
+  const [statutoryParameters, setStatutoryParameters] = useState<StatutoryParameters>(() => {
+    const saved = localStorage.getItem('stitch_statutory_parameters');
+    // Merged over the default so a set saved before a new parameter existed still loads, and
+    // an unconfigured threshold falls back to the statutory figure rather than to zero.
+    return saved ? { ...DEFAULT_STATUTORY_PARAMETERS, ...JSON.parse(saved) } : DEFAULT_STATUTORY_PARAMETERS;
+  });
+
+  // Supervisor approvals (Milestone 33). Append-only: an approval that happened cannot un-happen,
+  // and the audit trail is the whole point of collecting it.
+  const [approvals, setApprovals] = useState<ApprovalRecord[]>(() => {
+    const saved = localStorage.getItem('stitch_approvals');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [supervisorPins, setSupervisorPins] = useState<SupervisorPin[]>(() => {
+    const saved = localStorage.getItem('stitch_supervisor_pins');
+    return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
+  });
+
   // Inter-branch stock transfers (Milestone 20). Deliberately NOT branch-scoped: a transfer
   // belongs to two branches at once, and the destination must be able to see it arriving.
   const [stockTransfers, setStockTransfers] = useState<StockTransfer[]>(() => {
@@ -274,6 +300,18 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_karigar_ledger', JSON.stringify(karigarLedger));
   }, [karigarLedger]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_statutory_parameters', JSON.stringify(statutoryParameters));
+  }, [statutoryParameters]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_approvals', JSON.stringify(approvals));
+  }, [approvals]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_supervisor_pins', JSON.stringify(supervisorPins));
+  }, [supervisorPins]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -622,6 +660,10 @@ function AppContent() {
                     setTaxRates={setTaxRates}
                     itemDesigns={itemDesigns}
                     hallmarkPolicy={hallmarkPolicy}
+                    statutoryParameters={statutoryParameters}
+                    supervisors={supervisorPins}
+                    currentUserName={user?.name || 'Counter'}
+                    onApprovalRecorded={record => setApprovals(prev => [record, ...prev])}
                   />
                 }
               />
@@ -737,11 +779,16 @@ function AppContent() {
               <Route
                 path="/roles"
                 element={
-                  <RoleManager
+                  <AdminSettings
                     roles={roles}
                     setRoles={setRoles}
                     assignedRoleNames={user?.role ? [user.role] : []}
                     currentRole={currentRole}
+                    statutoryParameters={statutoryParameters}
+                    setStatutoryParameters={setStatutoryParameters}
+                    approvals={approvals}
+                    supervisors={supervisorPins}
+                    setSupervisors={setSupervisorPins}
                   />
                 }
               />

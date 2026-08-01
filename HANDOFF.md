@@ -102,7 +102,8 @@ The full 14-phase **Developer Implementation Handbook** (`docs/Jewellery_ERP_Dev
 - **✅ Done (2026-08-01): Milestones 45–47 — Phase 14 complete.** Manual Payment/Receipt/Contra vouchers, Cash Book, P&L and Balance Sheet. Accounting is now complete end to end. Test suite now **888 passing across 30 suites**.
 - **✅ Done (2026-08-01): Milestone 32 — Roles & permissions.** Permission matrix, navigation and route gating, role CRUD, and a role picker at login. Test suite now **926 passing across 31 suites**.
 - **✅ Done (2026-08-01): Milestones 30–31 — Phase 10 complete.** Reports Hub with six families and live reconciliation checks, plus the Customer 360 drawer. Test suite now **959 passing across 32 suites**.
-- **Next Up:** **M33 (Supervisor PIN approval)** — the enforcement mechanism the `billing.override` permission implies, and the natural pair to M32. **M34 (Statutory Parameters)** and **M49 (User Management)** are also unblocked.
+- **Next Up:** **M35 (Digital Scale simulation)** and **M36 (Offline POS Queue simulation)** — the two remaining Phase 11 milestones, both Simulation Desk work. **M49 (User Management)** is also unblocked by M32, and is the more substantive of the three: M32 defines roles, M33 records who approved a transaction, but there is still no way to create or deactivate the operators those roles are assigned to.
+- **Just landed (2026-08-01): M33–M34.** Supervisor approval is deliberately *not* a permission — M32 answers "may this person do it", M33 answers "was it authorised this time". Self-approval is refused, an approval only covers the amount it was given for, and only roles holding `billing.override` can be named as supervisors. Statutory thresholds (PAN/TCS/PMLA) now live in `localStorage` and fall back to the statutory default rather than to zero — zero would demand a PAN on every sale and stop the shop trading.
 
 ### Notes for whoever picks this up
 

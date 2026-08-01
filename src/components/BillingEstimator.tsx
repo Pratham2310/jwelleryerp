@@ -19,15 +19,22 @@ import {
   Users,
   Sparkles,
   X,
-  ShieldAlert
+  ShieldAlert,
+  ShieldCheck
 } from 'lucide-react';
-import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch, TaxRate, ItemDesign, HallmarkPolicy } from '../types';
+import { Tag, Customer, SaleInvoice, InvoiceItem, InvoiceType, Branch, TaxRate, ItemDesign, HallmarkPolicy, StatutoryParameters, ApprovalRecord } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { calculateLineItem, calculateInvoiceTotals, settleOldGold } from '../lib/billingCalculations';
 import { isSellable, canTransition } from '../lib/tagStateMachine';
 import { nextBranchInvoiceNumber, resolveMetalRate } from '../lib/branch';
 import { validatePaymentSplit, type PaymentSplitEntry, type PaymentMode } from '../lib/billingCalculations';
-import { isPanRequired, isValidPanFormat, validatePanDeclaration, PAN_THRESHOLD, type PanDeclaration } from '../lib/statutoryChecks';
+import { isValidPanFormat, validatePanDeclaration, type PanDeclaration } from '../lib/statutoryChecks';
+import {
+  isPanRequiredFor,
+  requiresSupervisorApproval,
+  type SupervisorPin,
+} from '../lib/statutoryParameters';
+import SupervisorPinModal from './SupervisorPinModal';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
 import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
 import TaxMasterPanel from './TaxMasterPanel';
@@ -65,6 +72,13 @@ interface BillingEstimatorProps {
   itemDesigns: ItemDesign[];
   /** Non-hallmarked sale guard policy (Milestone 25, PRD §11.3). */
   hallmarkPolicy: HallmarkPolicy;
+  /** Configured thresholds — PAN and the supervisor-approval limit (Milestone 34). */
+  statutoryParameters: StatutoryParameters;
+  /** Who may authorise a discount above that limit (Milestone 33). */
+  supervisors: SupervisorPin[];
+  /** The signed-in person, recorded as the requester on any approval. */
+  currentUserName: string;
+  onApprovalRecorded: (record: ApprovalRecord) => void;
 }
 
 // NOTE: the old shop-wide `nextInvoiceNumber()` was removed in Milestone 19. GST Rule 46
@@ -196,7 +210,11 @@ export default function BillingEstimator({
   taxRates,
   setTaxRates,
   itemDesigns,
-  hallmarkPolicy
+  hallmarkPolicy,
+  statutoryParameters,
+  supervisors,
+  currentUserName,
+  onApprovalRecorded
 }: BillingEstimatorProps) {
   // Available stock in showroom — only Tags in a legally sellable lifecycle state (Milestone 4)
   const availableStock = tags.filter(i => isSellable(i.status));
@@ -243,6 +261,14 @@ export default function BillingEstimator({
   const [oldGoldRate, setOldGoldRate] = useState<number>(5500); // reduced trade rate
 
   const [discount, setDiscount] = useState<number>(0);
+
+  /**
+   * The supervisor approval covering the CURRENT discount (Milestone 33). Held against the amount
+   * it was given for, so raising the discount after approval re-opens the gate rather than riding
+   * on a sign-off for a smaller figure.
+   */
+  const [discountApproval, setDiscountApproval] = useState<ApprovalRecord | null>(null);
+  const [isPinModalOpen, setPinModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'UPI' | 'Scheme Redemption'>('UPI');
 
   // PAN / Form 60 capture, mandatory at or above Rs 2,00,000 (Milestone 8, PRD §4.4/§15.3)
@@ -434,6 +460,18 @@ export default function BillingEstimator({
 
   const overrideReasonKey = (index: number, field: OverrideField) => `${index}:${field}`;
 
+  /**
+   * A discount above the configured limit needs a supervisor's PIN (Milestone 33). An approval
+   * covers the amount it was given for and anything smaller — raising the discount afterwards
+   * re-opens the gate rather than riding on a sign-off for a lesser figure.
+   */
+  const discountNeedsApproval = requiresSupervisorApproval(discount, statutoryParameters);
+  const discountApprovalCovers =
+    !!discountApproval && discountApproval.amount >= discount;
+  const unapprovedDiscountError = discountNeedsApproval && !discountApprovalCovers
+    ? `A discount of ₹${discount.toLocaleString('en-IN')} is above the ₹${statutoryParameters.supervisorApprovalThreshold.toLocaleString('en-IN')} limit and needs a supervisor's approval.`
+    : null;
+
   const unloggedOverrideError = lineOverrides
     .map(l => validateOverrideReasons(
       l.candidates,
@@ -493,7 +531,7 @@ export default function BillingEstimator({
     // PAN / Form 60 is mandatory at or above Rs 2,00,000 (PRD §4.4/§15.3, Rule 114B).
     // The threshold applies to the tax invoice value, not the post-old-gold cash collected.
     // Estimates are non-fiscal quotations and skip this gate — it re-applies on conversion.
-    if (!isEstimate && isPanRequired(invoiceTotal)) {
+    if (!isEstimate && isPanRequiredFor(invoiceTotal, statutoryParameters)) {
       const panError = validatePanDeclaration(invoiceTotal, panDeclaration);
       if (panError) {
         setPanModalOpen(true);
@@ -506,6 +544,14 @@ export default function BillingEstimator({
     if (unloggedOverrideError) {
       setOverrideModalOpen(true);
       setValidationError(unloggedOverrideError);
+      return;
+    }
+
+    // A large discount needs a second pair of eyes (Milestone 33). Applies to an estimate too:
+    // a quotation carrying an unapproved discount is what the customer will hold the shop to.
+    if (unapprovedDiscountError) {
+      setPinModalOpen(true);
+      setValidationError(unapprovedDiscountError);
       return;
     }
 
@@ -605,7 +651,9 @@ export default function BillingEstimator({
       paymentMethod: isSplitPayment && paymentSplit.length > 1 ? 'Mixed' : (isSplitPayment ? paymentSplit[0]?.mode || paymentMethod : paymentMethod),
       // An estimate records no tender and no PAN — both belong to the eventual tax invoice
       paymentSplit: isEstimate ? undefined : (isSplitPayment ? paymentSplit : [{ mode: paymentMethod, amount: finalGrandTotal }]),
-      panDeclaration: isEstimate ? undefined : (panDeclaration || undefined)
+      panDeclaration: isEstimate ? undefined : (panDeclaration || undefined),
+      // The sign-off travels with the bill, so a reprint shows who authorised the discount.
+      approvals: discountApprovalCovers && discountApproval ? [discountApproval] : undefined
     };
 
     // Update state
@@ -643,6 +691,7 @@ export default function BillingEstimator({
     setGuestPhone('');
     setOldGoldWeight(0);
     setDiscount(0);
+    setDiscountApproval(null);
     setCompletedInvoice(null);
     setValidationError(null);
     setPanDeclaration(null);
@@ -694,7 +743,7 @@ export default function BillingEstimator({
 
     // PAN / Form 60 gate applies to the converted tax invoice's value (Rule 114B)
     let declaration: PanDeclaration | undefined = estimate.panDeclaration;
-    if (isPanRequired(totals.grandTotal)) {
+    if (isPanRequiredFor(totals.grandTotal, statutoryParameters)) {
       const typed = convertPanInput.trim().toUpperCase();
       if (!declaration || (declaration.type === 'PAN' && declaration.panNumber !== typed)) {
         declaration = typed === 'FORM60'
@@ -1632,6 +1681,26 @@ export default function BillingEstimator({
                   </div>
                 )}
 
+                {/* Supervisor approval on a large discount (Milestone 33) */}
+                {unapprovedDiscountError && (
+                  <button
+                    type="button"
+                    onClick={() => setPinModalOpen(true)}
+                    className="w-full text-left flex items-start gap-2 p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 transition"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600" />
+                    <span className="text-[11px] font-semibold text-amber-700">
+                      {unapprovedDiscountError} Tap to capture it.
+                    </span>
+                  </button>
+                )}
+                {discountApprovalCovers && discountApproval && (
+                  <p className="text-[11px] font-semibold text-emerald-600 flex items-start gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    Approved by {discountApproval.approvedBy} ({discountApproval.approverRole}) — {discountApproval.reason}
+                  </p>
+                )}
+
                 {/* Statutory split (Milestone 21, PRD §7.3): CGST+SGST intra-state, IGST
                     inter-state. The halves are derived so they sum to gstTax exactly. */}
                 <div className="flex justify-between text-slate-500">
@@ -1715,7 +1784,7 @@ export default function BillingEstimator({
 
               {/* PAN / Form 60 requirement (Milestone 8, PRD §4.4/§15.3 — Income Tax Rule 114B).
                   Not shown for estimates: the gate applies when the tax invoice is created. */}
-              {!isEstimate && isPanRequired(invoiceTotal) && (
+              {!isEstimate && isPanRequiredFor(invoiceTotal, statutoryParameters) && (
                 <button
                   onClick={() => { setPanInput(panDeclaration?.panNumber || ''); setPanModalError(''); setPanModalOpen(true); }}
                   className={`w-full text-left p-3 rounded-xl border text-xs font-medium transition ${
@@ -1731,7 +1800,7 @@ export default function BillingEstimator({
                       : 'PAN / Form 60 required for this transaction'}
                   </span>
                   <span className="block mt-0.5 opacity-80">
-                    Invoice value is ₹{PAN_THRESHOLD.toLocaleString('en-IN')} or above. Tap to {panDeclaration ? 'change' : 'capture'}.
+                    Invoice value is ₹{statutoryParameters.panThreshold.toLocaleString('en-IN')} or above. Tap to {panDeclaration ? 'change' : 'capture'}.
                   </span>
                 </button>
               )}
@@ -1917,7 +1986,7 @@ export default function BillingEstimator({
                   <div>
                     <h3 className="font-bold text-sm flex items-center gap-2"><FileCheck className="w-4 h-4 text-amber-500" /> PAN / Form 60 Verification</h3>
                     <p className={`text-[11px] mt-0.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
-                      Mandatory for transactions of ₹{PAN_THRESHOLD.toLocaleString('en-IN')} or more (Income Tax Rule 114B).
+                      Mandatory for transactions of ₹{statutoryParameters.panThreshold.toLocaleString('en-IN')} or more (Income Tax Rule 114B).
                     </p>
                   </div>
                   <button
@@ -2421,10 +2490,10 @@ export default function BillingEstimator({
               </div>
 
               {/* The PAN gate skipped at estimate time applies now, against the converted value */}
-              {isPanRequired(estimateToConvert.grandTotal) && (
+              {isPanRequiredFor(estimateToConvert.grandTotal, statutoryParameters) && (
                 <div>
                   <label className={`block text-[10px] uppercase font-bold tracking-wider font-mono mb-1.5 ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>
-                    Customer PAN (required at ₹{PAN_THRESHOLD.toLocaleString('en-IN')}+)
+                    Customer PAN (required at ₹{statutoryParameters.panThreshold.toLocaleString('en-IN')}+)
                   </label>
                   <input
                     type="text"
@@ -2758,6 +2827,26 @@ export default function BillingEstimator({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Supervisor approval for a large discount (Milestone 33) */}
+      {isPinModalOpen && (
+        <SupervisorPinModal
+          request={{
+            kind: 'LARGE_DISCOUNT',
+            amount: discount,
+            reason: '',
+            requestedBy: currentUserName,
+          }}
+          supervisors={supervisors}
+          onApproved={record => {
+            setDiscountApproval(record);
+            onApprovalRecorded(record);
+            setPinModalOpen(false);
+            setValidationError(null);
+          }}
+          onClose={() => setPinModalOpen(false)}
+        />
       )}
     </div>
   );
