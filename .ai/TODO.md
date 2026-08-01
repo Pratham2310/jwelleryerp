@@ -261,7 +261,7 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
 - **Testable via:** ✅ Playwright-verified: no false positives before editing, gate blocks on edit, short reasons rejected, audit trail persisted.
 - **Note:** bill-level *discount* is deliberately not gated here — it's a separate, already-visible field rather than a deviation from an item master. Gate it in Milestone 33 alongside the Supervisor PIN if the business wants that.
 
-### 📍 Milestone 11: Estimate / Quotation Mode Toggle
+### ✅ Milestone 11: Estimate / Quotation Mode Toggle — DONE (2026-07-26)
 - **Goal:** Let staff generate a non-fiscal Estimate (same calculation engine, no invoice number consumed, no stock deduction) before committing to a Tax Invoice (PRD §7.8).
 - **Dependencies:** Milestone 2.
 - **Tasks:**
@@ -269,14 +269,14 @@ _Each milestone in this phase depends only on Milestone 2 and is independent of 
   2. Add a one-click "Convert to Tax Invoice" action that re-pulls the current rate (or honors the estimate's original rate, staff's explicit choice).
 - **Testable via:** Generating an Estimate does not increment the invoice sequence or reduce stock; converting it produces a real, sequential invoice.
 
-### 📍 Milestone 12: Sales Return & Credit Note
+### ✅ Milestone 12: Sales Return & Credit Note — DONE (2026-07-26)
 - **Goal:** Process item returns and issue credit notes against a prior invoice.
 - **Dependencies:** Milestone 2.
 - **Tasks:**
   1. Add a Sales Return tab to the Billing Registry, referencing an original `invoiceId` and generating a negative-value linked record.
 - **Testable via:** Returning an item against a real invoice produces a correctly-signed credit note referencing the original.
 
-### 📍 Milestone 13: Dashboard Real-Data Accuracy Fix
+### ✅ Milestone 13: Dashboard Real-Data Accuracy Fix — DONE (2026-07-26)
 - **Goal:** Remove the two decorative/fake Dashboard widgets and wire in already-available real state.
 - **Dependencies:** Milestone 2 (for `invoices`); Milestone 1 (for lifted `stones`/`jobBags` state).
 - **Tasks:**
