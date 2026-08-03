@@ -39,6 +39,7 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
   const currentPath = location.pathname;
 
   const { theme } = useTheme();
+  const light = theme === 'light';
 
   const menuItems = [
     { id: '/dashboard', name: 'Dashboard Overview', icon: LayoutDashboard, desc: 'Executive control summary' },
@@ -106,8 +107,13 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
         <div className="space-y-2">
           {metalRates.slice(0, 3).map((rate) => (
             <div key={rate.metalType} className="flex justify-between items-center text-xs font-semibold">
-              <span className="text-[#A1A1AA]">{rate.metalType.replace(' (', ' ')}</span>
-              <span className="font-mono text-[#C5A059] font-bold">₹{rate.ratePerGram.toLocaleString('en-IN')}</span>
+              {/* #A1A1AA reads at 2.33:1 on the light rate card — legible on the dark one only. */}
+              <span className={light ? 'text-zinc-600' : 'text-[#A1A1AA]'}>
+                {rate.metalType.replace(' (', ' ')}
+              </span>
+              <span className={`font-mono font-bold ${light ? 'text-[#6B5526]' : 'text-[#C5A059]'}`}>
+                ₹{rate.ratePerGram.toLocaleString('en-IN')}
+              </span>
             </div>
           ))}
         </div>
@@ -125,24 +131,41 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
               key={item.id}
               to={item.id}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-left group relative ${
-                isActive 
-                  ? 'bg-[#1C1917] text-[#C5A059] font-bold border border-[#3A3222]' 
-                  : 'text-[#A1A1AA] hover:bg-[#141416] hover:text-white border border-transparent'
+                isActive
+                  ? (light
+                      // Gold plaque with black type: 9.1:1, and unmistakably "you are here".
+                      ? 'sidebar-active-light font-bold border border-[#B08D4A]'
+                      : 'bg-[#1C1917] text-[#C5A059] font-bold border border-[#3A3222]')
+                  : (light
+                      // Hovering must not turn the label white — on a light plaque that reads
+                      // at 1.1:1, which is invisible. Darken toward black-and-gold instead.
+                      ? 'text-zinc-600 hover:bg-[#FBF6EA] hover:text-[#0A0A0B] border border-transparent'
+                      : 'text-[#A1A1AA] hover:bg-[#141416] hover:text-white border border-transparent')
               }`}
             >
               <Icon className={`w-5 h-5 shrink-0 transition duration-150 ${
-                isActive ? 'text-[#C5A059]' : 'text-[#71717A] group-hover:text-[#C5A059]'
+                isActive
+                  ? (light ? 'text-[#0A0A0B]' : 'text-[#C5A059]')
+                  : light
+                    ? 'text-zinc-400 group-hover:text-[#8C6D34]'
+                    : 'text-[#71717A] group-hover:text-[#C5A059]'
               }`} />
               <div className="flex flex-col">
                 <span className="text-xs font-bold">{item.name}</span>
-                <span className={`text-[10px] transition-colors leading-tight ${
-                  isActive ? 'text-[#C5A059]/70' : 'text-[#71717A] group-hover:text-[#A1A1AA]'
+                <span className={`sidebar-sub text-[10px] transition-colors leading-tight ${
+                  isActive
+                    ? (light ? 'text-[#0A0A0B]/75' : 'text-[#C5A059]/70')
+                    : light
+                      ? 'text-zinc-500 group-hover:text-[#6B5526]'
+                      : 'text-[#71717A] group-hover:text-[#A1A1AA]'
                 }`}>
                   {item.desc}
                 </span>
               </div>
               {isActive && (
-                <div className="absolute right-3.5 w-1.5 h-1.5 rounded-full bg-[#C5A059]" />
+                <div className={`absolute right-3.5 w-1.5 h-1.5 rounded-full ${
+                  light ? 'bg-[#0A0A0B]' : 'bg-[#C5A059]'
+                }`} />
               )}
             </Link>
           );

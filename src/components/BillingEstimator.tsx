@@ -1775,8 +1775,9 @@ export default function BillingEstimator({
                 )}
               </div>
 
-              {/* Net Amount Due */}
-              <div className="bg-slate-900 text-white p-4.5 rounded-2xl border border-slate-800 space-y-1">
+              {/* Net Amount Due. `on-gold-panel`: the light-mode sheet turns this plaque gold,
+                  so its contents need black type — darkened gold on gold reads at 1.96:1. */}
+              <div className="on-gold-panel bg-slate-900 text-white p-4.5 rounded-2xl border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider font-bold">Net Amount Due</span>
                 <div className="flex justify-between items-baseline">
                   <span className="text-xl font-bold font-mono text-amber-400">₹{finalGrandTotal.toLocaleString('en-IN')}</span>

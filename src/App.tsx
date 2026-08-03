@@ -932,7 +932,7 @@ function AppContent() {
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => setIsDeskOpen(!isDeskOpen)}
-          className="flex items-center gap-2 bg-[#141416]/95 hover:bg-zinc-900 border border-[#C5A059]/40 hover:border-[#C5A059] px-3.5 py-2 rounded-xl text-xs font-bold text-[#C5A059] shadow-xl shadow-black/60 backdrop-blur-xs transition"
+          className="surface-dark flex items-center gap-2 bg-[#141416]/95 hover:bg-zinc-900 border border-[#C5A059]/40 hover:border-[#C5A059] px-3.5 py-2 rounded-xl text-xs font-bold text-[#C5A059] shadow-xl shadow-black/60 backdrop-blur-xs transition"
           title="Toggle Simulation Control Desk"
         >
           <span className={`w-2 h-2 rounded-full ${forceOffline ? 'bg-red-500' : 'bg-emerald-500'} animate-pulse`} />
@@ -946,8 +946,10 @@ function AppContent() {
           )}
         </button>
         
+        {/* `surface-dark` opts this panel out of the light-mode override sheet: it stays
+            dark in both themes — see the block at the end of index.css. */}
         {isDeskOpen && (
-          <div className="absolute bottom-12 right-0 w-80 bg-[#141416] border border-[#262626] rounded-2xl shadow-2xl p-5 space-y-4 text-left select-none">
+          <div className="surface-dark absolute bottom-12 right-0 w-80 bg-[#141416] border border-[#262626] rounded-2xl shadow-2xl p-5 space-y-4 text-left select-none">
             <div className="flex justify-between items-center border-b border-[#262626] pb-2.5">
               <h4 className="font-bold text-white text-xs">Simulated API Settings</h4>
               <button 

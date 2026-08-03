@@ -30,7 +30,7 @@ export default function ToastStack() {
         const Icon = s.icon;
         return (
           <div key={t.id}
-            className={`flex items-start gap-2.5 p-3 rounded-xl border bg-[#141416]/97 backdrop-blur-sm shadow-2xl shadow-black/60 ${s.border}`}>
+            className={`surface-dark flex items-start gap-2.5 p-3 rounded-xl border bg-[#141416]/97 backdrop-blur-sm shadow-2xl shadow-black/60 ${s.border}`}>
             <Icon className={`w-4 h-4 shrink-0 mt-px ${s.tint}`} />
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-bold text-zinc-100">{t.title}</p>

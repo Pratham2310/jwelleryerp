@@ -432,10 +432,12 @@ body.light,
   color: #18181C !important;
 }
 .light .bg-slate-900.p-5.rounded-2xl .text-amber-400 {
-  color: #C5A059 !important;
+  /* #C5A059 on the whitened card is 2.46:1. #8C6D34 is the light-mode gold used everywhere
+     else and reads at 4.62:1, with the same hue. */
+  color: #8C6D34 !important;
 }
 .light .bg-slate-900.p-5.rounded-2xl .text-slate-400 {
-  color: #71717A !important;
+  color: #67676F !important;
 }
 .light .bg-slate-900.p-5.rounded-2xl .border-slate-800 {
   border-color: #E4E4E7 !important;
@@ -508,3 +510,157 @@ body.light,
   border-top-color: #E4E4E7 !important;
 }
 
+
+/* ============================================================================
+   LIGHT-MODE CONTRAST FIXES (2026-08-03)
+   ----------------------------------------------------------------------------
+   The light-mode block above rewrites dark utility classes to light values with
+   `!important`. That works for ordinary panels, which flip from dark to light as
+   a whole. It breaks for two things, and both are fixed here:
+
+     1. Surfaces that are DELIBERATELY dark in both themes — the floating
+        Simulation Desk and the toast stack. The sheet darkened their text
+        (`text-zinc-400` -> near-black) while their own `bg-zinc-900` buttons
+        stayed dark, giving black-on-black at 1.19:1.
+
+     2. `hover:` variants. `.light .text-white` never matches `hover:text-white`
+        because it is a different class, so the sidebar kept pure-white hover
+        text while its hover background flipped light — 1.1:1, invisible.
+   ============================================================================ */
+
+/* --- 1. Permanently dark surfaces keep their own palette in light mode ---
+   `.on-dark-panel` (above) solves the narrow case: white text on a panel that stays dark.
+   `.surface-dark` is the general form — it restores the whole zinc/amber text scale plus
+   backgrounds and borders, for a surface that is dark in BOTH themes end to end. */
+
+.light .surface-dark,
+.light .surface-dark * {
+  color: revert-layer;
+}
+
+.light .surface-dark {
+  background-color: #141416 !important;
+  color: #E5E5E5 !important;
+}
+
+.light .surface-dark .bg-zinc-900,
+.light .surface-dark .bg-\[\#141416\] {
+  background-color: #18181B !important;
+}
+
+.light .surface-dark .bg-zinc-950 {
+  background-color: #09090B !important;
+}
+
+/* Text scale inside a dark surface, restated so the light overrides cannot win. */
+.light .surface-dark .text-white          { color: #FFFFFF !important; }
+.light .surface-dark .text-zinc-100       { color: #F4F4F5 !important; }
+.light .surface-dark .text-zinc-200       { color: #E4E4E7 !important; }
+.light .surface-dark .text-zinc-300       { color: #D4D4D8 !important; }
+.light .surface-dark .text-zinc-400       { color: #A1A1AA !important; }
+.light .surface-dark .text-zinc-500       { color: #9C9CA5 !important; }
+.light .surface-dark .text-zinc-600       { color: #91919B !important; }
+.light .surface-dark .text-zinc-700       { color: #85858F !important; }
+.light .surface-dark .text-\[\#C5A059\]   { color: #C5A059 !important; }
+.light .surface-dark .text-amber-400      { color: #FBBF24 !important; }
+.light .surface-dark .text-emerald-400    { color: #34D399 !important; }
+.light .surface-dark .text-rose-400,
+.light .surface-dark .text-red-400        { color: #FB7185 !important; }
+
+/* Borders inside a dark surface must stay dark, not flip to the light hairline. */
+.light .surface-dark .border,
+.light .surface-dark .border-zinc-800,
+.light .surface-dark .border-\[\#262626\] {
+  border-color: #27272A !important;
+}
+
+/* The gold call-to-action keeps black type on gold, in both themes. */
+.light .surface-dark .bg-\[\#C5A059\] {
+  background-color: #C5A059 !important;
+  color: #0A0A0B !important;
+}
+
+/* --- 2. Sidebar: selected item is a gold plaque with black type (9.1:1) --- */
+
+.sidebar-active-light {
+  background-color: #C5A059 !important;
+}
+
+.sidebar-active-light,
+.sidebar-active-light span,
+.sidebar-active-light svg {
+  color: #0A0A0B !important;
+}
+
+/* --- 3. Notification count: white on a deep red, never the flipped near-black --- */
+
+/* `.light .text-white` is (0,2,0); a single class cannot beat it even with !important,
+   so this rule matches that specificity and wins on source order instead. */
+.notification-badge,
+.light .notification-badge,
+.light .notification-badge.text-white {
+  background-color: #B91C1C !important;
+  color: #FFFFFF !important;
+}
+
+/* The sidebar sub-label: the light override sheet sets `.light .text-zinc-500` with
+   `!important`, which a `group-hover:` variant cannot beat. Pinned here for both states. */
+.light aside a .sidebar-sub {
+  color: #5F5F68 !important;
+}
+
+.light aside a:hover .sidebar-sub {
+  color: #6B5526 !important;
+}
+
+.light aside a.sidebar-active-light .sidebar-sub {
+  color: rgba(10, 10, 11, 0.78) !important;
+}
+
+/* Rate-change deltas: emerald-600 lands at 3.65:1 on a white card. Emerald is a poor light-mode
+   accent at that weight — deepened here rather than at each call site, since the same pairing
+   recurs across the dashboard, reports and KPI tiles. */
+.light .text-emerald-500 { color: #047857 !important; }
+.light .text-emerald-600 { color: #036148 !important; }
+
+/* Muted captions sat at 4.40–4.48:1 in light mode — a hair under AA across breadcrumbs, KPI
+   sub-labels and card footers. Darkened a step; same hue, so nothing about the look changes. */
+.light .text-\[\#71717A\],
+.light .text-zinc-500 {
+  color: #67676F !important;
+}
+
+/* ...except inside a permanently dark surface, where that would reintroduce dark-on-dark. */
+.light .surface-dark .text-\[\#71717A\],
+.light .surface-dark .text-zinc-500 {
+  color: #9C9CA5 !important;
+}
+
+/* `text-slate-500` is the twin of `text-zinc-500` and appears on card affordances such as the
+   rate-card "History" button; it was missing from the muted-caption override above. */
+.light .text-slate-500 { color: #67676F !important; }
+.light .surface-dark .text-slate-500 { color: #9C9CA5 !important; }
+
+/* Gold-on-white: `text-amber-400` sits on KPI cards whose `bg-slate-900` the light sheet flips to
+   white, leaving 2.46:1. The other gold tokens were already deepened for light mode; these two
+   were simply missing from that list. Inside a `.surface-dark` the bright value still wins, since
+   that selector is more specific. */
+.light .text-amber-300,
+.light .text-amber-400 {
+  color: #8C6D34 !important;
+}
+
+/**
+ * `.on-gold-panel` — the sibling of `.on-dark-panel` for plaques the light-mode sheet turns
+ * GOLD (#C5A059). Gold-family text on a gold background reads at 1.96:1; on that plaque the
+ * only legible ink is near-black, which is also what the sidebar's selected item uses.
+ */
+.light .on-gold-panel,
+.light .on-gold-panel * {
+  color: #0A0A0B !important;
+}
+
+.light .on-gold-panel .text-slate-400,
+.light .on-gold-panel .text-zinc-400 {
+  color: rgba(10, 10, 11, 0.72) !important;
+}

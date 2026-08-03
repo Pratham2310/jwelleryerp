@@ -207,8 +207,8 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
             >
               <Bell className="w-5 h-5 text-[#C5A059]" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-600 rounded-full border-2 border-[#0A0A0B] text-[8px] font-bold text-white flex items-center justify-center animate-bounce">
-                  {unreadCount}
+                <span className="notification-badge absolute top-0.5 right-0.5 min-w-[1.15rem] h-[1.15rem] px-1 bg-red-700 rounded-full text-[10px] font-bold text-white leading-none flex items-center justify-center ring-2 ring-white dark:ring-[#0A0A0B]">
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </button>
