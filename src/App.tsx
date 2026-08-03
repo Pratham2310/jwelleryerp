@@ -18,6 +18,9 @@ import {
   type SupervisorPin,
 } from './lib/statutoryParameters';
 import ReportsHub from './components/ReportsHub';
+import InventoryOperations from './components/InventoryOperations';
+import type { StockAdjustment } from './lib/stockAdjustment';
+import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
 
 // Custom layouts & Auth pages
@@ -242,6 +245,18 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Stock write-offs (Milestone 42) and melt batches (Milestone 43). Both are append-only
+  // registers: a loss that happened cannot un-happen, and a melt is physically irreversible.
+  const [stockAdjustments, setStockAdjustments] = useState<StockAdjustment[]>(() => {
+    const saved = localStorage.getItem('stitch_stock_adjustments');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [meltBatches, setMeltBatches] = useState<MeltBatch[]>(() => {
+    const saved = localStorage.getItem('stitch_melt_batches');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Offline POS queue (Milestone 36). A sale raised while the terminal is offline is held here
   // rather than in the register, because it has no confirmed place in the invoice series yet.
   const [offlineQueue, setOfflineQueue] = useState<QueuedSale[]>(() => {
@@ -353,6 +368,14 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_offline_queue', JSON.stringify(offlineQueue));
   }, [offlineQueue]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_stock_adjustments', JSON.stringify(stockAdjustments));
+  }, [stockAdjustments]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_melt_batches', JSON.stringify(meltBatches));
+  }, [meltBatches]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -826,6 +849,26 @@ function AppContent() {
                     purchaseInvoices={purchaseInvoices}
                     branches={branches}
                     metalRates={projectedRates}
+                  />
+                }
+              />
+              <Route
+                path="/inventory"
+                element={
+                  <InventoryOperations
+                    tags={branchTags}
+                    setTags={setTags}
+                    metalRates={projectedRates}
+                    oldGoldVouchers={branchOldGoldVouchers}
+                    setOldGoldVouchers={setOldGoldVouchers}
+                    adjustments={stockAdjustments}
+                    setAdjustments={setStockAdjustments}
+                    meltBatches={meltBatches}
+                    setMeltBatches={setMeltBatches}
+                    activeBranch={activeBranch}
+                    currentRole={currentRole}
+                    currentUserName={user?.name || 'Counter'}
+                    lastAudit={null}
                   />
                 }
               />

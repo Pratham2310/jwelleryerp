@@ -79,9 +79,9 @@ Phase 12: Procurement & Supplier            [ADDED 2026-07-26 — gap found in c
   └── M41 Purchase Return / Debit Note
 
 Phase 13: Inventory Operations              [ADDED 2026-07-26]
-  ├── M42 Stock Adjustment & Write-Off Voucher
-  ├── M43 Melting Workflow
-  └── M44 Inventory Dashboard
+  ├── M42 Stock Adjustment & Write-Off Voucher ✅
+  ├── M43 Melting Workflow ✅
+  └── M44 Inventory Dashboard ✅
 
 Phase 14: Accounting Depth                  [ADDED 2026-07-26 — extends Phase 9]
   ├── M45 Payment / Receipt / Contra Vouchers
@@ -580,29 +580,36 @@ original roadmap never scheduled any of it. This was the largest coverage gap fo
 
 ---
 
-## 🏁 Phase 13: Inventory Operations (Milestones 42 – 44)
+## 🏁 Phase 13: Inventory Operations (Milestones 42 – 44) — ✅ COMPLETE (2026-08-03)
 
-### 📍 Milestone 42: Stock Adjustment & Write-Off Voucher
+### ✅ Milestone 42: Stock Adjustment & Write-Off Voucher
 - **Goal:** A controlled, reason-logged way to correct stock or write off damaged/lost pieces.
 - **Dependencies:** Milestone 4 (drives the `DamagedOrMelted` transition), Milestone 10 (reuses the reason-log pattern).
 - **Tasks:**
   1. Stock Adjustment voucher: select Tags, choose a reason (damaged / lost / shrinkage / correction), require a logged reason, and transition through the state machine — never by direct status assignment.
 - **Testable via:** Writing off a Tag requires a reason and moves it to `DamagedOrMelted`; it leaves sellable stock and stock valuation.
+- **Done:** `src/lib/stockAdjustment.ts` + an Adjustments tab on the new Inventory Ops screen. **Writing off is not deleting** — the tag moves through the state machine to `DamagedOrMelted` and the record stays, because erasing the piece would erase the loss it exists to document. The rule is **ITC reversal**: GST s.17(5)(h) blocks input tax credit on goods lost, stolen or destroyed, so credit claimed on a written-off piece must be reversed — **but a book correction is not a destruction**, and reversing there would hand back money the shop is entitled to keep. `requiresItcReversal` is therefore per reason, not per voucher, and it is tested both ways.
+- **Decisions:** only pieces the shop physically holds can be adjusted (a `Sold` piece is not ours, a piece in transit is the other branch's to account for, an already-written-off piece would double-count the loss); the note must be a real sentence, on the same argument as M10's override reason; and valuation **includes making charge**, unlike a branch transfer, because a write-off is a real loss and the making already spent is lost with it.
 
-### 📍 Milestone 43: Melting Workflow
+### ✅ Milestone 43: Melting Workflow
 - **Goal:** Convert old gold and damaged/unsold tags back into raw metal stock (PRD §6.3).
 - **Dependencies:** Milestone 15 (old-gold lots), Milestone 42 (damaged tags).
 - **Tasks:**
   1. Melting batch: select old-gold lots and/or damaged Tags, record input gross weight, expected vs. actual recovered fine weight, and melting loss; output increments raw metal stock.
 - **Testable via:** A melt batch's recovered fine weight plus recorded loss reconciles against the input weight; melted Tags leave sellable inventory permanently.
+- **Done:** `src/lib/melting.ts` + a Melting tab. Three rules carry it. **You cannot get more gold out than went in** — a recovery above the input is refused outright rather than booked as a gain, because silently accepting it would create metal from nothing and corrupt every valuation downstream. **Loss is derived, never typed** (`input − recovered`), so a batch reconciles by construction rather than by someone entering two numbers that happen to agree. And **melting destroys identity**: the output raw-metal tag is created with no HUID, because that number certified an ornament that no longer exists and carrying it forward would attach a BIS certification to metal never assayed in this form.
+- **Decisions:** excess loss beyond 5% is **flagged for review, not blocked** — a genuinely bad melt happens and the shop needs it visible, the same pattern as excess wastage on job work (M18); recovery is split across lots **in proportion to the fine metal each contributed**, since splitting evenly would credit a 60%-purity lot the same as a 92% one; and because a written-off piece and an already-melted one share `DamagedOrMelted`, **batch history rather than status** decides what can still go in the crucible.
+- **Bug caught by the typechecker:** `purityOfMetal` read every non-karat mark as 92.5%, which would have understated the fine content of every `Silver (999)` melt. Karats and parts-per-thousand are different notations and are now parsed as such.
 
-### 📍 Milestone 44: Inventory Dashboard
+### ✅ Milestone 44: Inventory Dashboard
 - **Goal:** A dedicated inventory-analytics landing screen, distinct from the main sales dashboard.
 - **Dependencies:** Milestone 4, Milestone 6, Milestone 13.
 - **Tasks:**
   1. Stock-by-purity/category weight & value tiles, lifecycle-state distribution, ageing buckets (>90/180 days), GML/consignment exposure, and the last audit's discrepancy summary.
 - **Reference design:** `docs/stitch_jewelry_management_suite/.../inventory_valuation_summary/`, `.../stock_ageing_velocity_analysis/`.
 - **Testable via:** Every tile reconciles against the underlying `Tag[]` state; selling a piece updates it without a reload.
+- **Done:** `src/lib/inventoryDashboard.ts` + the Inventory Dashboard tab. **"Stock" is deliberately not one number:** a piece on memo is the shop's asset but unsellable today, a piece in transit is on neither branch's floor, and financed GML/consignment stock sits on the shelf without belonging to the business — rolling those together produces a figure that is wrong for every question anyone actually asks. The tiles separate sellable, held-not-sellable, financed and owned. Ageing covers **everything on hand**, not just the sellable slice `reports.inventoryAgeing` reports, because metal sitting with a karigar for eight months is exactly the capital worth surfacing. Undated pieces stay in their own bucket and are excluded from the slow-moving figure rather than counted as new.
+- **`reconcileInventory()`** makes the milestone's criterion executable — five checks shown on screen, so the page proves it ties to `Tag[]` rather than asserting it.
 
 ---
 

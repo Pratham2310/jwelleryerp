@@ -864,6 +864,15 @@ export interface JobBag {
  * These are policy, not arithmetic. Holding them as constants means a shop cannot comply with a
  * change until a release ships, which is the same argument the Tax Master settled for GST rates.
  */
+/**
+ * Stock Adjustment & Write-Off (Milestone 42) and Melting (Milestone 43) live in their own
+ * libraries — `src/lib/stockAdjustment.ts` and `src/lib/melting.ts` — and re-export their
+ * shapes from there, following the same pattern as `Role` and `SupervisorPin`. They are listed
+ * here only so the persisted-state map in `App.tsx` reads in one place:
+ *   stitch_stock_adjustments -> StockAdjustment[]
+ *   stitch_melt_batches      -> MeltBatch[]
+ */
+
 export interface StatutoryParameters {
   panThreshold: number;
   tcsThreshold: number;

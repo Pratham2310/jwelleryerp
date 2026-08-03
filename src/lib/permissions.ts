@@ -240,6 +240,7 @@ export const ROUTE_PERMISSION: Record<string, Permission> = {
   '/oldgold': 'billing.create',
   '/customers': 'customers.manage',
   '/purchases': 'purchase.view',
+  '/inventory': 'catalog.view',
   '/accounting': 'accounting.view',
   '/reports': 'accounting.view',
   '/roles': 'admin.roles',

@@ -4,6 +4,35 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-08-03 — Phase 13 Complete: Milestones 42–44 (Stock Adjustment, Melting, Inventory Dashboard)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+The three ship together on one **Inventory Ops** screen because they are the same subject seen three ways: what stock the shop has, how it leaves without being sold, and how it is turned back into metal.
+
+**Milestone 42 — writing off is not deleting.** A damaged or lost piece must leave sellable stock and valuation, but the *record* stays: erasing the tag would erase the loss the voucher exists to document. The tag moves through the state machine — never by direct assignment — to `DamagedOrMelted`.
+
+The rule with money attached is **ITC reversal**. GST s.17(5)(h) blocks input tax credit on goods lost, stolen or destroyed, so credit claimed on a written-off piece has to be reversed. **But a book correction is not a destruction** — the record was wrong, not the stock, and reversing there would hand back money the shop is entitled to keep. `requiresItcReversal` is per reason for exactly that reason, and both directions are tested. Only pieces the shop physically holds can be adjusted: a `Sold` piece is not ours, a piece in transit is the other branch's to account for, and an already-written-off piece would double-count the loss.
+
+**Milestone 43 — three rules, two of them from physics.**
+
+1. **You cannot get more gold out than went in.** A recovery above the input is refused outright, not booked as an unusually good melt. Accepting it would create metal from nothing and corrupt every valuation downstream.
+2. **Loss is derived, never typed** (`input − recovered`), so a batch reconciles by construction. A shop that can type both numbers can produce a batch that does not balance.
+3. **Melting destroys identity.** The output raw-metal tag carries no HUID: that number certified an ornament that no longer exists, and carrying it forward would attach a BIS certification to metal never assayed in this form.
+
+Excess loss past 5% is **flagged, not blocked** — a bad melt is a real event the shop needs recorded, the same argument as excess wastage on job work (M18). Recovery is split across lots in proportion to the fine metal each contributed, since splitting evenly would credit a 60%-purity lot the same as a 92% one. And because a written-off piece and an already-melted one share `DamagedOrMelted`, batch history rather than status decides what can still go in the crucible.
+
+**A bug the typechecker caught, worth naming:** `purityOfMetal` read every non-karat mark as 92.5% sterling, which would have understated the fine content of every `Silver (999)` melt. Gold is marked in karats out of 24 and silver/platinum in parts per thousand — two notations meaning different things, now parsed as such.
+
+**Milestone 44 — "stock" is deliberately not one number.** A piece on memo is the shop's asset but unsellable today; a piece in transit is on neither branch's floor; financed GML/consignment stock sits on the shelf without belonging to the business. Rolling those into one figure produces a number that is wrong for every question anyone actually asks, so the tiles separate **sellable**, **held-not-sellable**, **financed** and **owned outright**. Ageing covers everything on hand rather than only the sellable slice `reports.inventoryAgeing` reports, because metal sitting with a karigar for eight months is exactly the capital worth surfacing; undated pieces stay in their own bucket and are excluded from the slow-moving total rather than counted as new. `reconcileInventory()` makes the milestone's criterion executable — five checks rendered on the page, so it proves it ties to `Tag[]` instead of asserting it.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **1138 tests passing across 38 suites** (up from 1046); `npm run build` clean. Playwright-verified: all five reconciliation checks tied at ₹10,29,263 against live tags; a write-off with a one-word note was refused with nothing written, then a properly reasoned one moved the tag to `DamagedOrMelted`, kept the record, flagged ITC reversal, and dropped Sellable Now from ₹8,02,742 to ₹5,16,262; a melt claiming 9,999 g from an 18.5 g input was refused as physically impossible, then a real batch reconciled exactly (18.500 = 16.850 + 1.650), was flagged for review at 8.9% loss, produced a `RawMetal` tag with no HUID, and marked the lot melted with its proportional recovery; a second batch took a `Silver (999)` piece permanently out of inventory. Regression across all 16 screens × 2 themes, including both new sub-tabs added to the sweep: zero contrast failures, zero console errors.
+
+**Remaining after this:** Phase 15's M49–M53 are the only unbuilt milestones left.
+
+---
+
 ## 2026-08-01 — Phase 11 Complete: Milestones 35–36 (Simulated Hardware & Offline POS Queue)
 
 **Author:** AI agent (Claude Code), pair programming with USER.
