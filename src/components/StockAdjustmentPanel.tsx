@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ClipboardX, Plus, X, AlertCircle, Info } from 'lucide-react';
 import type { Tag, MetalRate, Branch } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import { NOTIFY } from '../lib/notifications';
 import {
   ADJUSTMENT_REASONS,
   reasonDef,
@@ -33,6 +35,7 @@ export default function StockAdjustmentPanel({
 }: StockAdjustmentPanelProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
+  const { notify } = useNotifications();
 
   const [isOpen, setOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -66,6 +69,9 @@ export default function StockAdjustmentPanel({
     );
     setAdjustments(prev => [adjustment, ...prev]);
     setTags(prev => applyAdjustment(adjustment, prev));
+    notify(NOTIFY.stockWrittenOff(
+      adjustment.adjustmentNo, adjustment.valueWrittenOff, adjustment.itcReversed
+    ));
     reset();
   };
 

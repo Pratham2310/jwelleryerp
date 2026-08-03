@@ -131,6 +131,7 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
     panNumber: '',
     itemDescription: '',
     grossWeight: 0,
+    claimedPurityPercent: 0,
     testedPurityPercent: 91.6,
     meltingLossPercent: 3,
     buybackRatePerGram: suggestedBuybackRate,
@@ -200,6 +201,10 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
       panNumber: form.panNumber.trim().toUpperCase() || undefined,
       itemDescription: form.itemDescription.trim(),
       grossWeight: valuation.grossWeight,
+      // What the customer said it was, for the claimed-vs-tested gap (Milestone 53).
+      // Left undefined when unrecorded rather than defaulted to the tested figure —
+      // an assumed match would make the gap look smaller than it is.
+      claimedPurityPercent: form.claimedPurityPercent > 0 ? form.claimedPurityPercent : undefined,
       testedPurityPercent: form.testedPurityPercent,
       meltingLossPercent: form.meltingLossPercent,
       netPayableWeight: valuation.netPayableWeight,
@@ -616,6 +621,22 @@ export default function OldGoldManager({ vouchers, setVouchers, customers, metal
                       onChange={(e) => setForm(p => ({ ...p, meltingLossPercent: parseFloat(e.target.value) || 0 }))}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className={labelCls}>Claimed Purity (%) — optional</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="What the customer says it is"
+                    className={`w-full text-xs font-mono px-3 py-2 rounded-lg border focus:outline-none focus:border-amber-500 ${inputCls}`}
+                    value={form.claimedPurityPercent || ''}
+                    onChange={(e) => setForm(p => ({ ...p, claimedPurityPercent: parseFloat(e.target.value) || 0 }))}
+                  />
+                  <p className={`text-[10px] mt-1 ${mutedCls}`}>
+                    Recorded before assay. Leave blank if not stated — the buyback report excludes
+                    unclaimed lots rather than assuming they agree with the test.
+                  </p>
                 </div>
 
                 <div>

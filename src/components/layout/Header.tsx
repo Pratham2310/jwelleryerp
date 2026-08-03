@@ -27,6 +27,8 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Tag, Customer, Karigar, Branch } from '../../types';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { sortForDisplay, relativeTime, CATEGORY_LABEL } from '../../lib/notifications';
 
 interface HeaderProps {
   user: { name: string; role: string; branch: string } | null;
@@ -54,33 +56,8 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
   const [isBranchMenuOpen, setBranchMenuOpen] = useState(false);
   const [isProfileOpen, setProfileOpen] = useState(false);
 
-  // Notifications state
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'notif-1',
-      type: 'warning',
-      title: 'Exchange Rate Surge',
-      desc: 'Standard Gold (22K) rate increased to ₹6,650/g (+0.72%)',
-      time: '5 mins ago',
-      read: false
-    },
-    {
-      id: 'notif-2',
-      type: 'success',
-      title: 'Job Completed',
-      desc: 'Karigar Ramesh finished Peacock Ring (WO-2026-001)',
-      time: '1 hour ago',
-      read: false
-    },
-    {
-      id: 'notif-3',
-      type: 'info',
-      title: 'Scheme Installment Due',
-      desc: "Shrutika Deshpande's Swarna Nidhi savings deposit due today",
-      time: '3 hours ago',
-      read: true
-    }
-  ]);
+  const { notifications, unread: unreadCount, markRead, markAllRead } = useNotifications();
+
 
   // Refs for closing on click outside
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -118,15 +95,8 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
 
   const hasResults = searchResults.items.length > 0 || searchResults.customers.length > 0 || searchResults.karigars.length > 0;
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const dismissNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Real events pushed by the app (Milestone 50) — no longer a hardcoded array.
+  const displayed = sortForDisplay(notifications).slice(0, 12);
 
   return (
     <>
@@ -268,55 +238,46 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
                   )}
                 </div>
 
-                <div className={`divide-y max-h-64 overflow-y-auto space-y-2 ${
+                <div className={`divide-y max-h-72 overflow-y-auto space-y-2 ${
                   theme === 'light' ? 'divide-zinc-150' : 'divide-[#262626]'
                 }`}>
-                  {notifications.length === 0 ? (
+                  {displayed.length === 0 ? (
                     <div className={`text-center py-6 text-xs ${
                       theme === 'light' ? 'text-zinc-400' : 'text-[#71717A]'
                     }`}>
-                      No active alerts or events
+                      No events yet. Raise a bill or adjust stock and it will appear here.
                     </div>
                   ) : (
-                    notifications.map(notif => (
-                      <div 
-                        key={notif.id} 
-                        className={`pt-2.5 pb-2 flex gap-3 relative group rounded-xl px-2 transition ${
-                          theme === 'light' 
+                    displayed.map(notif => (
+                      <div
+                        key={notif.id}
+                        onClick={() => markRead(notif.id)}
+                        className={`pt-2.5 pb-2 flex gap-3 relative group rounded-xl px-2 transition cursor-pointer ${
+                          theme === 'light'
                             ? (!notif.read ? 'bg-amber-50/40 border border-amber-200/40' : 'border border-transparent')
                             : (!notif.read ? 'bg-[#1C1917]/30 border border-[#3A3222]/30' : 'border border-transparent')
                         }`}
                       >
                         <div className="mt-0.5 shrink-0">
-                          {notif.type === 'warning' && <TrendingUp className="w-4 h-4 text-[#C5A059]" />}
-                          {notif.type === 'success' && <CheckCircle className="w-4 h-4 text-emerald-500" />}
-                          {notif.type === 'info' && <Info className="w-4 h-4 text-blue-400" />}
+                          {notif.severity === 'CRITICAL' && <AlertTriangle className="w-4 h-4 text-rose-500" />}
+                          {notif.severity === 'WARNING' && <TrendingUp className="w-4 h-4 text-[#C5A059]" />}
+                          {notif.severity === 'INFO' && <CheckCircle className="w-4 h-4 text-emerald-500" />}
                         </div>
-                        <div className="flex-1 space-y-0.5">
+                        <div className="flex-1 space-y-0.5 min-w-0">
                           <div className="flex justify-between items-start gap-1.5">
                             <h5 className={`font-sans font-bold text-[11px] leading-tight ${
                               theme === 'light' ? 'text-zinc-800' : 'text-white'
                             }`}>{notif.title}</h5>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className={`text-[9px] font-mono whitespace-nowrap ${
-                                theme === 'light' ? 'text-zinc-400' : 'text-[#71717A]'
-                              }`}>{notif.time}</span>
-                              <button 
-                                onClick={() => dismissNotification(notif.id)}
-                                className={`p-0.5 rounded transition opacity-0 group-hover:opacity-100 ${
-                                  theme === 'light' 
-                                    ? 'hover:bg-zinc-150 text-zinc-400 hover:text-zinc-700' 
-                                    : 'hover:bg-[#262626] text-[#71717A] hover:text-[#E5E5E5]'
-                                }`}
-                                title="Dismiss notification"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
+                            <span className={`text-[9px] font-mono whitespace-nowrap shrink-0 ${
+                              theme === 'light' ? 'text-zinc-400' : 'text-[#71717A]'
+                            }`}>{relativeTime(notif.at)}</span>
                           </div>
                           <p className={`text-[11px] leading-relaxed ${
                             theme === 'light' ? 'text-zinc-600' : 'text-[#A1A1AA]'
-                          }`}>{notif.desc}</p>
+                          }`}>{notif.body}</p>
+                          <span className={`text-[9px] font-mono uppercase tracking-wider ${
+                            theme === 'light' ? 'text-zinc-400' : 'text-[#71717A]'
+                          }`}>{CATEGORY_LABEL[notif.category]}</span>
                         </div>
                       </div>
                     ))

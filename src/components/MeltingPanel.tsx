@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Flame, Plus, X, AlertCircle, FileWarning } from 'lucide-react';
 import type { Tag, OldGoldVoucher, Branch, MetalStandard } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import { NOTIFY } from '../lib/notifications';
 import {
   isMeltableTag,
   tagAsMeltInput,
@@ -39,6 +41,7 @@ export default function MeltingPanel({
 }: MeltingPanelProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
+  const { notify } = useNotifications();
 
   const [isOpen, setOpen] = useState(false);
   const [tagIds, setTagIds] = useState<string[]>([]);
@@ -90,6 +93,7 @@ export default function MeltingPanel({
     // Melted pieces become terminal; the recovered metal enters stock as a new raw-metal tag.
     setTags(prev => [...applyMeltToTags(batch, prev), output]);
     setOldGoldVouchers(prev => applyMeltToLots(batch, prev));
+    notify(NOTIFY.meltCompleted(batch.batchNo, batch.actualFineWeight, batch.needsReview));
     reset();
   };
 

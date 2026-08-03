@@ -2,10 +2,17 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
+import pkg from './package.json';
 
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    // Injected at build time so the System Health panel (Milestone 51) reports a real version
+    // and build stamp rather than a constant someone has to remember to update.
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version),
+      __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

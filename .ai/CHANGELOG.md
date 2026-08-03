@@ -4,6 +4,35 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-08-03 — Phase 15 Complete: Milestones 49–53. **Roadmap finished — all 53 milestones built.**
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+The last five. Each one closed a gap that earlier milestones had left visible.
+
+**Milestone 49 — User Management, and the seam it closes.** M32 defined roles; this defines the people holding them, which matters because the audit trail names a person: M10 logs who overrode a price, M33 who approved a discount, M42 who authorised a write-off. **Deactivate, never delete** — removing a user would orphan every document they touched, so `isActive` gates *selection* while `resolveUserName()` deliberately resolves inactive users too. That asymmetry is the design.
+
+It also closes the seam flagged when M33 shipped: that milestone kept its own list of supervisor names and PINs because no user master existed. The roster is now **derived** — only active users whose role holds `billing.override` — so a person's PIN and their authority to approve cannot drift apart. Deactivating someone withdraws their approval rights in the same action, verified in the browser.
+
+**Milestone 50 — a real event store.** `Header.tsx`'s hardcoded three-item notification array is gone. Three rules: notifications are **append-only** (reading only flips `read`); the cap **never evicts an unread event to make room for a read one** — a busy afternoon of sales must not push out the one notification saying a bill failed to sync; and the panel sorts unread, then severity, then recency, because it exists to surface what needs attention rather than to be a chronological log. A CRITICAL toast has no auto-dismiss. Wired to sales, offline queueing, sync conflicts, write-offs, melts and supervisor approvals — plus the `Toast` primitive `CURRENT_PROGRESS.md` §3.6 had listed as missing.
+
+**Milestone 51 — a status panel that does not lie.** The criterion was that nothing is a hardcoded placeholder, which is the whole reason it is worth building: a panel that lies is worse than none, because it is believed. Storage is summed from the actual keys — counting UTF-16 code units *and* the key, since `value.length` alone under-reports by roughly half, which on a quota warning is the difference between a useful number and a reassuring lie. The quota comes from `navigator.storage.estimate()` where the browser gives one and is **labelled as assumed** when it does not. Version and build stamp are injected by Vite's `define`. It is equally honest about what it cannot claim: there is no server, so the API rows describe the simulation and say so. Never having exported a backup reads CRITICAL, because with no backend, clearing site data destroys everything.
+
+**Milestone 52 — credit claimed is not credit retained.** The ITC Register separates blocked credit (s.17(5)) and, more importantly, **carries the reversals from Milestone 42's write-offs**: s.17(5)(h) blocks credit on goods destroyed, and leaving that off the register is how a shop ends up claiming credit it has already forfeited. Reverse-charge rows are flagged, because a reader reconciling against GSTR-2B will not find them there — RCM credit is self-declared. The HSN Summary is Table 12 shape, with credit notes **netted in rather than listed separately**: a return reduces the period's outward supply, and gross figures would not reconcile against the GSTR-1 actually filed.
+
+`reconcileRegisters()` makes both criteria executable, and running it against the seed data immediately surfaced a real Rule 46 gap — a pre-M21 invoice line carrying no HSN.
+
+**Milestone 53 — the metric that earns the screen.** Claimed versus tested purity: a customer brings in a chain they believe is 22K and it assays at 78%. That gap is where disputes happen and where an under-tested lot quietly loses money. A lot with **no recorded claim is excluded from the average**, never treated as agreeing with the test — folding them in at parity would drag the gap toward zero and hide exactly what the metric exists to show. The gap reads tested − claimed, so worse-than-claimed is negative, which is the direction that costs money. `OldGoldVoucher.claimedPurityPercent` was added (optional, since vouchers predate it) with a capture input on the buyback form. Melting loss is tracked against lots actually melted, not all intake.
+
+**A defect browser testing caught:** `formatBytes` topped out at megabytes, so a browser reporting a 10 GB quota rendered "10240.00 MB" — a figure nobody reads as ten gigabytes.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **1264 tests passing across 43 suites** (up from 1138); `npm run build` clean. Playwright-verified end to end: deactivating the only administrator was refused by name; deactivating a second supervisor removed them from the approver roster in the same action while their record and name survived; a completed sale pushed a real notification and toast with no reload, and the header dropdown rendered it; System Health reported a browser-measured 10 GB quota, 38 real keys with real sizes, and build v1.0.0 with its timestamp; the ITC register showed ₹3,13,260 of write-off reversal carried from Milestone 42 and the HSN summary tied to the sales register at ₹3,08,574 while flagging the unclassified seed line; and a buyback recorded at 91.6% claimed against 78% tested produced a −13.60 point gap with one lot materially overclaimed, the two unclaimed lots correctly excluded. Regression across all 20 screens and sub-tabs × 2 themes: zero contrast failures, zero console errors.
+
+**The 53-milestone roadmap is complete.** Every phase in `TODO.md` is now closed.
+
+---
+
 ## 2026-08-03 — Phase 13 Complete: Milestones 42–44 (Stock Adjustment, Melting, Inventory Dashboard)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ShieldCheck, Scale } from 'lucide-react';
+import { ShieldCheck, Scale, UserCog, Activity } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import RoleManager from './RoleManager';
 import StatutoryPanel from './StatutoryPanel';
-import type { StatutoryParameters, ApprovalRecord } from '../types';
+import UserManagerPanel from './UserManagerPanel';
+import SystemHealthPanel from './SystemHealthPanel';
+import type { StatutoryParameters, ApprovalRecord, Branch } from '../types';
 import type { SupervisorPin } from '../lib/statutoryParameters';
+import type { OperatorUser } from '../lib/users';
 import { can, type Role } from '../lib/permissions';
 
 interface AdminSettingsProps {
@@ -15,33 +18,43 @@ interface AdminSettingsProps {
   statutoryParameters: StatutoryParameters;
   setStatutoryParameters: React.Dispatch<React.SetStateAction<StatutoryParameters>>;
   approvals: ApprovalRecord[];
+  /** Derived from the user master (Milestone 49) rather than kept as a separate list. */
   supervisors: SupervisorPin[];
-  setSupervisors: React.Dispatch<React.SetStateAction<SupervisorPin[]>>;
+  users: OperatorUser[];
+  setUsers: React.Dispatch<React.SetStateAction<OperatorUser[]>>;
+  branches: Branch[];
+  forceOffline: boolean;
+  latencyMs: number;
+  queuedSales: number;
+  queueConflicts: number;
 }
 
 const TABS = [
   { key: 'roles' as const, label: 'Roles & Access', icon: ShieldCheck },
+  { key: 'users' as const, label: 'Operators', icon: UserCog },
   { key: 'statutory' as const, label: 'Statutory & Approvals', icon: Scale },
+  { key: 'health' as const, label: 'System Health', icon: Activity },
 ];
 
+type Tab = typeof TABS[number]['key'];
+
 /**
- * The two administration screens live together because they answer adjacent questions:
- * who may act (Milestone 32), and under what limits and whose sign-off (Milestones 33-34).
+ * The administration screens live together because they answer adjacent questions: who may act
+ * (M32), who *is* acting (M49), under what limits and whose sign-off (M33–M34), and whether the
+ * system underneath is actually healthy (M51).
  */
 export default function AdminSettings({
   roles, setRoles, assignedRoleNames, currentRole,
-  statutoryParameters, setStatutoryParameters, approvals, supervisors, setSupervisors,
+  statutoryParameters, setStatutoryParameters, approvals, supervisors,
+  users, setUsers, branches, forceOffline, latencyMs, queuedSales, queueConflicts,
 }: AdminSettingsProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
-  const [tab, setTab] = useState<'roles' | 'statutory'>('roles');
-
-  // Only roles that can override a price may be named as approvers.
-  const approvingRoleNames = roles.filter(r => r.permissions.includes('billing.override')).map(r => r.name);
+  const [tab, setTab] = useState<Tab>('roles');
 
   return (
     <div className="space-y-6">
-      <div className={`flex gap-1 p-1 rounded-xl border w-fit ${
+      <div className={`flex flex-wrap gap-1 p-1 rounded-xl border w-fit ${
         dark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-150'
       }`}>
         {TABS.map(t => (
@@ -59,22 +72,41 @@ export default function AdminSettings({
         ))}
       </div>
 
-      {tab === 'roles' ? (
+      {tab === 'roles' && (
         <RoleManager
           roles={roles}
           setRoles={setRoles}
           assignedRoleNames={assignedRoleNames}
           currentRole={currentRole}
         />
-      ) : (
+      )}
+
+      {tab === 'users' && (
+        <UserManagerPanel
+          users={users}
+          setUsers={setUsers}
+          roles={roles}
+          branches={branches}
+          canEdit={can(currentRole, 'admin.roles')}
+        />
+      )}
+
+      {tab === 'statutory' && (
         <StatutoryPanel
           parameters={statutoryParameters}
           setParameters={setStatutoryParameters}
           approvals={approvals}
           supervisors={supervisors}
-          setSupervisors={setSupervisors}
-          approvingRoleNames={approvingRoleNames}
           canEdit={can(currentRole, 'masters.manage')}
+        />
+      )}
+
+      {tab === 'health' && (
+        <SystemHealthPanel
+          forceOffline={forceOffline}
+          latencyMs={latencyMs}
+          queuedSales={queuedSales}
+          queueConflicts={queueConflicts}
         />
       )}
     </div>

@@ -4,6 +4,10 @@ import { initialMetalRates, initialItemDesigns, initialTags, initialCustomers, i
 import { ItemDesign, Tag, Customer, Karigar, JobWork, SaleInvoice, MetalRate, LooseStone, OldGoldVoucher, KarigarLedgerEntry, Branch, StockTransfer, TaxRate, MetalRateVersion, HallmarkBatch, HallmarkPolicy, SavingsScheme, SchemeEnrollment, SchemeInstalment, Supplier, PurchaseOrder, GoodsReceipt, PurchaseInvoice, PurchaseReturn, ManualVoucher, StatutoryParameters, ApprovalRecord } from './types';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { HardwareProvider } from './contexts/HardwareContext';
+import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
+import ToastStack from './components/ToastStack';
+import { NOTIFY } from './lib/notifications';
+import { DEFAULT_USERS, supervisorsFromUsers, type OperatorUser } from './lib/users';
 import HardwarePanel from './components/HardwarePanel';
 import OfflineQueueDrawer from './components/OfflineQueueDrawer';
 import { syncQueue, summariseQueue, queueSale, type QueuedSale } from './lib/offlineQueue';
@@ -60,6 +64,7 @@ function AppContent() {
   const [isDeskOpen, setIsDeskOpen] = useState(false);
 
   const { theme, toggleTheme } = useTheme();
+  const { notify } = useNotifications();
 
   // Core database states (with LocalStorage persistence)
   // Metal metadata (id/metalType/purity). Since Milestone 48 the RATE itself is projected from
@@ -245,6 +250,12 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Operator accounts (Milestone 49). Deactivated, never deleted — see src/lib/users.ts.
+  const [users, setUsers] = useState<OperatorUser[]>(() => {
+    const saved = localStorage.getItem('stitch_users');
+    return saved ? JSON.parse(saved) : DEFAULT_USERS;
+  });
+
   // Stock write-offs (Milestone 42) and melt batches (Milestone 43). Both are append-only
   // registers: a loss that happened cannot un-happen, and a melt is physically irreversible.
   const [stockAdjustments, setStockAdjustments] = useState<StockAdjustment[]>(() => {
@@ -289,11 +300,15 @@ function AppContent() {
     if (result.invoicesToCommit.length > 0) {
       setInvoices(prev => [...result.invoicesToCommit, ...prev]);
     }
+    // A conflict is a compliance problem, not a notice — it is raised loudly and stays until read.
+    for (const conflict of result.conflicts) {
+      notify(NOTIFY.syncConflict(conflict.invoice.invoiceNumber));
+    }
     // Rebuilt in the order the sales were made, so the drawer reads as a till roll rather than
     // resorting itself every time one entry changes state.
     const byId = new Map([...result.synced, ...result.conflicts].map(q => [q.id, q]));
     setOfflineQueue(offlineQueue.map(q => byId.get(q.id) ?? q));
-  }, [offlineQueue, invoices]);
+  }, [offlineQueue, invoices, notify]);
 
   // Coming back online drains the queue by itself. A counter that has to remember to press a
   // button is a counter that leaves sales out of the books.
@@ -376,6 +391,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_melt_batches', JSON.stringify(meltBatches));
   }, [meltBatches]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_users', JSON.stringify(users));
+  }, [users]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -735,11 +754,18 @@ function AppContent() {
                     itemDesigns={itemDesigns}
                     hallmarkPolicy={hallmarkPolicy}
                     statutoryParameters={statutoryParameters}
-                    supervisors={supervisorPins}
+                    supervisors={supervisorsFromUsers(users, roles)}
                     currentUserName={user?.name || 'Counter'}
-                    onApprovalRecorded={record => setApprovals(prev => [record, ...prev])}
+                    onApprovalRecorded={record => {
+                      setApprovals(prev => [record, ...prev]);
+                      notify(NOTIFY.supervisorApproval(record.kind === 'LARGE_DISCOUNT'
+                        ? 'Large discount' : 'Price override', record.amount, record.approvedBy));
+                    }}
                     isOffline={forceOffline}
-                    onQueueSale={invoice => setOfflineQueue(prev => [...prev, queueSale(invoice)])}
+                    onQueueSale={invoice => {
+                      setOfflineQueue(prev => [...prev, queueSale(invoice)]);
+                      notify(NOTIFY.saleQueuedOffline(invoice.invoiceNumber, invoice.grandTotal));
+                    }}
                   />
                 }
               />
@@ -849,6 +875,8 @@ function AppContent() {
                     purchaseInvoices={purchaseInvoices}
                     branches={branches}
                     metalRates={projectedRates}
+                    stockAdjustments={stockAdjustments}
+                    oldGoldVouchers={branchOldGoldVouchers}
                   />
                 }
               />
@@ -883,8 +911,14 @@ function AppContent() {
                     statutoryParameters={statutoryParameters}
                     setStatutoryParameters={setStatutoryParameters}
                     approvals={approvals}
-                    supervisors={supervisorPins}
-                    setSupervisors={setSupervisorPins}
+                    supervisors={supervisorsFromUsers(users, roles)}
+                    users={users}
+                    setUsers={setUsers}
+                    branches={branches}
+                    forceOffline={forceOffline}
+                    latencyMs={latency}
+                    queuedSales={queueSummary.pending}
+                    queueConflicts={queueSummary.conflicts}
                   />
                 }
               />
@@ -1044,11 +1078,14 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <HardwareProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </HardwareProvider>
+      <NotificationProvider>
+        <HardwareProvider>
+          <Router>
+            <AppContent />
+            <ToastStack />
+          </Router>
+        </HardwareProvider>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

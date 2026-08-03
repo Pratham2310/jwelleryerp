@@ -37,6 +37,8 @@ import {
 } from '../lib/statutoryParameters';
 import SupervisorPinModal from './SupervisorPinModal';
 import { useHardware } from '../contexts/HardwareContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import { NOTIFY } from '../lib/notifications';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
 import { calculateReturnTotals, validateReturnSelection } from '../lib/salesReturn';
 import TaxMasterPanel from './TaxMasterPanel';
@@ -228,6 +230,7 @@ export default function BillingEstimator({
 
   const { theme } = useTheme();
   const { registerWeightField } = useHardware();
+  const { notify } = useNotifications();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'create' | 'registry' | 'taxmaster' | 'returns'>('create');
@@ -672,6 +675,8 @@ export default function BillingEstimator({
       onQueueSale(invoice);
     } else {
       setInvoices(prev => [invoice, ...prev]);
+      // Estimates raise nothing: a quotation is not an event the shop needs told about.
+      if (!isEstimate) notify(NOTIFY.saleCompleted(invoice.invoiceNumber, invoice.grandTotal));
     }
 
     // Mark catalogue tags in stock as "Sold" — only ever via a legal state-machine transition

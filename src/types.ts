@@ -622,6 +622,12 @@ export interface OldGoldVoucher {
 
   // Valuation inputs and outputs (PRD §8.2 steps 2-4)
   grossWeight: number;
+  /**
+   * What the customer said the piece was, before assay (Milestone 53). Optional because vouchers
+   * predate it — and an absent claim is reported as "not recorded", never as agreeing with the
+   * test, which would make the claimed-vs-tested gap look smaller than it is.
+   */
+  claimedPurityPercent?: number;
   testedPurityPercent: number;
   meltingLossPercent: number;
   netPayableWeight: number;

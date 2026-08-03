@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Scale, AlertTriangle, ShieldCheck, Info, Trash2, Plus, KeyRound } from 'lucide-react';
+import { Scale, AlertTriangle, ShieldCheck, Info, KeyRound } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import type { StatutoryParameters, ApprovalRecord } from '../types';
 import {
   PARAMETER_DEFS,
   validateStatutoryParameters,
-  validateSupervisor,
   summariseApprovals,
   SUPERVISOR_PIN_NOTICE,
   APPROVAL_KIND_LABEL,
@@ -16,15 +15,16 @@ interface StatutoryPanelProps {
   parameters: StatutoryParameters;
   setParameters: React.Dispatch<React.SetStateAction<StatutoryParameters>>;
   approvals: ApprovalRecord[];
+  /**
+   * Derived from the operator master (Milestone 49) rather than kept here, so a person's PIN and
+   * their authority to approve cannot drift apart. Edited on the Operators tab.
+   */
   supervisors: SupervisorPin[];
-  setSupervisors: React.Dispatch<React.SetStateAction<SupervisorPin[]>>;
-  /** Roles that hold `billing.override` — only these can be named as approvers. */
-  approvingRoleNames: string[];
   canEdit: boolean;
 }
 
 export default function StatutoryPanel({
-  parameters, setParameters, approvals, supervisors, setSupervisors, approvingRoleNames, canEdit,
+  parameters, setParameters, approvals, supervisors, canEdit,
 }: StatutoryPanelProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -33,10 +33,6 @@ export default function StatutoryPanel({
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const [newSupervisor, setNewSupervisor] = useState<SupervisorPin>({
-    roleName: approvingRoleNames[0] || '', supervisorName: '', pin: '',
-  });
-  const [supervisorError, setSupervisorError] = useState('');
 
   const cardCls = dark ? 'bg-[#141416] border-[#262626] text-zinc-100' : 'bg-white border-slate-150 text-slate-900';
   const mutedCls = dark ? 'text-zinc-500' : 'text-slate-400';
@@ -52,25 +48,6 @@ export default function StatutoryPanel({
     setParameters(draft);
     setError('');
     setSaved(true);
-  };
-
-  const addSupervisor = () => {
-    const err = validateSupervisor(newSupervisor, supervisors, approvingRoleNames);
-    if (err) { setSupervisorError(err); return; }
-    setSupervisors(prev => [...prev, { ...newSupervisor, supervisorName: newSupervisor.supervisorName.trim() }]);
-    setNewSupervisor({ roleName: approvingRoleNames[0] || '', supervisorName: '', pin: '' });
-    setSupervisorError('');
-  };
-
-  const removeSupervisor = (pin: string) => {
-    // Removing the last one would leave nobody able to authorise an override, which stops the
-    // counter rather than protecting it.
-    if (supervisors.length === 1) {
-      setSupervisorError('Keep at least one supervisor — with none, no override could ever be approved.');
-      return;
-    }
-    setSupervisors(prev => prev.filter(s => s.pin !== pin));
-    setSupervisorError('');
   };
 
   return (
@@ -147,8 +124,9 @@ export default function StatutoryPanel({
           <KeyRound className="w-4 h-4 text-amber-500" /> Supervisors
         </h3>
         <p className={`text-xs mt-0.5 ${mutedCls}`}>
-          Only roles that can override a price may approve one — otherwise the sign-off is a
-          signature, not a second pair of eyes.
+          Derived from the operator list — every active person whose role can override a price.
+          Add or remove them on the <span className="font-bold">Operators</span> tab, so a PIN and
+          the authority to use it can never drift apart.
         </p>
 
         <div className="mt-4 space-y-2">
@@ -160,53 +138,16 @@ export default function StatutoryPanel({
               </div>
               {/* Never rendered in the clear — the log proves who approved, the PIN needn't be readable. */}
               <span className={`font-mono text-xs tracking-[0.3em] ${mutedCls}`}>••••</span>
-              <button onClick={() => removeSupervisor(s.pin)} disabled={!canEdit}
-                aria-label={`Remove ${s.supervisorName}`}
-                className={`p-1.5 rounded-lg transition disabled:opacity-30 ${dark ? 'hover:bg-rose-500/10 text-rose-400' : 'hover:bg-rose-50 text-rose-600'}`}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
             </div>
           ))}
+          {supervisors.length === 0 && (
+            <p className="text-[11px] font-bold text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
+              <AlertTriangle className="w-3 h-3 inline mr-1" />
+              No active operator can approve an override, so nothing above the limit can be
+              authorised. Give someone a role with price-override rights.
+            </p>
+          )}
         </div>
-
-        {canEdit && (
-          <div className="grid sm:grid-cols-[1fr_1fr_auto_auto] gap-2 mt-3">
-            <input
-              value={newSupervisor.supervisorName}
-              placeholder="Supervisor name"
-              aria-label="Supervisor name"
-              onChange={e => { setNewSupervisor({ ...newSupervisor, supervisorName: e.target.value }); setSupervisorError(''); }}
-              className={`text-xs px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`}
-            />
-            <select
-              value={newSupervisor.roleName}
-              aria-label="Supervisor role"
-              onChange={e => { setNewSupervisor({ ...newSupervisor, roleName: e.target.value }); setSupervisorError(''); }}
-              className={`text-xs px-3 py-2 border rounded-lg focus:outline-none focus:border-amber-500 ${inputCls}`}
-            >
-              {approvingRoleNames.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <input
-              value={newSupervisor.pin}
-              placeholder="PIN"
-              inputMode="numeric"
-              maxLength={6}
-              aria-label="New supervisor PIN"
-              onChange={e => { setNewSupervisor({ ...newSupervisor, pin: e.target.value }); setSupervisorError(''); }}
-              className={`text-xs font-mono px-3 py-2 border rounded-lg w-24 focus:outline-none focus:border-amber-500 ${inputCls}`}
-            />
-            <button onClick={addSupervisor}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#C5A059] hover:bg-[#B08D4A] text-[#0A0A0B] text-xs font-bold rounded-xl transition whitespace-nowrap">
-              <Plus className="w-3.5 h-3.5" /> Add
-            </button>
-          </div>
-        )}
-
-        {supervisorError && (
-          <p className="mt-3 text-[11px] font-bold text-rose-500 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
-            <AlertTriangle className="w-3 h-3 inline mr-1" />{supervisorError}
-          </p>
-        )}
 
         <p className={`text-[10px] mt-3 leading-relaxed ${mutedCls}`}>{SUPERVISOR_PIN_NOTICE}</p>
       </div>

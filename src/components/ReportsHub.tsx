@@ -12,8 +12,18 @@ import {
   karigarReconciliation, supplierPurchases, branchComparison,
   reconcileReports, AGE_BUCKET_LABEL,
 } from '../lib/reports';
+import {
+  itcRegister, summariseItc, itcRegisterCsv,
+  hsnSummary, hsnSummaryCsv, reconcileRegisters,
+} from '../lib/gstRegisters';
+import {
+  buybackHeadline, intakeByPurityBand, claimedVsTested,
+  meltingLossTrend, vaultByState, reconcileBuyback, lotsInPeriod,
+} from '../lib/buybackDashboard';
+import type { StockAdjustment } from '../lib/stockAdjustment';
+import type { OldGoldVoucher } from '../types';
 
-type Family = 'sales' | 'inventory' | 'customer' | 'karigar' | 'purchase' | 'branch';
+type Family = 'sales' | 'inventory' | 'customer' | 'karigar' | 'purchase' | 'branch' | 'gst' | 'buyback';
 
 interface ReportsHubProps {
   invoices: SaleInvoice[];
@@ -25,6 +35,10 @@ interface ReportsHubProps {
   purchaseInvoices: PurchaseInvoice[];
   branches: Branch[];
   metalRates: MetalRate[];
+  /** Milestone 52 — write-offs carry an ITC reversal that belongs on the register. */
+  stockAdjustments: StockAdjustment[];
+  /** Milestone 53 — the buyback dashboard's source. */
+  oldGoldVouchers: OldGoldVoucher[];
 }
 
 const FAMILIES: { key: Family; label: string }[] = [
@@ -34,11 +48,13 @@ const FAMILIES: { key: Family; label: string }[] = [
   { key: 'customer', label: 'Customer' },
   { key: 'karigar', label: 'Karigar' },
   { key: 'branch', label: 'Branch' },
+  { key: 'gst', label: 'GST Registers' },
+  { key: 'buyback', label: 'Buyback' },
 ];
 
 export default function ReportsHub({
   invoices, tags, customers, suppliers, karigars, karigarLedger,
-  purchaseInvoices, branches, metalRates,
+  purchaseInvoices, branches, metalRates, stockAdjustments, oldGoldVouchers,
 }: ReportsHubProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -53,6 +69,16 @@ export default function ReportsHub({
   const inputCls = dark ? 'bg-zinc-950 border-zinc-800 text-zinc-100' : 'bg-white border-slate-200 text-slate-900';
 
   const money = (n: number) => `${n < 0 ? '−' : ''}₹${Math.abs(n).toLocaleString('en-IN')}`;
+
+  const downloadCsv = (filename: string, csv: string) => {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const checks = reconcileReports(invoices, tags, metalRates, from, to);
   const allReconcile = checks.every(c => c.reconciles);
 
@@ -255,16 +281,213 @@ export default function ReportsHub({
         </Panel>
       )}
 
+      {family === 'gst' && (() => {
+        const rows = itcRegister(purchaseInvoices, suppliers, from, to);
+        const summary = summariseItc(rows, stockAdjustments, from, to);
+        const hsn = hsnSummary(invoices, from, to);
+        const registerChecks = reconcileRegisters(purchaseInvoices, suppliers, invoices, from, to);
+
+        return (
+          <div className="space-y-6">
+            <Panel title="Input Tax Credit Register">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-3">
+                {[
+                  { label: 'Credit Claimed', value: money(summary.claimedTotal), accent: true },
+                  { label: 'Blocked u/s 17(5)', value: money(summary.blockedTotal), warn: summary.blockedTotal > 0 },
+                  { label: 'Reverse Charge', value: money(summary.reverseChargeTotal) },
+                  { label: 'Write-Off Reversal Base', value: money(summary.reversalBase), warn: summary.reversalBase > 0 },
+                ].map(k => (
+                  <div key={k.label} className={`p-3 rounded-xl border text-center ${
+                    k.warn ? 'border-amber-500/40 bg-amber-500/5'
+                      : k.accent ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : dark ? 'border-[#262626] bg-zinc-900/30' : 'border-slate-150 bg-slate-50/60'
+                  }`}>
+                    <p className={`text-base font-black font-mono ${
+                      k.warn ? 'text-amber-500' : k.accent ? 'text-emerald-600 dark:text-emerald-400' : ''
+                    }`}>{k.value}</p>
+                    <p className={`text-[9px] uppercase font-mono font-bold tracking-wider mt-0.5 ${mutedCls}`}>{k.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <p className={`px-3 pb-2 text-[10px] leading-relaxed ${mutedCls}`}>
+                The reversal figure is the <span className="font-bold">stock value</span> written off
+                under s.17(5)(h), not the tax on it — the rate originally claimed lives on the
+                purchase invoice for those goods, which a write-off does not reference.
+              </p>
+
+              <Table
+                head={['Date', 'Supplier', 'Invoice', 'Taxable', 'CGST', 'SGST', 'IGST', 'Eligible']}
+                rows={rows.map(r => [
+                  r.invoiceDate, r.supplierName, r.supplierInvoiceNo, money(r.taxableValue),
+                  money(r.cgst), money(r.sgst), money(r.igst),
+                  r.eligible ? (r.isReverseCharge ? 'Yes (RCM)' : 'Yes') : 'No',
+                ])} />
+
+              <div className="p-3">
+                <button onClick={() => downloadCsv(`itc-register-${from}-to-${to}.csv`, itcRegisterCsv(rows))}
+                  className="px-4 py-2 bg-[#C5A059] hover:bg-[#B08D4A] text-[#0A0A0B] text-xs font-bold rounded-xl transition">
+                  Export ITC Register CSV
+                </button>
+              </div>
+            </Panel>
+
+            <Panel title="HSN Summary (GSTR-1 Table 12)">
+              <Table
+                head={['HSN', 'Description', 'UQC', 'Quantity', 'Taxable', 'CGST', 'SGST', 'IGST']}
+                rows={hsn.map(h => [
+                  h.hsnCode, h.description, h.uqc, h.totalQuantity.toFixed(3),
+                  money(h.taxableValue), money(h.cgst), money(h.sgst), money(h.igst),
+                ])} />
+              <p className={`px-3 pt-2 text-[10px] leading-relaxed ${mutedCls}`}>
+                Credit notes are netted in rather than listed separately — a return reduces the
+                period&apos;s outward supply, and gross figures would not reconcile against the
+                GSTR-1 actually filed. Estimates are excluded: a quotation is not a supply.
+              </p>
+              <div className="p-3">
+                <button onClick={() => downloadCsv(`hsn-summary-${from}-to-${to}.csv`, hsnSummaryCsv(hsn))}
+                  className="px-4 py-2 bg-[#C5A059] hover:bg-[#B08D4A] text-[#0A0A0B] text-xs font-bold rounded-xl transition">
+                  Export HSN Summary CSV
+                </button>
+              </div>
+            </Panel>
+
+            <Panel title="Register Reconciliation">
+              <div className="p-3 space-y-2">
+                {registerChecks.map(c => (
+                  <div key={c.label} className="flex items-start gap-2.5 text-[11px]">
+                    {c.passes
+                      ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px text-emerald-500" />
+                      : <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px text-rose-500" />}
+                    <span className="flex-1">
+                      {c.label}
+                      <span className={`block font-mono text-[10px] ${mutedCls}`}>{c.detail}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          </div>
+        );
+      })()}
+
+      {family === 'buyback' && (() => {
+        const lots = lotsInPeriod(oldGoldVouchers, from, to);
+        const head = buybackHeadline(lots);
+        const gap = claimedVsTested(lots);
+        const buybackChecks = reconcileBuyback(lots);
+
+        return (
+          <div className="space-y-6">
+            <Panel title="Buyback Intake">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-3">
+                {[
+                  { label: 'Lots Taken In', value: String(head.lots) },
+                  { label: 'Gross Weight', value: `${head.grossWeight.toFixed(3)} g` },
+                  { label: 'Paid Out', value: money(head.totalPaid), accent: true },
+                  { label: 'Avg Rate / g', value: money(head.averageRatePerGram) },
+                ].map(k => (
+                  <div key={k.label} className={`p-3 rounded-xl border text-center ${
+                    k.accent ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : dark ? 'border-[#262626] bg-zinc-900/30' : 'border-slate-150 bg-slate-50/60'
+                  }`}>
+                    <p className={`text-base font-black font-mono ${k.accent ? 'text-emerald-600 dark:text-emerald-400' : ''}`}>{k.value}</p>
+                    <p className={`text-[9px] uppercase font-mono font-bold tracking-wider mt-0.5 ${mutedCls}`}>{k.label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className={`px-3 pb-2 text-[10px] ${mutedCls}`}>
+                Purity testing and melting allowance removed {head.deductedWeight.toFixed(3)} g
+                ({head.deductedPercent.toFixed(2)}%) of the gross taken in.
+              </p>
+            </Panel>
+
+            <Panel title="Claimed vs Tested Purity">
+              {gap.comparableLots === 0 ? (
+                <p className={`p-6 text-center text-[11px] ${mutedCls}`}>
+                  No lot in this period recorded what the customer claimed, so there is nothing to
+                  compare. Lots without a claim are never assumed to agree with the test.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-3">
+                  {[
+                    { label: 'Avg Claimed', value: `${gap.averageClaimed.toFixed(2)}%` },
+                    { label: 'Avg Tested', value: `${gap.averageTested.toFixed(2)}%` },
+                    { label: 'Gap', value: `${gap.averageGap > 0 ? '+' : ''}${gap.averageGap.toFixed(2)} pts`,
+                      warn: gap.averageGap < 0 },
+                    { label: 'Materially Overclaimed', value: String(gap.materiallyOverclaimed),
+                      warn: gap.materiallyOverclaimed > 0 },
+                  ].map(k => (
+                    <div key={k.label} className={`p-3 rounded-xl border text-center ${
+                      k.warn ? 'border-rose-500/40 bg-rose-500/5'
+                        : dark ? 'border-[#262626] bg-zinc-900/30' : 'border-slate-150 bg-slate-50/60'
+                    }`}>
+                      <p className={`text-base font-black font-mono ${k.warn ? 'text-rose-500' : ''}`}>{k.value}</p>
+                      <p className={`text-[9px] uppercase font-mono font-bold tracking-wider mt-0.5 ${mutedCls}`}>{k.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {gap.lotsWithoutClaim > 0 && (
+                <p className={`px-3 pb-3 text-[10px] ${mutedCls}`}>
+                  {gap.lotsWithoutClaim} lot(s) recorded no claim and are excluded from the average
+                  rather than counted as agreeing — folding them in at parity would drag the gap
+                  toward zero and hide what this measures.
+                </p>
+              )}
+            </Panel>
+
+            <Panel title="Intake by Purity Band">
+              <Table head={['Band', 'Lots', 'Gross Weight', 'Value', 'Share']}
+                rows={intakeByPurityBand(lots).map(b =>
+                  [b.label, b.lots, `${b.grossWeight.toFixed(3)}g`, money(b.value), `${b.sharePercent.toFixed(1)}%`])} />
+            </Panel>
+
+            <Panel title="Melting Loss Trend">
+              <Table head={['Month', 'Lots Melted', 'Expected Fine', 'Recovered', 'Loss %']}
+                rows={meltingLossTrend(lots).map(m =>
+                  [m.month, m.lots, `${m.expectedFine.toFixed(3)}g`, `${m.recoveredFine.toFixed(3)}g`, `${m.lossPercent.toFixed(2)}%`])} />
+              <p className={`px-3 pt-2 text-[10px] ${mutedCls}`}>
+                Only lots actually melted appear. A lot still in the safe has no loss yet, and
+                counting it as zero would understate the real refining loss.
+              </p>
+            </Panel>
+
+            <Panel title="Vault Holdings by State">
+              <Table head={['State', 'Lots', 'Gross Weight', 'Value']}
+                rows={vaultByState(lots).map(v =>
+                  [v.label, v.lots, `${v.grossWeight.toFixed(3)}g`, money(v.value)])} />
+            </Panel>
+
+            <Panel title="Buyback Reconciliation">
+              <div className="p-3 space-y-2">
+                {buybackChecks.map(c => (
+                  <div key={c.label} className="flex items-start gap-2.5 text-[11px]">
+                    {c.passes
+                      ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-px text-emerald-500" />
+                      : <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px text-rose-500" />}
+                    <span className="flex-1">
+                      {c.label}
+                      <span className={`block font-mono text-[10px] ${mutedCls}`}>{c.detail}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          </div>
+        );
+      })()}
+
       <div className={`p-3 rounded-xl border flex gap-2.5 ${
         dark ? 'bg-zinc-900/40 border-zinc-800' : 'bg-slate-50/60 border-slate-150'
       }`}>
         <Info className={`w-4 h-4 shrink-0 mt-0.5 ${mutedCls}`} />
         <p className={`text-[11px] leading-relaxed ${mutedCls}`}>
-          <span className="font-bold">Not yet here:</span> the Audit Log viewer, which needs the
-          event store from Milestone 50 — the app reconstructs activity from current records rather
-          than logging events as they happen, so an audit trail built on it would silently omit
-          anything since deleted. GST returns live on the Billing screen (GSTR-1/3B) and the ITC
-          register lands in Milestone 52.
+          <span className="font-bold">Not yet here:</span> a full Audit Log viewer. Milestone 50
+          added a real event store, so events are now recorded as they happen rather than
+          reconstructed — but it holds only recent activity in this browser, which is a
+          notification feed rather than a complete audit trail. GST returns live on the Billing
+          screen (GSTR-1/3B); the ITC register and HSN summary are on the GST Registers tab above.
         </p>
       </div>
     </div>

@@ -89,12 +89,12 @@ Phase 14: Accounting Depth                  [ADDED 2026-07-26 — extends Phase 
   └── M47 Trial Balance, P&L & Balance Sheet
 
 Phase 15: Masters & Admin Depth             [ADDED 2026-07-26]
-  ├── M48 Rate Master Screen & Append-Only Rate History
-  ├── M49 User Management
-  ├── M50 Notification Center & Activity Feed
-  ├── M51 System Health & Diagnostics Panel
-  ├── M52 ITC Register & HSN Summary Reports
-  └── M53 Old Gold Buyback Dashboard
+  ├── M48 Rate Master Screen & Append-Only Rate History ✅
+  ├── M49 User Management ✅
+  ├── M50 Notification Center & Activity Feed ✅
+  ├── M51 System Health & Diagnostics Panel ✅
+  ├── M52 ITC Register & HSN Summary Reports ✅
+  └── M53 Old Gold Buyback Dashboard ✅
 ```
 
 ---
@@ -648,7 +648,7 @@ three statutory financial statements, which were never scheduled._
 
 ---
 
-## 🏁 Phase 15: Masters & Admin Depth (Milestones 48 – 53)
+## 🏁 Phase 15: Masters & Admin Depth (Milestones 48 – 53) — ✅ COMPLETE (2026-08-03)
 
 ### ✅ Milestone 48: Rate Master Screen & Append-Only Rate History — done 2026-07-29, pulled forward
 - **Goal:** A real Rate Master with versioned history, replacing the Dashboard's in-place inline edit.
@@ -660,38 +660,50 @@ three statutory financial statements, which were never scheduled._
 - **Testable via:** Editing a rate creates a new version rather than overwriting; an old invoice still resolves the rate version it was billed at; a 20% rate jump is blocked pending confirmation.
 - **Done:** `src/lib/rateMaster.ts` + rate history on the Dashboard rate cards. `effectiveFrom` is a full **timestamp**, not a date, because gold moves intraday and same-day rates must still order deterministically. The fat-finger guard sits at **5%** — the outer bound of PRD §4.2's 2–5% range, deliberately, because gold genuinely moves a few percent daily and a tighter default would train staff to click through the warning. Past it a written reason is mandatory; beyond 50% the message names a misplaced decimal point specifically. It never hard-blocks: a real spike must remain recordable. `MetalRate` is now **projected** from the versions (same pattern as M16's derived karigar balances), so every existing screen consumes it unchanged, and `history24h` — previously a decorative array — is now the real recorded versions. Purity derivation from the 24K base is a **suggestion, never applied**: a shop's counter rate absorbs local premium (seed is 7250/6650 where derivation gives 6648), so overwriting it with arithmetic would change what customers are charged.
 
-### 📍 Milestone 49: User Management
+### ✅ Milestone 49: User Management
 - **Goal:** Create/edit/deactivate operator accounts — distinct from *defining* roles (Milestone 32).
 - **Dependencies:** Milestone 32 (roles must exist before users can be assigned to them).
 - **Tasks:**
   1. User list plus a create/edit drawer (name, role, branch, PIN, active flag), with deactivate-not-delete so audit history stays intact.
 - **Testable via:** A deactivated user can no longer be selected as an operator, but their past transactions still resolve their name.
+- **Done:** `src/lib/users.ts` + an Operators tab on the admin screen. **Deactivate, never delete** — removing a user would orphan every document they touched, so `isActive` gates *selection* while `resolveUserName()` deliberately resolves inactive users too. That asymmetry is the design. Administration can never be orphaned: deactivating the last active administrator is refused, with the message naming what to do instead.
+- **Closes the Milestone 33 seam.** M33 shipped its own list of supervisor names and PINs because no user master existed. That list is now **derived** via `supervisorsFromUsers()` — only active users whose role holds `billing.override` — so a person's PIN and their authority to approve cannot drift apart. Verified in the browser: deactivating an operator removed them from the supervisor roster in the same action.
 
-### 📍 Milestone 50: Notification Center & Activity Feed
+### ✅ Milestone 50: Notification Center & Activity Feed
 - **Goal:** Replace `Header.tsx`'s hardcoded notification dropdown with a real event-driven feed.
 - **Dependencies:** Milestone 13 (which establishes a real recent-events source).
 - **Tasks:**
   1. An event/notification store any screen can push into, plus the `Toast` primitive flagged as missing in `CURRENT_PROGRESS.md` §3.6.
   2. Notification Center (unread/read, per-category) and an Activity Feed of real state changes.
 - **Testable via:** Completing a sale, receiving stock, or writing off a Tag each push a real notification that appears without a reload.
+- **Done:** `src/lib/notifications.ts` + `NotificationContext` + the `ToastStack` primitive flagged as missing in `CURRENT_PROGRESS.md` §3.6. `Header.tsx`'s hardcoded three-item array is gone; the dropdown now renders real events. Three rules: notifications are **append-only** (reading only flips `read`); the cap **never evicts an unread event to make room** — a busy afternoon of sales must not push out the one notification saying a bill failed to sync, so read events are evicted first; and the panel sorts **unread, then severity, then recency**, because it exists to surface what needs attention rather than to be a chronological log.
+- **Wired to real state changes:** a completed sale, a sale queued offline, a sync conflict, a stock write-off, a melt batch, and a supervisor approval. A CRITICAL toast has no auto-dismiss — a failed sync must not scroll past unnoticed.
 
-### 📍 Milestone 51: System Health & Diagnostics Panel
+### ✅ Milestone 51: System Health & Diagnostics Panel
 - **Goal:** An honest status surface for a frontend-only prototype: storage, sync and peripheral state.
 - **Dependencies:** Milestone 35, Milestone 36 (extends the Simulation Desk).
 - **Tasks:**
   1. `localStorage` usage/quota, last-backup timestamp, simulated API/offline state, peripheral connection status, and app/build version.
 - **Testable via:** Filling storage or toggling Force Offline is reflected accurately; nothing on the panel is a hardcoded placeholder.
+- **Done:** `src/lib/systemHealth.ts` + a System Health tab. The criterion was that **nothing is a hardcoded placeholder**, which is the whole reason it is worth building: a status panel that lies is worse than none, because it is believed. Storage is summed from the actual keys (counting UTF-16 code units *and* the key, since `value.length` alone under-reports by roughly half); the quota comes from `navigator.storage.estimate()` where the browser offers one and is **labelled as assumed** when it does not; the version and build stamp are injected by Vite's `define` rather than typed into a constant.
+- **Honest about what it cannot claim:** there is no server, so the API rows describe the simulation and say so. Never having exported a backup is reported as CRITICAL — with no backend, clearing site data destroys everything with no copy — and the panel offers the export that fixes it.
 
-### 📍 Milestone 52: ITC Register & HSN Summary Reports
+### ✅ Milestone 52: ITC Register & HSN Summary Reports
 - **Goal:** The two GST reports PRD §9.6 requires beyond GSTR-1/3B.
 - **Dependencies:** Milestone 40 (ITC is booked at purchase), Milestone 21 (HSN comes from the Tax Master).
 - **Tasks:**
   1. ITC Register (input tax by supplier/invoice, for GSTR-2B reconciliation) and HSN Summary (GSTR-1 Table 12 shape), both CSV-exportable.
 - **Testable via:** The ITC Register total equals the sum of input tax on booked purchase invoices; the HSN Summary's taxable values reconcile against the sales register for the period.
+- **Done:** `src/lib/gstRegisters.ts` + a GST Registers tab, both CSV-exportable. **Credit claimed is not credit retained**, and a register showing only the claim side overstates entitlement: blocked credit (s.17(5)) is separated, and **stock written off under Milestone 42 carries its reversal onto this register** — s.17(5)(h) blocks credit on goods destroyed, and leaving it off is how a shop ends up claiming credit it has already forfeited. Reverse-charge rows are flagged because a reader reconciling against GSTR-2B will not find them there.
+- **The HSN Summary is Table 12 shape:** credit notes are **netted in rather than listed separately**, since a return reduces the period's outward supply and gross figures would not reconcile against the GSTR-1 actually filed; estimates are excluded entirely. Invoice-level tax is split across lines in proportion to taxable value, because Table 12 reports per HSN while the stored tax sits at invoice level.
+- **`reconcileRegisters()`** makes both criteria executable. Running it against the seed data immediately flagged a real Rule 46 gap: a pre-M21 invoice line carries no HSN.
 
-### 📍 Milestone 53: Old Gold Buyback Dashboard
+### ✅ Milestone 53: Old Gold Buyback Dashboard
 - **Goal:** An analytics view over old-gold intake, distinct from the transactional voucher.
 - **Dependencies:** Milestone 14, Milestone 15, Milestone 43.
 - **Tasks:**
   1. Intake weight/value by period and purity band, average tested vs. claimed purity, melting-loss trend, and current vault holdings by state (`In Safe`/`Melted`/`Fine Gold Stock`).
 - **Testable via:** Every figure reconciles against the underlying old-gold lots; raising a new buyback voucher updates it without a reload.
+- **Done:** `src/lib/buybackDashboard.ts` + a Buyback tab. The metric that earns the screen is **claimed versus tested purity** — a customer brings in a chain they believe is 22K and it assays at 78%, which is where disputes happen and where an under-tested lot quietly loses money. Two rules: a lot with **no recorded claim is excluded from the average**, never treated as agreeing with the test (folding them in at parity would drag the gap toward zero and hide exactly what the metric shows), and the gap reads **tested − claimed**, so worse-than-claimed is negative — the direction that costs money.
+- **`OldGoldVoucher.claimedPurityPercent`** was added as an optional field to carry this, with a capture input on the buyback form. Optional because vouchers predate it, and absent is reported as "not recorded" rather than assumed.
+- **Melting loss is tracked against lots actually melted**, not all intake: a lot still in the safe has no loss yet, and averaging it in as zero would understate real refining loss. `reconcileBuyback()` ties every figure back to the lots, including a check that net payable weight never exceeds gross — paying for more metal than came through the door would mean a valuation bug upstream.
