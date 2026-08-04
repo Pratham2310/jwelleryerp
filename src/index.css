@@ -664,3 +664,36 @@ body.light,
 .light .on-gold-panel .text-zinc-400 {
   color: rgba(10, 10, 11, 0.72) !important;
 }
+
+/**
+ * Branch switcher options — the same black-and-gold scheme as the sidebar (see
+ * `.sidebar-active-light`). Dark mode keeps its own look; only light mode is restated here,
+ * because `hover:bg-[#1A1A1D]` is a dark utility the light override sheet never rewrites and
+ * so painted the hovered row black underneath already-black text.
+ */
+.light .branch-option:hover {
+  background-color: #FBF6EA !important;
+  border-left-color: #C5A059 !important;
+}
+
+.light .branch-option:hover p {
+  color: #0A0A0B !important;
+}
+
+.light .branch-option:hover p + p,
+.light .branch-option:hover p ~ p {
+  color: #6B5526 !important;
+}
+
+.light .branch-option-active {
+  background-color: #C5A059 !important;
+}
+
+.light .branch-option-active p {
+  color: #0A0A0B !important;
+}
+
+.light .branch-option-active p + p,
+.light .branch-option-active p ~ p {
+  color: rgba(10, 10, 11, 0.78) !important;
+}

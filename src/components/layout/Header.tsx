@@ -48,6 +48,7 @@ interface HeaderProps {
 export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarOpen, setSidebarOpen, tags, customers, karigars, branches, activeBranch, onSwitchBranch }: HeaderProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const light = theme === 'light';
 
   // State controls
   const [isSearchOpen, setSearchOpen] = useState(false);
@@ -148,9 +149,13 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
                     <button
                       key={b.id}
                       onClick={() => { onSwitchBranch(b.id); setBranchMenuOpen(false); }}
-                      className={`w-full text-left px-4 py-3 transition border-l-2 ${
+                      className={`branch-option w-full text-left px-4 py-3 transition border-l-2 ${
                         b.id === activeBranch?.id
-                          ? 'bg-[#C5A059]/10 border-[#C5A059]'
+                          // Same scheme as the sidebar: the selected branch is a gold plaque with
+                          // black type, and hovering warms toward gold rather than going dark —
+                          // `hover:bg-[#1A1A1D]` is a dark utility the light sheet never rewrites,
+                          // so in light mode it painted the row black under black text.
+                          ? (light ? 'branch-option-active border-[#B08D4A]' : 'bg-[#C5A059]/10 border-[#C5A059]')
                           : 'border-transparent hover:bg-[#1A1A1D]'
                       }`}
                     >
