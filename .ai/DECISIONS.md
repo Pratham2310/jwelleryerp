@@ -64,9 +64,38 @@ Architecture Decision Log. Newest decisions at the top of each section is not en
 **Decision:** `stock_ownership_type` (D-3) and a hard default block on cash-refunding Gold Savings Scheme balances (configurable only via a logged compliance override) must both be designed in from the start of their respective modules (Inventory/Accounting and Scheme, respectively) — not added later as compliance polish.
 **Why:** Both carry genuine legal exposure (Balance Sheet misstatement risk for GML; Banning of Unregulated Deposit Schemes Act, 2019 exposure for cash-refundable schemes) rather than being pure UX/feature decisions.
 
+## D-12: Backend stack is Node + TypeScript + NestJS + PostgreSQL + Drizzle — not MERN
+**Source:** Backend planning session, 2026-08-04.
+**Decision:** The server is Node 22 LTS + TypeScript, NestJS for structure, PostgreSQL 16 for storage, Drizzle as the query layer with drizzle-kit migrations, Redis + BullMQ for background work, and Zod for validation shared with the frontend. Clerk provides *identity*; authorization stays in our own database.
+**Implications locked in:**
+- The existing `src/lib/` becomes `packages/domain` **verbatim**. It is framework-free today — of 45 modules only three touch a browser API, and two of those already take storage as an injected parameter — so it ports with its 1264 tests intact.
+- `packages/domain` may never import NestJS, Drizzle or any I/O library. Services do I/O and own transactions; the domain package takes data and returns data. This is what keeps the domain suite running in milliseconds with no database.
+- Money is `BIGINT` paisa and weight is `BIGINT` milligrams at the column level, matching `money.ts`. No `FLOAT`/`DOUBLE` anywhere in the schema.
+- Append-only tables (D-4: rate versions, tax rates; plus karigar ledger, approvals, notifications) have `UPDATE`/`DELETE` revoked at the Postgres role level, not merely avoided in code.
+**Why not MongoDB (i.e. why not MERN):** four properties of this domain are database problems in Postgres and application problems in Mongo — journals that must balance (M28), integer money that must not drift, a gap-free consecutive invoice series per GSTIN required by GST Rule 46, and tenant isolation. The reporting surface (GSTR-1, trial balance, HSN summary, stock ageing) is relational aggregation.
+**Why not another language:** the domain rules — wastage caps, tunch valuation, Fine Gold Equivalent, ITC reversal under s.17(5)(h), the HUID lifecycle — already exist as tested TypeScript. Rewriting them elsewhere discards the most expensive asset in the project to gain nothing.
+**Known risk, accepted:** the team knows Express but not NestJS, and Nest + Drizzle has thinner tutorial coverage than Nest + Prisma. Mitigation: learn Drizzle + RLS first and Nest structure second, because dropping Nest for Fastify later costs about a day while changing the query layer after the schema exists does not.
+
+## D-13: Tenant isolation is enforced by PostgreSQL Row-Level Security, not by application discipline
+**Source:** Backend planning session, 2026-08-04. Extends D-1 and D-5.
+**Decision:** One database, one schema, `tenant_id` on every tenant-owned table (per D-1), with an RLS policy on each. Every request opens a transaction that sets `SET LOCAL app.tenant_id`; policies read `current_setting('app.tenant_id', true)`. Not schema-per-tenant, not database-per-tenant.
+**Implications locked in:**
+- A repository method that forgets its tenant predicate returns **zero rows**, never another shop's stock. That is the entire point: isolation cannot depend on every developer remembering.
+- `SET LOCAL` is transaction-scoped, so this is safe behind pgBouncer in transaction mode.
+- D-5 still holds and is now a schema rule: party masters and the Metal/Purity master carry `tenant_id` but **no** `branch_id`.
+- D-7 becomes a partial unique index rather than a convention — a tag may be sellable at only one branch.
+- CI must contain a test proving tenant A cannot read tenant B's data, run on every pull request.
+**Why not schema-per-tenant:** migrations become O(tenants) and break down past a few hundred shops. **Why not database-per-tenant:** far too heavy for a single-shop customer, which is the majority of the market this targets. Both remain available as an escape hatch for one enterprise customer later, since the application only ever talks to plain Postgres.
+
+## D-14: Identity is bought; authorization is built
+**Source:** Backend planning session, 2026-08-04.
+**Decision:** Clerk owns login, password reset, MFA and sessions. A Clerk Organization maps to one tenant. Roles, permissions, operator accounts and supervisor PINs stay in our own database — `permissions.ts` (M32), `users.ts` (M49) and `statutoryParameters.ts` (M33) move server-side unchanged.
+**Why:** authentication is commodity and getting it wrong is a breach; authorization here is domain-specific and getting it wrong is a business rule failure. The supervisor PIN in particular is **not** an authentication factor — it records that a second person authorised a discount (M33), which is an accounting control, not a login step. Handing it to an identity vendor would misclassify it.
+**Consequence:** the frontend's current claim that its checks "gate the interface, not the data" stops being true only once each check is re-asserted in a Nest guard or service. Until then it remains true and must keep being stated.
+
 ---
 
 ## Open Decisions Not Yet Made (flagged, not resolved — see `HANDOFF.md` for full detail)
 
 - **HSN classification of diamond-studded gold pieces** — single composite line at jewellery-rate vs. split HSN lines (jewellery @ ~3% + diamond @ ~1.5%). Requires client CA sign-off before the GST engine (Handbook Phase 7, not yet drafted) is built.
-- **Where RBAC and the Statutory Parameters table (PAN/TCS/PMLA/Hallmarking thresholds as data, not code) should be built relative to the Phase 2 Master Data work** — flagged in prior project context as needing earlier sequencing than the Handbook's TOC currently implies (Phase 12), but the currently-available Handbook draft does not yet contain the reasoning or resolution for this. Needs to be revisited once Phase 12 (or an accelerated version of it) is actually drafted.
+- ~~**Where RBAC and the Statutory Parameters table should be built relative to Phase 2**~~ — **RESOLVED by delivery (2026-08-01).** Both shipped in the frontend as M32/M34, and D-12/D-13 place them in the backend's platform slice, built before any business module. Original note kept for context: **where RBAC and the Statutory Parameters table (PAN/TCS/PMLA/Hallmarking thresholds as data, not code) should be built relative to the Phase 2 Master Data work** — flagged in prior project context as needing earlier sequencing than the Handbook's TOC currently implies (Phase 12), but the currently-available Handbook draft does not yet contain the reasoning or resolution for this. Needs to be revisited once Phase 12 (or an accelerated version of it) is actually drafted.
