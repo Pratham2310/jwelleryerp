@@ -76,6 +76,17 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Escape closes the search palette. It matters more now the trigger is an icon: there is no
+  // longer a visible input to click away from, so the keyboard needs an obvious way out.
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isSearchOpen]);
+
   // Filter lists for Global Search
   const searchResults = searchQuery.trim() === '' ? { items: [], customers: [], karigars: [] } : {
     items: tags.filter(item =>
@@ -102,7 +113,7 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
     <>
       <header className="h-16 bg-[#0A0A0B] border-b border-[#262626] px-4 md:px-8 flex items-center justify-between shrink-0 select-none shadow-sm relative z-40">
         {/* Left Side: Breadcrumbs and System Time */}
-        <div className="flex items-center gap-3 md:gap-6">
+        <div className="flex items-center gap-3 md:gap-6 min-w-0">
           <button 
             onClick={() => setSidebarOpen && setSidebarOpen(!sidebarOpen)}
             className="p-1.5 -ml-1 text-[#71717A] hover:text-white rounded-lg hover:bg-[#141416] border border-transparent hover:border-[#262626] transition lg:hidden"
@@ -117,7 +128,7 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
           <div className="hidden lg:block relative">
             <button
               onClick={() => setBranchMenuOpen(!isBranchMenuOpen)}
-              className="flex items-center gap-2 text-[10px] font-medium text-[#71717A] font-mono px-2 py-1 rounded-lg hover:bg-[#141416] border border-transparent hover:border-[#262626] transition"
+              className="flex items-center gap-2 text-[10px] font-medium text-[#71717A] font-mono px-2 py-1 rounded-lg hover:bg-[#141416] border border-transparent hover:border-[#262626] transition whitespace-nowrap"
             >
               <Globe className="w-3.5 h-3.5 text-[#C5A059]" />
               <span className="text-[#E5E5E5] font-bold">{activeBranch?.name || 'No Branch'}</span>
@@ -161,23 +172,26 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
         </div>
 
         {/* Right Side: Quick Action Icons */}
-        <div className="flex items-center gap-4.5">
+        <div className="flex items-center gap-3 lg:gap-4.5 shrink-0">
           {/* Active work orders tracker */}
           {activeWorkOrdersCount > 0 && (
-            <Badge variant="gold" className="hidden sm:inline-flex gap-1 items-center px-3 py-1 rounded-full text-[10px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse" />
-              {activeWorkOrdersCount} ACTIVE MANUFACTURING JOBS
+            <Badge variant="gold" title={`${activeWorkOrdersCount} active manufacturing jobs`}
+              className="hidden xl:inline-flex gap-1 items-center px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse shrink-0" />
+              {activeWorkOrdersCount} ACTIVE JOBS
             </Badge>
           )}
 
-          {/* Interactive Global Search trigger */}
-          <button 
+          {/* Global search trigger — icon only. The palette it opens carries its own labelled,
+              autofocused input, so a permanently-visible placeholder was spending ~12rem of
+              navbar width to say what the magnifier already says. */}
+          <button
             onClick={() => setSearchOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#141416] border border-[#262626] text-xs text-[#71717A] rounded-xl hover:border-[#C5A059]/40 transition duration-150 w-32 md:w-48 text-left"
+            aria-label="Search records"
+            title="Search records"
+            className="p-2 text-[#71717A] hover:text-[#E5E5E5] rounded-xl bg-[#141416] border border-[#262626] hover:border-[#C5A059]/40 transition duration-150 flex items-center justify-center"
           >
-            <Search className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span className="hidden md:inline">Search records...</span>
-            <span className="md:hidden">Search...</span>
+            <Search className="w-5 h-5 text-[#C5A059]" />
           </button>
 
           {/* Light / Dark Mode Toggle */}
@@ -299,9 +313,9 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
               <div className="w-7 h-7 rounded-lg bg-[#C5A059]/10 border border-[#C5A059]/30 text-[#C5A059] flex items-center justify-center font-mono font-bold text-xs select-none">
                 {user?.name ? user.name.split(' ').map(n => n[0]).join('') : 'OP'}
               </div>
-              <div className="hidden md:block pr-1 select-none">
-                <p className="text-[11px] font-bold text-white leading-tight">{user?.name || 'Operator'}</p>
-                <span className="text-[9px] text-[#71717A] font-mono block leading-none uppercase">{user?.role || 'Store Manager'}</span>
+              <div className="hidden md:block pr-1 select-none max-w-[9rem]">
+                <p className="text-[11px] font-bold text-white leading-tight truncate">{user?.name || 'Operator'}</p>
+                <span className="text-[9px] text-[#71717A] font-mono block leading-none uppercase truncate">{user?.role || 'Store Manager'}</span>
               </div>
             </button>
 
