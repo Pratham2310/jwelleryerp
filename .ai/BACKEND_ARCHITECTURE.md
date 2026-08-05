@@ -4,6 +4,10 @@ _Written 2026-08-04, after the 53-milestone frontend was completed. Stack decisi
 **D-12**, **D-13** and **D-14** in `DECISIONS.md` — this document is the architecture those decisions
 imply, plus how four people divide it._
 
+**New to NestJS, Drizzle or Postgres RLS? Read `BACKEND_GUIDE.md` first** — it walks one real
+endpoint (the M42 stock write-off) from HTTP to Postgres and back, and explains each tool as it
+appears.
+
 **Read `DECISIONS.md` D-1 through D-14 before this file.** Several things that look like schema
 choices below are locked domain decisions, and reversing one silently will break a compliance rule
 rather than merely a table.
