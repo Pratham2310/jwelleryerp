@@ -14,7 +14,7 @@ import { syncQueue, summariseQueue, queueSale, type QueuedSale } from './lib/off
 import { nextBranchInvoiceNumber } from './lib/branch';
 import { getActiveBranch, primaryBranchId, scopeToBranch } from './lib/branch';
 import { projectCurrentRates, seedVersionsFromRates } from './lib/rateMaster';
-import { DEFAULT_ROLES, roleByName, canAccessRoute, type Role } from './lib/permissions';
+import { DEFAULT_ROLES, roleByName, canAccessRoute, can, type Role } from './lib/permissions';
 import AdminSettings from './components/AdminSettings';
 import {
   DEFAULT_STATUTORY_PARAMETERS,
@@ -23,6 +23,8 @@ import {
 } from './lib/statutoryParameters';
 import ReportsHub from './components/ReportsHub';
 import InventoryOperations from './components/InventoryOperations';
+import RepairManager from './components/RepairManager';
+import type { RepairJob } from './lib/repairJob';
 import type { StockAdjustment } from './lib/stockAdjustment';
 import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
@@ -250,6 +252,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Repair jobs (Milestone 54). Customer property held in custody — deliberately NOT tags,
+  // because booking someone else's chain as stock would overstate what the business owns.
+  const [repairJobs, setRepairJobs] = useState<RepairJob[]>(() => {
+    const saved = localStorage.getItem('stitch_repair_jobs');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Operator accounts (Milestone 49). Deactivated, never deleted — see src/lib/users.ts.
   const [users, setUsers] = useState<OperatorUser[]>(() => {
     const saved = localStorage.getItem('stitch_users');
@@ -395,6 +404,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_users', JSON.stringify(users));
   }, [users]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_repair_jobs', JSON.stringify(repairJobs));
+  }, [repairJobs]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -897,6 +910,19 @@ function AppContent() {
                     currentRole={currentRole}
                     currentUserName={user?.name || 'Counter'}
                     lastAudit={null}
+                  />
+                }
+              />
+              <Route
+                path="/repairs"
+                element={
+                  <RepairManager
+                    jobs={repairJobs}
+                    setJobs={setRepairJobs}
+                    karigars={karigars}
+                    activeBranch={activeBranch}
+                    currentUserName={user?.name || 'Counter'}
+                    canManage={can(currentRole, 'catalog.manage')}
                   />
                 }
               />

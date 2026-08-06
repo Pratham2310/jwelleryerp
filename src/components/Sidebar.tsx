@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   BarChart3,
   Boxes,
+  Wrench,
   X
 } from 'lucide-react';
 import { MetalRate, Branch } from '../types';
@@ -50,6 +51,7 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
     { id: '/jobbags', name: 'Job Bags Tracker', icon: Layers, desc: 'Visual factory floor workflow' },
     { id: '/oldgold', name: 'Old Gold Buyback', icon: Coins, desc: 'Purity testing & melt valuation' },
     { id: '/inventory', name: 'Inventory Ops', icon: Boxes, desc: 'Valuation, write-offs & melting' },
+    { id: '/repairs', name: 'Repairs & Service', icon: Wrench, desc: 'Customer pieces in custody' },
     { id: '/customers', name: 'Customers & Schemes', icon: Users, desc: 'CRM Swarna Nidhi scheme' },
     { id: '/purchases', name: 'Purchases', icon: ClipboardList, desc: 'Orders, receipts & supplier bills' },
     { id: '/accounting', name: 'Accounting', icon: Scale, desc: 'Day book, ledgers & trial balance' },

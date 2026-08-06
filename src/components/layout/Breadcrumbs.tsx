@@ -18,6 +18,7 @@ export default function Breadcrumbs() {
     // Routes added after the original map; without these the crumb showed the raw path
     // segment, so /inventory read as "INVENTORY" beside properly named siblings.
     inventory: 'Inventory Operations',
+    repairs: 'Repairs & Service',
     purchases: 'Procurement & Suppliers',
     accounting: 'Accounting & Ledgers',
     reports: 'Reports & Analytics',

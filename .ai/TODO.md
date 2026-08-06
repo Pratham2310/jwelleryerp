@@ -95,6 +95,16 @@ Phase 15: Masters & Admin Depth             [ADDED 2026-07-26]
   ├── M51 System Health & Diagnostics Panel ✅
   ├── M52 ITC Register & HSN Summary Reports ✅
   └── M53 Old Gold Buyback Dashboard ✅
+
+Phase 16: Full-Product Gaps                 [ADDED 2026-08-04]
+  ├── M54 Repair & Service Jobs
+  ├── M55 Customer Orders & Advances
+  ├── M56 Approval / Memo-Out Workflow
+  ├── M57 Customer Credit & Receivables Ageing
+  ├── M58 Salesperson Attribution & Incentives
+  ├── M59 Loyalty Points Engine
+  ├── M60 e-Invoice / e-Way Bill Integration-Ready
+  └── M61 Outbound Notification Channels
 ```
 
 ---
@@ -707,3 +717,86 @@ three statutory financial statements, which were never scheduled._
 - **Done:** `src/lib/buybackDashboard.ts` + a Buyback tab. The metric that earns the screen is **claimed versus tested purity** — a customer brings in a chain they believe is 22K and it assays at 78%, which is where disputes happen and where an under-tested lot quietly loses money. Two rules: a lot with **no recorded claim is excluded from the average**, never treated as agreeing with the test (folding them in at parity would drag the gap toward zero and hide exactly what the metric shows), and the gap reads **tested − claimed**, so worse-than-claimed is negative — the direction that costs money.
 - **`OldGoldVoucher.claimedPurityPercent`** was added as an optional field to carry this, with a capture input on the buyback form. Optional because vouchers predate it, and absent is reported as "not recorded" rather than assumed.
 - **Melting loss is tracked against lots actually melted**, not all intake: a lot still in the safe has no loss yet, and averaging it in as zero would understate real refining loss. `reconcileBuyback()` ties every figure back to the lots, including a check that net payable weight never exceeds gross — paying for more metal than came through the door would mean a valuation bug upstream.
+
+---
+
+## 🏁 Phase 16: Full-Product Gaps (Milestones 54 – 61) [ADDED 2026-08-04]
+
+_Eight gaps identified when planning the SaaS product. The first five are things a real shop hits
+weekly and the app currently cannot do at all; the last three are integration and engagement work.
+M60 and M61 stay **simulated** until the backend exists — they need credentials and a server, and
+saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
+
+### ✅ Milestone 54: Repair & Service Jobs
+- **Goal:** Take in a customer's own piece for repair, track it, and give it back.
+- **Dependencies:** Milestone 16 (karigar ledger), Milestone 4 (state machine pattern).
+- **Tasks:**
+  1. Repair intake voucher: customer, item description, gross weight in, reported fault, quoted charge, promised date. Lifecycle Received → Assessed → WithKarigar → Ready → Delivered, plus ReturnedUnrepaired.
+  2. Weight reconciliation on delivery (weight out vs weight in, metal added or removed).
+- **Testable via:** A repair item never appears in stock valuation or sellable stock; delivering without recording weight out is refused.
+- **Critical rule:** the item is the **customer's property held in custody**, not shop stock. It must never touch inventory valuation — booking it as an asset overstates the balance sheet and is the mistake generic POS software makes here.
+- **Done:** `src/lib/repairJob.ts` + a Repairs & Service screen. **The piece is the customer's property held in custody, never shop stock** — a repair job creates no Tag, so it can never enter inventory valuation, be sold, or distort the daily weight reconciliation (D-2). That is the mistake generic retail POS makes here and it is expensive to unwind. The custody weight is reported as a disclosure, labelled as such on screen.
+- **Weight in must reconcile with weight out.** Intake refuses to record a piece without weighing it in front of the customer, because that reading is the only thing a return can be checked against and the shop's only defence in a dispute. Delivery refuses a shortfall beyond 50 mg with the difference named, rather than absorbing it — unexplained metal loss is where disputes and pilferage both live. Metal the shop supplied stays a separate figure from the labour charge, since goods and services are taxed differently.
+- **Lifecycle:** Received → Assessed → WithKarigar → Ready → Delivered, with ReturnedUnrepaired reachable from any pre-delivery state, because a shop can always judge a piece not economically repairable.
+
+### 📍 Milestone 55: Customer Orders & Advances
+- **Goal:** Take an order for a piece that does not exist yet, against an advance.
+- **Dependencies:** Milestone 17 (job work), Milestone 26 (advance-as-liability pattern), Milestone 28 (posting).
+- **Tasks:**
+  1. Order: customer, design/specs, agreed weight range, **rate basis (fixed at order vs at delivery)**, advance received, expected delivery, status.
+  2. Conversion to a tax invoice on delivery, with the advance applied and any rate difference settled.
+- **Testable via:** An advance posts as a liability, never as income; converting the order applies it exactly once and the order cannot be converted twice.
+- **Critical rule:** **rate basis must be explicit and recorded at order time.** Gold moves daily, and "what rate did we agree" is the single most common customer dispute in Indian jewellery ordering.
+
+### 📍 Milestone 56: Approval / Memo-Out Workflow
+- **Goal:** Let a piece leave the shop on approval and make sure it comes back.
+- **Dependencies:** Milestone 4 (the `MemoOut` status already exists but has no workflow), Milestone 8 (KYC).
+- **Tasks:**
+  1. Memo voucher: pieces, customer, taken-by, due-back date, declared value; return, convert-to-sale, or mark overdue.
+  2. Overdue register with value at risk, and a KYC requirement above a configurable value.
+- **Testable via:** Issuing a memo moves the tags out of sellable stock without removing them from the shop's assets; an overdue memo is visible with its value at risk.
+- **Critical rule:** memo stock is **still the shop's asset** but not sellable to a walk-in — the one case where "in stock" and "sellable" genuinely differ, which `inventoryDashboard.ts` already separates.
+
+### 📍 Milestone 57: Customer Credit & Receivables Ageing
+- **Goal:** Sell on credit safely and know who owes what, for how long.
+- **Dependencies:** Milestone 2 (billing), Milestone 33 (approval), Milestone 45 (receipt vouchers).
+- **Tasks:**
+  1. Enforce `creditLimit` at checkout; a sale that breaches it needs supervisor approval.
+  2. Receivables ageing (0–30/31–60/61–90/90+), receipt allocation against invoices, and a collection follow-up list.
+- **Testable via:** A credit sale beyond the limit is blocked pending approval; a receipt reduces the oldest invoice first and the ageing buckets move accordingly.
+- **Critical rule:** allocation must be **explicit and recorded**, not implied by dates. "Which bill did this payment settle" has to survive an audit.
+
+### 📍 Milestone 58: Salesperson Attribution & Incentives
+- **Goal:** Know who sold what, and what they earned for it.
+- **Dependencies:** Milestone 2 (invoices), Milestone 49 (operators).
+- **Tasks:**
+  1. Record `salespersonId` on an invoice, separate from who operated the till.
+  2. Configurable incentive basis (percentage of making charges, per gram, or flat per sale) with a per-person statement.
+- **Testable via:** Two staff on one terminal produce correctly attributed sales; changing the incentive scheme does not alter what past sales already earned.
+- **Critical rule:** incentive earned is **snapshotted at sale time**, never recomputed. A scheme change must not silently rewrite last quarter's payouts.
+
+### 📍 Milestone 59: Loyalty Points Engine
+- **Goal:** Make the existing `tier`/`loyaltyPoints` fields mean something.
+- **Dependencies:** Milestone 31 (Customer 360), Milestone 28 (posting).
+- **Tasks:**
+  1. Earning rules, redemption with a per-bill cap, expiry, and tier progression.
+  2. Points ledger per customer, append-only.
+- **Testable via:** Points earn on a sale, redeem against a later bill, and expire on schedule; the ledger always explains the balance.
+- **Critical rule:** **points earn on making charges and stone value, never on metal value.** Metal value moves with the gold rate, so rewarding a percentage of it gives away real gold whenever the rate rises — the shop's margin is in the making, and that is what a loyalty scheme can afford to share.
+
+### 📍 Milestone 60: e-Invoice / e-Way Bill — Integration-Ready
+- **Goal:** Take Milestone 22's simulation to the shape a real GSP integration needs.
+- **Dependencies:** Milestone 22, Milestone 21 (Tax Master).
+- **Tasks:**
+  1. Model the real IRN request/response, the signed QR payload, the 24-hour cancellation window, and error/retry handling with idempotency.
+- **Testable via:** A cancellation attempted after 24 hours is refused with the statutory reason; a failed submission is retryable without duplicating the IRN.
+- **Still simulated:** no GSP credentials and no server exist yet. This milestone makes the *shape* correct so wiring a real GSP later is configuration, not a rewrite.
+
+### 📍 Milestone 61: Outbound Notification Channels (WhatsApp / SMS)
+- **Goal:** Reach the customer, not just the operator.
+- **Dependencies:** Milestone 50 (the event store already exists).
+- **Tasks:**
+  1. Channel abstraction over the M50 event store, message templates (order ready, scheme instalment due, rate alert, memo overdue), per-customer consent, and a delivery log.
+- **Testable via:** A customer with no recorded consent is never queued for a message; a template renders with the right values and the delivery log records the outcome.
+- **Critical rule:** **consent is per channel and must be recorded.** Indian SMS requires DLT-registered templates and WhatsApp requires opt-in; sending without either is a compliance failure, not a delivery failure.
+- **Still simulated:** dispatch is logged, not sent, until the backend holds the provider credentials.
