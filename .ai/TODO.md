@@ -752,7 +752,7 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **Rate basis is mandatory and explicit.** `FIXED_AT_ORDER` locks the rate and the shop absorbs any rise; `AT_DELIVERY` prices at the market rate and the customer carries the risk. Neither is more correct — leaving it unrecorded is what causes the argument when gold has moved between order and delivery. An at-delivery order stores `null`, never `0`, since zero would read as "locked at nothing" and price the piece free.
 - **Conversion happens exactly once**, guarded by the presence of the invoice number rather than by status alone: without it a double-click at the counter bills the customer twice and applies the advance twice. Cancellation keeps the advances on the record and adds a refund — a refund is a new fact, not the erasure of an old one.
 
-### 📍 Milestone 56: Approval / Memo-Out Workflow
+### ✅ Milestone 56: Approval / Memo-Out Workflow
 - **Goal:** Let a piece leave the shop on approval and make sure it comes back.
 - **Dependencies:** Milestone 4 (the `MemoOut` status already exists but has no workflow), Milestone 8 (KYC).
 - **Tasks:**
@@ -760,6 +760,10 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
   2. Overdue register with value at risk, and a KYC requirement above a configurable value.
 - **Testable via:** Issuing a memo moves the tags out of sellable stock without removing them from the shop's assets; an overdue memo is visible with its value at risk.
 - **Critical rule:** memo stock is **still the shop's asset** but not sellable to a walk-in — the one case where "in stock" and "sellable" genuinely differ, which `inventoryDashboard.ts` already separates.
+- **Done:** `src/lib/memoOut.ts` + a Memo / Approval tab on Inventory Ops. The `MemoOut` status and its `InStock → MemoOut → {InStock, Sold}` transitions already existed from M4; what was missing was the workflow around them — who took it, when it is due, what it is worth, and what happens when it does not come back.
+- **Memo stock is still the shop's asset.** This is the one case where "in stock" and "sellable" genuinely differ, and it is why `inventoryDashboard.ts` separated those ideas in M44. The mirror image is a repair (M54): the customer's property held by the shop rather than the shop's property held by the customer — neither belongs in sellable stock, and they sit on opposite sides of the balance sheet.
+- **A due-back date is mandatory.** Without one nothing is ever overdue, and a piece that never returns becomes shrinkage rather than an exception. Above ₹1,00,000 an ID reference is required, because handing over lakhs of gold against a phone number is not a controlled risk — a shop-policy control, so the threshold is data rather than a constant.
+- **Status is derived from the lines, never stored**, so a partly-returned memo cannot disagree with itself. A piece already out on an open memo cannot go out again. Conversion rate — of everything settled, how much sold — is the number that tells an owner whether letting stock out is earning its risk.
 
 ### 📍 Milestone 57: Customer Credit & Receivables Ageing
 - **Goal:** Sell on credit safely and know who owes what, for how long.

@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Boxes, ClipboardX, Flame } from 'lucide-react';
+import { Boxes, ClipboardX, Flame, Send } from 'lucide-react';
 import type { Tag, MetalRate, OldGoldVoucher, Branch } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import InventoryDashboardPanel from './InventoryDashboardPanel';
 import StockAdjustmentPanel from './StockAdjustmentPanel';
 import MeltingPanel from './MeltingPanel';
+import MemoPanel from './MemoPanel';
+import type { MemoVoucher } from '../lib/memoOut';
 import type { StockAdjustment } from '../lib/stockAdjustment';
 import type { MeltBatch } from '../lib/melting';
 import type { AuditResult } from '../lib/stockAudit';
@@ -20,6 +22,8 @@ interface InventoryOperationsProps {
   setAdjustments: React.Dispatch<React.SetStateAction<StockAdjustment[]>>;
   meltBatches: MeltBatch[];
   setMeltBatches: React.Dispatch<React.SetStateAction<MeltBatch[]>>;
+  memos: MemoVoucher[];
+  setMemos: React.Dispatch<React.SetStateAction<MemoVoucher[]>>;
   activeBranch: Branch | null;
   currentRole: Role | null;
   currentUserName: string;
@@ -30,6 +34,7 @@ const TABS = [
   { key: 'dashboard' as const, label: 'Inventory Dashboard', icon: Boxes },
   { key: 'adjustment' as const, label: 'Adjustments', icon: ClipboardX },
   { key: 'melting' as const, label: 'Melting', icon: Flame },
+  { key: 'memo' as const, label: 'Memo / Approval', icon: Send },
 ];
 
 /**
@@ -40,7 +45,7 @@ const TABS = [
 export default function InventoryOperations(props: InventoryOperationsProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
-  const [tab, setTab] = useState<'dashboard' | 'adjustment' | 'melting'>('dashboard');
+  const [tab, setTab] = useState<'dashboard' | 'adjustment' | 'melting' | 'memo'>('dashboard');
 
   // Both write-off and melting permanently remove stock, so both sit behind the same permission.
   const canManage = can(props.currentRole, 'catalog.manage');
@@ -76,6 +81,19 @@ export default function InventoryOperations(props: InventoryOperationsProps) {
           setTags={props.setTags}
           adjustments={props.adjustments}
           setAdjustments={props.setAdjustments}
+          metalRates={props.metalRates}
+          activeBranch={props.activeBranch}
+          currentUserName={props.currentUserName}
+          canManage={canManage}
+        />
+      )}
+
+      {tab === 'memo' && (
+        <MemoPanel
+          tags={props.tags}
+          setTags={props.setTags}
+          memos={props.memos}
+          setMemos={props.setMemos}
           metalRates={props.metalRates}
           activeBranch={props.activeBranch}
           currentUserName={props.currentUserName}

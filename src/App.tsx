@@ -26,6 +26,7 @@ import InventoryOperations from './components/InventoryOperations';
 import CustomerJobs from './components/CustomerJobs';
 import type { RepairJob } from './lib/repairJob';
 import type { CustomerOrder } from './lib/customerOrder';
+import type { MemoVoucher } from './lib/memoOut';
 import type { StockAdjustment } from './lib/stockAdjustment';
 import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
@@ -253,6 +254,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Memo / approval vouchers (Milestone 56). Pieces out with a customer are still the shop's
+  // asset — the one case where "in stock" and "sellable" genuinely differ.
+  const [memos, setMemos] = useState<MemoVoucher[]>(() => {
+    const saved = localStorage.getItem('stitch_memos');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Customer orders (Milestone 55). Advances held here are a LIABILITY until delivery — the
   // same treatment scheme instalments get in M26, and for the same reason.
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>(() => {
@@ -420,6 +428,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_customer_orders', JSON.stringify(customerOrders));
   }, [customerOrders]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_memos', JSON.stringify(memos));
+  }, [memos]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -918,6 +930,8 @@ function AppContent() {
                     setAdjustments={setStockAdjustments}
                     meltBatches={meltBatches}
                     setMeltBatches={setMeltBatches}
+                    memos={memos}
+                    setMemos={setMemos}
                     activeBranch={activeBranch}
                     currentRole={currentRole}
                     currentUserName={user?.name || 'Counter'}
