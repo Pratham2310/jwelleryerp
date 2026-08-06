@@ -778,7 +778,7 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **Allocation is explicit, never implied.** A receipt carries a list of invoice numbers and amounts. FIFO is offered as a *suggestion* because it is what most shops mean, but what gets stored is what someone confirmed — otherwise "which bill did this payment settle" has no answer in a dispute, a credit-note reversal, or an audit. A part-allocated receipt is refused rather than silently leaving money on account, since on-account balances are not modelled yet.
 - **Ageing runs from the invoice date, not a due date.** A shop giving 30 days' credit that ages from the due date shows a 45-day-old bill as 15 days — flattering and useless for collection. The credit period is reported separately so the two are never confused. Average age is weighted by amount, so one big old bill is not hidden behind many small fresh ones.
 
-### 📍 Milestone 58: Salesperson Attribution & Incentives
+### ✅ Milestone 58: Salesperson Attribution & Incentives
 - **Goal:** Know who sold what, and what they earned for it.
 - **Dependencies:** Milestone 2 (invoices), Milestone 49 (operators).
 - **Tasks:**
@@ -786,6 +786,10 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
   2. Configurable incentive basis (percentage of making charges, per gram, or flat per sale) with a per-person statement.
 - **Testable via:** Two staff on one terminal produce correctly attributed sales; changing the incentive scheme does not alter what past sales already earned.
 - **Critical rule:** incentive earned is **snapshotted at sale time**, never recomputed. A scheme change must not silently rewrite last quarter's payouts.
+- **Done:** `src/lib/salesAttribution.ts`, a "Sold By" selector at checkout, and a Salespeople tab in Reports. An invoice already recorded who *operated the till*; in a shop with floor staff that is often not who *made the sale* — a salesperson spends an hour with a customer and the cashier bills it in ninety seconds.
+- **What is earned is frozen at sale time.** The invoice carries the salesperson, the scheme, its basis and rate, and the resulting rupee figure. Computing on demand from the current scheme would mean changing it in April silently rewrites what everyone earned in March, and staff pay is not a number that may quietly change after the fact. Verified: with a 20% scheme in force, a sale made under the 2% scheme still reads ₹163.80.
+- **Incentives are earned on making charges and stone value, never on metal.** Metal value moves with the daily rate, so a percentage of it pays staff more when gold rises without anyone selling better. The shop's margin lives in the making — that is what a scheme can afford to share. Same reasoning as the loyalty engine (M59).
+- **A return claws the incentive back.** A credit note carries a negative attribution against the original salesperson; without it, staff are paid for sales that were undone, and the obvious gaming is a sale in one period returned in the next. Sales nobody is credited with are counted and surfaced, since that is usually a process gap at the counter rather than nobody having sold them.
 
 ### 📍 Milestone 59: Loyalty Points Engine
 - **Goal:** Make the existing `tier`/`loyaltyPoints` fields mean something.

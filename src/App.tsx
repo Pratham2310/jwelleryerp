@@ -7,7 +7,7 @@ import { HardwareProvider } from './contexts/HardwareContext';
 import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
 import ToastStack from './components/ToastStack';
 import { NOTIFY } from './lib/notifications';
-import { DEFAULT_USERS, supervisorsFromUsers, type OperatorUser } from './lib/users';
+import { DEFAULT_USERS, supervisorsFromUsers, activeUsers, type OperatorUser } from './lib/users';
 import HardwarePanel from './components/HardwarePanel';
 import OfflineQueueDrawer from './components/OfflineQueueDrawer';
 import { syncQueue, summariseQueue, queueSale, type QueuedSale } from './lib/offlineQueue';
@@ -28,6 +28,7 @@ import type { RepairJob } from './lib/repairJob';
 import type { CustomerOrder } from './lib/customerOrder';
 import type { MemoVoucher } from './lib/memoOut';
 import type { CustomerReceipt } from './lib/receivables';
+import { DEFAULT_INCENTIVE_SCHEME, type IncentiveScheme } from './lib/salesAttribution';
 import type { StockAdjustment } from './lib/stockAdjustment';
 import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
@@ -255,6 +256,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Incentive schemes (Milestone 58). Append-only in spirit: a new scheme carries a later
+  // effective date and never restates what past sales already earned.
+  const [incentiveSchemes, setIncentiveSchemes] = useState<IncentiveScheme[]>(() => {
+    const saved = localStorage.getItem('stitch_incentive_schemes');
+    return saved ? JSON.parse(saved) : [DEFAULT_INCENTIVE_SCHEME];
+  });
+
   // Customer receipts against credit sales (Milestone 57). Allocations are explicit, so
   // "which bill did this payment settle" always has an answer.
   const [customerReceipts, setCustomerReceipts] = useState<CustomerReceipt[]>(() => {
@@ -444,6 +452,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_customer_receipts', JSON.stringify(customerReceipts));
   }, [customerReceipts]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_incentive_schemes', JSON.stringify(incentiveSchemes));
+  }, [incentiveSchemes]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -806,6 +818,8 @@ function AppContent() {
                     supervisors={supervisorsFromUsers(users, roles)}
                     currentUserName={user?.name || 'Counter'}
                     customerReceipts={customerReceipts}
+                    salespeople={activeUsers(users).map(u => ({ id: u.id, name: u.name }))}
+                    incentiveSchemes={incentiveSchemes}
                     onApprovalRecorded={record => {
                       setApprovals(prev => [record, ...prev]);
                       notify(NOTIFY.supervisorApproval(record.kind === 'LARGE_DISCOUNT'
@@ -930,6 +944,8 @@ function AppContent() {
                     branches={branches}
                     metalRates={projectedRates}
                     stockAdjustments={stockAdjustments}
+                    incentiveSchemes={incentiveSchemes}
+                    setIncentiveSchemes={setIncentiveSchemes}
                     oldGoldVouchers={branchOldGoldVouchers}
                   />
                 }

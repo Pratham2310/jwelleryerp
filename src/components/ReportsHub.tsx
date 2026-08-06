@@ -21,9 +21,13 @@ import {
   meltingLossTrend, vaultByState, reconcileBuyback, lotsInPeriod,
 } from '../lib/buybackDashboard';
 import type { StockAdjustment } from '../lib/stockAdjustment';
+import {
+  salespersonStatement, summariseAttribution, schemeInForce,
+  BASIS_LABEL, BASIS_NOTE, type IncentiveScheme,
+} from '../lib/salesAttribution';
 import type { OldGoldVoucher } from '../types';
 
-type Family = 'sales' | 'inventory' | 'customer' | 'karigar' | 'purchase' | 'branch' | 'gst' | 'buyback';
+type Family = 'sales' | 'inventory' | 'customer' | 'karigar' | 'purchase' | 'branch' | 'gst' | 'buyback' | 'staff';
 
 interface ReportsHubProps {
   invoices: SaleInvoice[];
@@ -39,6 +43,9 @@ interface ReportsHubProps {
   stockAdjustments: StockAdjustment[];
   /** Milestone 53 — the buyback dashboard's source. */
   oldGoldVouchers: OldGoldVoucher[];
+  /** Milestone 58 — incentive schemes, so a statement can name the one in force. */
+  incentiveSchemes: IncentiveScheme[];
+  setIncentiveSchemes: React.Dispatch<React.SetStateAction<IncentiveScheme[]>>;
 }
 
 const FAMILIES: { key: Family; label: string }[] = [
@@ -50,11 +57,13 @@ const FAMILIES: { key: Family; label: string }[] = [
   { key: 'branch', label: 'Branch' },
   { key: 'gst', label: 'GST Registers' },
   { key: 'buyback', label: 'Buyback' },
+  { key: 'staff', label: 'Salespeople' },
 ];
 
 export default function ReportsHub({
   invoices, tags, customers, suppliers, karigars, karigarLedger,
   purchaseInvoices, branches, metalRates, stockAdjustments, oldGoldVouchers,
+  incentiveSchemes,
 }: ReportsHubProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -473,6 +482,74 @@ export default function ReportsHub({
                   </div>
                 ))}
               </div>
+            </Panel>
+          </div>
+        );
+      })()}
+
+      {family === 'staff' && (() => {
+        const rows = salespersonStatement(invoices, from, to);
+        const s = summariseAttribution(invoices, from, to);
+        const active = schemeInForce(incentiveSchemes, to);
+        return (
+          <div className="space-y-6">
+            <Panel title="Incentive Scheme in Force">
+              <div className="p-3 space-y-2">
+                {active ? (
+                  <>
+                    <p className="text-[11px] font-bold">
+                      {active.name} — {BASIS_LABEL[active.basis]} at{' '}
+                      {active.basis === 'PERCENT_OF_MAKING' ? `${active.value}%` : money(active.value)}
+                      <span className={`font-normal ${mutedCls}`}> · effective {active.effectiveFrom}</span>
+                    </p>
+                    <p className={`text-[10px] leading-relaxed ${mutedCls}`}>{BASIS_NOTE[active.basis]}</p>
+                  </>
+                ) : (
+                  <p className={`text-[11px] ${mutedCls}`}>No scheme is currently effective.</p>
+                )}
+                <p className={`text-[10px] leading-relaxed ${mutedCls}`}>
+                  Figures below come from what each sale <span className="font-bold">recorded at the
+                  time</span>, not from this scheme. Changing the scheme never restates a past payout.
+                </p>
+              </div>
+            </Panel>
+
+            <Panel title="Salesperson Statement">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-3">
+                {[
+                  { label: 'Attributed Sales', value: String(s.attributedSales) },
+                  { label: 'Unattributed', value: String(s.unattributedSales), warn: s.unattributedSales > 0 },
+                  { label: 'Incentive Earned', value: money(s.totalIncentivePaisa / 100), accent: true },
+                  { label: 'Clawed Back', value: money(Math.abs(s.clawedBackPaisa) / 100),
+                    warn: s.clawedBackPaisa < 0 },
+                ].map(k => (
+                  <div key={k.label} className={`p-3 rounded-xl border text-center ${
+                    k.warn ? 'border-amber-500/40 bg-amber-500/5'
+                      : k.accent ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : dark ? 'border-[#262626] bg-zinc-900/30' : 'border-slate-150 bg-slate-50/60'
+                  }`}>
+                    <p className={`text-base font-black font-mono ${
+                      k.warn ? 'text-amber-500' : k.accent ? 'text-emerald-600 dark:text-emerald-400' : ''
+                    }`}>{k.value}</p>
+                    <p className={`text-[9px] uppercase font-mono font-bold tracking-wider mt-0.5 ${mutedCls}`}>{k.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <Table
+                head={['Salesperson', 'Sales', 'Returns', 'Net Sales', 'Weight', 'Value Added', 'Avg Ticket', 'Incentive']}
+                rows={rows.map(r => [
+                  r.salespersonName, r.sales, r.returns, money(r.netSalesPaisa / 100),
+                  `${r.netWeightGrams.toFixed(3)}g`, money(r.valueAddedPaisa / 100),
+                  money(r.averageTicketPaisa / 100), money(r.incentivePaisa / 100),
+                ])} />
+
+              {s.unattributedSales > 0 && (
+                <p className={`px-3 pt-2 text-[10px] leading-relaxed ${mutedCls}`}>
+                  {s.unattributedSales} sale(s) in this period credit nobody. That is usually a
+                  process gap at the counter rather than nobody having sold them.
+                </p>
+              )}
             </Panel>
           </div>
         );

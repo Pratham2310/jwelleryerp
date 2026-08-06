@@ -38,6 +38,7 @@ import {
 import SupervisorPinModal from './SupervisorPinModal';
 import { useHardware } from '../contexts/HardwareContext';
 import { checkCreditLimit, type CustomerReceipt } from '../lib/receivables';
+import { schemeInForce, buildAttribution, type IncentiveScheme } from '../lib/salesAttribution';
 import { useNotifications } from '../contexts/NotificationContext';
 import { NOTIFY } from '../lib/notifications';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
@@ -86,6 +87,9 @@ interface BillingEstimatorProps {
   onApprovalRecorded: (record: ApprovalRecord) => void;
   /** Milestone 57 — credit exposure is checked against these before a credit sale is allowed. */
   customerReceipts: CustomerReceipt[];
+  /** Milestone 58 — who may be credited with the sale, and the scheme that prices it. */
+  salespeople: { id: string; name: string }[];
+  incentiveSchemes: IncentiveScheme[];
   /** Terminal is offline (Milestone 36): a completed sale is queued rather than registered. */
   isOffline: boolean;
   onQueueSale: (invoice: SaleInvoice) => void;
@@ -226,6 +230,8 @@ export default function BillingEstimator({
   currentUserName,
   onApprovalRecorded,
   customerReceipts,
+  salespeople,
+  incentiveSchemes,
   isOffline,
   onQueueSale
 }: BillingEstimatorProps) {
@@ -282,6 +288,8 @@ export default function BillingEstimator({
    * it was given for, so raising the discount after approval re-opens the gate rather than riding
    * on a sign-off for a smaller figure.
    */
+  /** Who made the sale, as distinct from who is operating the till (Milestone 58). */
+  const [salespersonId, setSalespersonId] = useState<string>('');
   const [discountApproval, setDiscountApproval] = useState<ApprovalRecord | null>(null);
   const [isPinModalOpen, setPinModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Credit'>('UPI');
@@ -690,8 +698,16 @@ export default function BillingEstimator({
       paymentSplit: isEstimate ? undefined : (isSplitPayment ? paymentSplit : [{ mode: paymentMethod, amount: finalGrandTotal }]),
       panDeclaration: isEstimate ? undefined : (panDeclaration || undefined),
       // The sign-off travels with the bill, so a reprint shows who authorised the discount.
-      approvals: discountApprovalCovers && discountApproval ? [discountApproval] : undefined
+      approvals: discountApprovalCovers && discountApproval ? [discountApproval] : undefined,
+      // Frozen at sale time (Milestone 58): a later scheme change must not restate this payout.
+      salesAttribution: undefined as SaleInvoice['salesAttribution']
     };
+
+    const seller = salespeople.find(p => p.id === salespersonId);
+    const scheme = schemeInForce(incentiveSchemes, invoice.date);
+    if (seller && scheme && !isEstimate) {
+      invoice.salesAttribution = buildAttribution(invoice, seller, scheme);
+    }
 
     // Offline, a tax invoice goes to the queue instead of the register (Milestone 36). It has no
     // confirmed place in the series yet — another terminal may have taken the number — so writing
@@ -738,6 +754,7 @@ export default function BillingEstimator({
     setOldGoldWeight(0);
     setDiscount(0);
     setDiscountApproval(null);
+    setSalespersonId('');
     setCompletedInvoice(null);
     setValidationError(null);
     setPanDeclaration(null);
@@ -1728,6 +1745,24 @@ export default function BillingEstimator({
                   <div className="flex justify-between text-slate-500">
                     <span>Less: Discount</span>
                     <span className="font-mono">-₹{Math.min(discount, invoiceSubtotal).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
+                {/* Who made the sale (Milestone 58) — not necessarily who is billing it */}
+                {!isEstimate && salespeople.length > 0 && (
+                  <div className="pt-2 border-t space-y-1">
+                    <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">
+                      Sold By
+                    </label>
+                    <select
+                      value={salespersonId}
+                      aria-label="Salesperson"
+                      onChange={e => setSalespersonId(e.target.value)}
+                      className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-none bg-white"
+                    >
+                      <option value="">Not recorded</option>
+                      {salespeople.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
                   </div>
                 )}
 

@@ -2,6 +2,7 @@ import type { TagStatus } from './lib/tagStateMachine';
 import type { PaymentSplitEntry } from './lib/billingCalculations';
 import type { OverrideRecord } from './lib/priceOverrides';
 import type { PanDeclaration } from './lib/statutoryChecks';
+import type { SalesAttribution } from './lib/salesAttribution';
 
 export type ItemCategory = 'Rings' | 'Necklaces' | 'Earrings' | 'Bangles' | 'Bracelets' | 'Chains' | 'Coins';
 export type MetalStandard = 'Gold (24K)' | 'Gold (22K)' | 'Gold (18K)' | 'Silver (999)' | 'Platinum (950)';
@@ -527,6 +528,12 @@ export interface SaleInvoice {
    * before the gate existed still load unchanged.
    */
   approvals?: ApprovalRecord[];
+  /**
+   * Who actually made the sale, and what it earned them (Milestone 58) — distinct from whoever
+   * operated the till. Frozen at sale time: changing the incentive scheme later must never
+   * restate a past payout. Optional, so invoices raised before M58 still load.
+   */
+  salesAttribution?: SalesAttribution;
   convertedToInvoiceNumber?: string; // set on an ESTIMATE once it has been converted
   convertedFromEstimateNumber?: string; // set on a TAX_INVOICE created by converting an estimate
 
