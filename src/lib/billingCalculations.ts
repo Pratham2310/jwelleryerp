@@ -145,7 +145,7 @@ export function settleOldGold(grandTotal: number, oldGoldValue: number): number 
   return Math.max(0, grandTotal - (Number(oldGoldValue) || 0));
 }
 
-export type PaymentMode = 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption';
+export type PaymentMode = 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Credit';
 
 export interface PaymentSplitEntry {
   mode: PaymentMode;

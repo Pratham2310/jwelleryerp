@@ -765,7 +765,7 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **A due-back date is mandatory.** Without one nothing is ever overdue, and a piece that never returns becomes shrinkage rather than an exception. Above ₹1,00,000 an ID reference is required, because handing over lakhs of gold against a phone number is not a controlled risk — a shop-policy control, so the threshold is data rather than a constant.
 - **Status is derived from the lines, never stored**, so a partly-returned memo cannot disagree with itself. A piece already out on an open memo cannot go out again. Conversion rate — of everything settled, how much sold — is the number that tells an owner whether letting stock out is earning its risk.
 
-### 📍 Milestone 57: Customer Credit & Receivables Ageing
+### ✅ Milestone 57: Customer Credit & Receivables Ageing
 - **Goal:** Sell on credit safely and know who owes what, for how long.
 - **Dependencies:** Milestone 2 (billing), Milestone 33 (approval), Milestone 45 (receipt vouchers).
 - **Tasks:**
@@ -773,6 +773,10 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
   2. Receivables ageing (0–30/31–60/61–90/90+), receipt allocation against invoices, and a collection follow-up list.
 - **Testable via:** A credit sale beyond the limit is blocked pending approval; a receipt reduces the oldest invoice first and the ageing buckets move accordingly.
 - **Critical rule:** allocation must be **explicit and recorded**, not implied by dates. "Which bill did this payment settle" has to survive an audit.
+- **Done:** `src/lib/receivables.ts`, a Receivables tab on Accounting, and `Credit` added as a tender mode enforced at checkout. `Customer.creditLimit` had existed since the first schema with nothing enforcing it — the app happily let a shop lend unlimited gold to anyone.
+- **A customer with no limit set is treated as having none, not unlimited.** Selling on credit to someone nobody has assessed is exactly the decision this check exists to surface. It refuses, and the refusal is overridable by a supervisor (M33) — the shop can still do it, someone senior just owns it. Credit to a walk-in is refused outright: there is nobody to collect from.
+- **Allocation is explicit, never implied.** A receipt carries a list of invoice numbers and amounts. FIFO is offered as a *suggestion* because it is what most shops mean, but what gets stored is what someone confirmed — otherwise "which bill did this payment settle" has no answer in a dispute, a credit-note reversal, or an audit. A part-allocated receipt is refused rather than silently leaving money on account, since on-account balances are not modelled yet.
+- **Ageing runs from the invoice date, not a due date.** A shop giving 30 days' credit that ages from the due date shows a 45-day-old bill as 15 days — flattering and useless for collection. The credit period is reported separately so the two are never confused. Average age is weighted by amount, so one big old bill is not hidden behind many small fresh ones.
 
 ### 📍 Milestone 58: Salesperson Attribution & Incentives
 - **Goal:** Know who sold what, and what they earned for it.

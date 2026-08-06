@@ -517,7 +517,9 @@ export interface SaleInvoice {
   discount: number;
   grandTotal: number; // compliant tax invoice total = (subtotal - discount) + tax
   netAmountDue: number; // grandTotal - oldGoldValue: actual cash/digital amount collected
-  paymentMethod: 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Mixed';
+  // 'Credit' means the customer walked out owing (Milestone 57) — it creates a receivable
+  // rather than settling the bill, which is why it is a tender mode and not a status.
+  paymentMethod: 'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Credit' | 'Mixed';
   paymentSplit?: PaymentSplitEntry[]; // multi-tender breakdown (PRD §7.5); single-mode bills record one entry
   panDeclaration?: PanDeclaration; // the PAN/Form 60 actually captured at/above the Rule 114B threshold
   /**

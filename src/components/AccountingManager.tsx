@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, Scale, Landmark, ListTree, AlertTriangle, CheckCircle2, Download, Wallet, ArrowLeftRight, TrendingUp } from 'lucide-react';
+import { BookOpen, Scale, Landmark, ListTree, AlertTriangle, CheckCircle2, Download, Wallet, ArrowLeftRight, TrendingUp, HandCoins } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import type { SaleInvoice, OldGoldVoucher, SchemeInstalment, KarigarLedgerEntry, Karigar, ManualVoucher, Branch } from '../types';
+import type { SaleInvoice, OldGoldVoucher, SchemeInstalment, KarigarLedgerEntry, Karigar, ManualVoucher, Branch, Customer } from '../types';
 import ManualVoucherPanel from './ManualVoucherPanel';
 import FinancialStatementsPanel from './FinancialStatementsPanel';
+import ReceivablesPanel from './ReceivablesPanel';
+import type { CustomerReceipt } from '../lib/receivables';
 import { postManualVoucher } from '../lib/manualVoucher';
 import {
   CHART_OF_ACCOUNTS,
@@ -36,13 +38,19 @@ interface AccountingManagerProps {
   manualVouchers: ManualVoucher[];
   setManualVouchers: React.Dispatch<React.SetStateAction<ManualVoucher[]>>;
   activeBranch: Branch | null;
+  /** Milestone 57 — credit sales and their collection. */
+  customers: Customer[];
+  receipts: CustomerReceipt[];
+  setReceipts: React.Dispatch<React.SetStateAction<CustomerReceipt[]>>;
+  currentUserName: string;
 }
 
-type Tab = 'daybook' | 'cashbook' | 'trial' | 'pl' | 'balancesheet' | 'ledger' | 'vouchers' | 'chart' | 'tally';
+type Tab = 'daybook' | 'cashbook' | 'trial' | 'pl' | 'balancesheet' | 'ledger' | 'vouchers' | 'chart' | 'tally' | 'receivables';
 
 export default function AccountingManager({
   invoices, oldGoldVouchers, schemeInstalments, karigarLedger, karigars,
   manualVouchers, setManualVouchers, activeBranch,
+  customers, receipts, setReceipts, currentUserName,
 }: AccountingManagerProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -100,6 +108,7 @@ export default function AccountingManager({
   const TABS: { key: Tab; label: string; icon: typeof BookOpen }[] = [
     { key: 'daybook', label: 'Day Book', icon: BookOpen },
     { key: 'cashbook', label: 'Cash Book', icon: Wallet },
+    { key: 'receivables', label: 'Receivables', icon: HandCoins },
     { key: 'vouchers', label: 'Vouchers', icon: ArrowLeftRight },
     { key: 'trial', label: 'Trial Balance', icon: Scale },
     { key: 'pl', label: 'Profit & Loss', icon: TrendingUp },
@@ -169,6 +178,18 @@ export default function AccountingManager({
           </button>
         ))}
       </div>
+
+      {tab === 'receivables' && (
+        <ReceivablesPanel
+          invoices={invoices}
+          customers={customers}
+          receipts={receipts}
+          setReceipts={setReceipts}
+          activeBranch={activeBranch}
+          currentUserName={currentUserName}
+          canManage
+        />
+      )}
 
       {tab === 'daybook' && (
         <div className={`rounded-2xl border shadow-sm overflow-hidden ${cardCls}`}>

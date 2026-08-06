@@ -37,6 +37,7 @@ import {
 } from '../lib/statutoryParameters';
 import SupervisorPinModal from './SupervisorPinModal';
 import { useHardware } from '../contexts/HardwareContext';
+import { checkCreditLimit, type CustomerReceipt } from '../lib/receivables';
 import { useNotifications } from '../contexts/NotificationContext';
 import { NOTIFY } from '../lib/notifications';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
@@ -83,6 +84,8 @@ interface BillingEstimatorProps {
   /** The signed-in person, recorded as the requester on any approval. */
   currentUserName: string;
   onApprovalRecorded: (record: ApprovalRecord) => void;
+  /** Milestone 57 — credit exposure is checked against these before a credit sale is allowed. */
+  customerReceipts: CustomerReceipt[];
   /** Terminal is offline (Milestone 36): a completed sale is queued rather than registered. */
   isOffline: boolean;
   onQueueSale: (invoice: SaleInvoice) => void;
@@ -222,6 +225,7 @@ export default function BillingEstimator({
   supervisors,
   currentUserName,
   onApprovalRecorded,
+  customerReceipts,
   isOffline,
   onQueueSale
 }: BillingEstimatorProps) {
@@ -280,7 +284,7 @@ export default function BillingEstimator({
    */
   const [discountApproval, setDiscountApproval] = useState<ApprovalRecord | null>(null);
   const [isPinModalOpen, setPinModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'UPI' | 'Scheme Redemption'>('UPI');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Credit'>('UPI');
 
   // PAN / Form 60 capture, mandatory at or above Rs 2,00,000 (Milestone 8, PRD §4.4/§15.3)
   const [panDeclaration, setPanDeclaration] = useState<PanDeclaration | null>(null);
@@ -476,6 +480,21 @@ export default function BillingEstimator({
    * covers the amount it was given for and anything smaller — raising the discount afterwards
    * re-opens the gate rather than riding on a sign-off for a lesser figure.
    */
+  /**
+   * Credit exposure check (Milestone 57). A credit sale is the shop lending gold, so the limit is
+   * enforced here rather than discovered later in the receivables report. A breach is refused but
+   * overridable by a supervisor — the shop can still do it, someone senior just owns the decision.
+   */
+  const creditTendered = isEstimate
+    ? 0
+    : isSplitPayment
+      ? paymentSplit.filter(e => e.mode === 'Credit').reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+      : (paymentMethod === 'Credit' ? finalGrandTotal : 0);
+
+  const creditCheck = creditTendered > 0
+    ? checkCreditLimit(selectedCustomer, Math.round(creditTendered * 100), invoices, customerReceipts)
+    : null;
+
   const discountNeedsApproval = requiresSupervisorApproval(discount, statutoryParameters);
   const discountApprovalCovers =
     !!discountApproval && discountApproval.amount >= discount;
@@ -592,6 +611,13 @@ export default function BillingEstimator({
         setValidationError(`Scheme balance (₹${(selectedCustomer.savingsSchemeBalance || 0).toLocaleString('en-IN')}) is insufficient to cover the redeemed amount (₹${schemeRedeemedAmount.toLocaleString('en-IN')}).`);
         return;
       }
+    }
+
+    // A credit sale beyond the customer's limit is refused here, not discovered in the ageing
+    // report six weeks later when the money is already gone.
+    if (creditCheck && !creditCheck.allowed) {
+      setValidationError(creditCheck.message);
+      return;
     }
 
     const customerName = selectedCustomer ? selectedCustomer.name : guestName.trim() || 'Guest Walk-in';
@@ -1705,6 +1731,22 @@ export default function BillingEstimator({
                   </div>
                 )}
 
+                {/* Credit exposure (Milestone 57) */}
+                {creditCheck && (
+                  <div className={`p-2.5 rounded-lg border text-[11px] leading-relaxed ${
+                    creditCheck.allowed
+                      ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400'
+                      : 'border-rose-500/40 bg-rose-500/5 text-rose-700 dark:text-rose-400'
+                  }`}>
+                    <span className="font-bold">
+                      {creditCheck.allowed ? 'Credit within limit' : 'Credit limit'}
+                    </span>
+                    {creditCheck.allowed
+                      ? ` — would take ${selectedCustomer?.name ?? 'this customer'} to ₹${Math.round(creditCheck.wouldBePaisa / 100).toLocaleString('en-IN')} of ₹${Math.round(creditCheck.limitPaisa / 100).toLocaleString('en-IN')}.`
+                      : ` — ${creditCheck.message}`}
+                  </div>
+                )}
+
                 {/* Supervisor approval on a large discount (Milestone 33) */}
                 {unapprovedDiscountError && (
                   <button
@@ -1848,7 +1890,7 @@ export default function BillingEstimator({
 
                 {!isSplitPayment ? (
                   <div className="grid grid-cols-2 gap-2">
-                    {['UPI', 'Cash', 'Card', 'Scheme Redemption'].map((mode) => (
+                    {['UPI', 'Cash', 'Card', 'Scheme Redemption', 'Credit'].map((mode) => (
                       <button
                         key={mode}
                         onClick={() => setPaymentMethod(mode as any)}
@@ -1872,7 +1914,7 @@ export default function BillingEstimator({
                           onChange={(e) => updateSplitEntry(idx, { mode: e.target.value as PaymentMode })}
                           className="text-xs px-2 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 w-2/5"
                         >
-                          {(['UPI', 'Cash', 'Card', 'Scheme Redemption'] as PaymentMode[]).map(m => (
+                          {(['UPI', 'Cash', 'Card', 'Scheme Redemption', 'Credit'] as PaymentMode[]).map(m => (
                             <option key={m} value={m}>{m}</option>
                           ))}
                         </select>

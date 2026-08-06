@@ -27,6 +27,7 @@ import CustomerJobs from './components/CustomerJobs';
 import type { RepairJob } from './lib/repairJob';
 import type { CustomerOrder } from './lib/customerOrder';
 import type { MemoVoucher } from './lib/memoOut';
+import type { CustomerReceipt } from './lib/receivables';
 import type { StockAdjustment } from './lib/stockAdjustment';
 import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
@@ -254,6 +255,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Customer receipts against credit sales (Milestone 57). Allocations are explicit, so
+  // "which bill did this payment settle" always has an answer.
+  const [customerReceipts, setCustomerReceipts] = useState<CustomerReceipt[]>(() => {
+    const saved = localStorage.getItem('stitch_customer_receipts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Memo / approval vouchers (Milestone 56). Pieces out with a customer are still the shop's
   // asset — the one case where "in stock" and "sellable" genuinely differ.
   const [memos, setMemos] = useState<MemoVoucher[]>(() => {
@@ -432,6 +440,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_memos', JSON.stringify(memos));
   }, [memos]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_customer_receipts', JSON.stringify(customerReceipts));
+  }, [customerReceipts]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -793,6 +805,7 @@ function AppContent() {
                     statutoryParameters={statutoryParameters}
                     supervisors={supervisorsFromUsers(users, roles)}
                     currentUserName={user?.name || 'Counter'}
+                    customerReceipts={customerReceipts}
                     onApprovalRecorded={record => {
                       setApprovals(prev => [record, ...prev]);
                       notify(NOTIFY.supervisorApproval(record.kind === 'LARGE_DISCOUNT'
@@ -895,6 +908,10 @@ function AppContent() {
                     karigars={karigars}
                     manualVouchers={manualVouchers}
                     setManualVouchers={setManualVouchers}
+                    customers={customers}
+                    receipts={customerReceipts}
+                    setReceipts={setCustomerReceipts}
+                    currentUserName={user?.name || 'Counter'}
                     activeBranch={activeBranch}
                   />
                 }
