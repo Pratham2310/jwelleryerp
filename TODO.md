@@ -739,7 +739,7 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **Weight in must reconcile with weight out.** Intake refuses to record a piece without weighing it in front of the customer, because that reading is the only thing a return can be checked against and the shop's only defence in a dispute. Delivery refuses a shortfall beyond 50 mg with the difference named, rather than absorbing it — unexplained metal loss is where disputes and pilferage both live. Metal the shop supplied stays a separate figure from the labour charge, since goods and services are taxed differently.
 - **Lifecycle:** Received → Assessed → WithKarigar → Ready → Delivered, with ReturnedUnrepaired reachable from any pre-delivery state, because a shop can always judge a piece not economically repairable.
 
-### 📍 Milestone 55: Customer Orders & Advances
+### ✅ Milestone 55: Customer Orders & Advances
 - **Goal:** Take an order for a piece that does not exist yet, against an advance.
 - **Dependencies:** Milestone 17 (job work), Milestone 26 (advance-as-liability pattern), Milestone 28 (posting).
 - **Tasks:**
@@ -747,6 +747,10 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
   2. Conversion to a tax invoice on delivery, with the advance applied and any rate difference settled.
 - **Testable via:** An advance posts as a liability, never as income; converting the order applies it exactly once and the order cannot be converted twice.
 - **Critical rule:** **rate basis must be explicit and recorded at order time.** Gold moves daily, and "what rate did we agree" is the single most common customer dispute in Indian jewellery ordering.
+- **Done:** `src/lib/customerOrder.ts` + a Customer Orders tab, sharing the Orders & Repairs screen with M54 because both are the same situation from the counter's view — a customer waiting, with the shop holding either their money or their property.
+- **The advance is a liability, never income.** Money taken before goods are supplied is the customer's, held by the shop; booking it as revenue recognises a sale that has not happened and creates tax on unearned money. Same treatment as scheme instalments (M26). An advance beyond the order's value is refused outright, because past that point it stops being an advance and becomes a deposit the shop must return — the territory D-11 flags for savings schemes.
+- **Rate basis is mandatory and explicit.** `FIXED_AT_ORDER` locks the rate and the shop absorbs any rise; `AT_DELIVERY` prices at the market rate and the customer carries the risk. Neither is more correct — leaving it unrecorded is what causes the argument when gold has moved between order and delivery. An at-delivery order stores `null`, never `0`, since zero would read as "locked at nothing" and price the piece free.
+- **Conversion happens exactly once**, guarded by the presence of the invoice number rather than by status alone: without it a double-click at the counter bills the customer twice and applies the advance twice. Cancellation keeps the advances on the record and adds a refund — a refund is a new fact, not the erasure of an old one.
 
 ### 📍 Milestone 56: Approval / Memo-Out Workflow
 - **Goal:** Let a piece leave the shop on approval and make sure it comes back.

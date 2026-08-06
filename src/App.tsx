@@ -23,8 +23,9 @@ import {
 } from './lib/statutoryParameters';
 import ReportsHub from './components/ReportsHub';
 import InventoryOperations from './components/InventoryOperations';
-import RepairManager from './components/RepairManager';
+import CustomerJobs from './components/CustomerJobs';
 import type { RepairJob } from './lib/repairJob';
+import type { CustomerOrder } from './lib/customerOrder';
 import type { StockAdjustment } from './lib/stockAdjustment';
 import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
@@ -252,6 +253,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Customer orders (Milestone 55). Advances held here are a LIABILITY until delivery — the
+  // same treatment scheme instalments get in M26, and for the same reason.
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>(() => {
+    const saved = localStorage.getItem('stitch_customer_orders');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Repair jobs (Milestone 54). Customer property held in custody — deliberately NOT tags,
   // because booking someone else's chain as stock would overstate what the business owns.
   const [repairJobs, setRepairJobs] = useState<RepairJob[]>(() => {
@@ -408,6 +416,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_repair_jobs', JSON.stringify(repairJobs));
   }, [repairJobs]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_customer_orders', JSON.stringify(customerOrders));
+  }, [customerOrders]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -914,15 +926,18 @@ function AppContent() {
                 }
               />
               <Route
-                path="/repairs"
+                path="/orders"
                 element={
-                  <RepairManager
-                    jobs={repairJobs}
-                    setJobs={setRepairJobs}
+                  <CustomerJobs
+                    orders={customerOrders}
+                    setOrders={setCustomerOrders}
+                    repairJobs={repairJobs}
+                    setRepairJobs={setRepairJobs}
                     karigars={karigars}
+                    metalRates={projectedRates}
                     activeBranch={activeBranch}
                     currentUserName={user?.name || 'Counter'}
-                    canManage={can(currentRole, 'catalog.manage')}
+                    canManage={can(currentRole, 'billing.create')}
                   />
                 }
               />
