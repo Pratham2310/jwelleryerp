@@ -791,7 +791,7 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **Incentives are earned on making charges and stone value, never on metal.** Metal value moves with the daily rate, so a percentage of it pays staff more when gold rises without anyone selling better. The shop's margin lives in the making — that is what a scheme can afford to share. Same reasoning as the loyalty engine (M59).
 - **A return claws the incentive back.** A credit note carries a negative attribution against the original salesperson; without it, staff are paid for sales that were undone, and the obvious gaming is a sale in one period returned in the next. Sales nobody is credited with are counted and surfaced, since that is usually a process gap at the counter rather than nobody having sold them.
 
-### 📍 Milestone 59: Loyalty Points Engine
+### ✅ Milestone 59: Loyalty Points Engine
 - **Goal:** Make the existing `tier`/`loyaltyPoints` fields mean something.
 - **Dependencies:** Milestone 31 (Customer 360), Milestone 28 (posting).
 - **Tasks:**
@@ -799,6 +799,11 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
   2. Points ledger per customer, append-only.
 - **Testable via:** Points earn on a sale, redeem against a later bill, and expire on schedule; the ledger always explains the balance.
 - **Critical rule:** **points earn on making charges and stone value, never on metal value.** Metal value moves with the gold rate, so rewarding a percentage of it gives away real gold whenever the rate rises — the shop's margin is in the making, and that is what a loyalty scheme can afford to share.
+- **Done:** `src/lib/loyalty.ts`, earning wired into checkout, redemption as a tender at the till, and a Loyalty tab on Customers. `Customer.tier` and `loyaltyPoints` had sat in the schema as decoration — a number that never moved and a tier nobody earned.
+- **Redemption is a TENDER, not a discount.** A discount reduces the taxable value of the supply; redeeming points does not — the customer is paying with something the shop previously issued. Treating it as a discount would understate output GST on every redeemed bill, which is exactly the error **D-10** already prevents for old gold. Verified in the browser: redeeming 392 points moved Net Amount Due from ₹2,45,196 to ₹2,44,804 while taxable value and invoice total stayed put.
+- **Points earn on making and stone value, never on metal** (same rule as M58, and it matters more here because the liability is open-ended): accruing on the whole bill would reward customers more generously every time gold rose, for the identical piece sold identically.
+- **The ledger is append-only and the balance derived**, consuming the **oldest lot first** — redeeming newest-first would let older points lapse while a usable balance existed, which is the behaviour that generates complaints. Expiry is computed rather than written as entries, so re-running can never double-count. Tiers run on **lifetime earned**, so spending points never demotes anyone.
+- **A bug caught by browser testing:** the redemption message claimed it settled ₹392 while Net Amount Due did not move — the figure was displayed but never applied. Redemption is now computed before the amount due rather than after it.
 
 ### 📍 Milestone 60: e-Invoice / e-Way Bill — Integration-Ready
 - **Goal:** Take Milestone 22's simulation to the shape a real GSP integration needs.

@@ -29,6 +29,7 @@ import type { CustomerOrder } from './lib/customerOrder';
 import type { MemoVoucher } from './lib/memoOut';
 import type { CustomerReceipt } from './lib/receivables';
 import { DEFAULT_INCENTIVE_SCHEME, type IncentiveScheme } from './lib/salesAttribution';
+import type { LoyaltyEntry } from './lib/loyalty';
 import type { StockAdjustment } from './lib/stockAdjustment';
 import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
@@ -256,6 +257,13 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Loyalty points ledger (Milestone 59). Append-only: balances are derived from it, so an
+  // expiry sweep run twice cannot double-count.
+  const [loyaltyEntries, setLoyaltyEntries] = useState<LoyaltyEntry[]>(() => {
+    const saved = localStorage.getItem('stitch_loyalty_entries');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Incentive schemes (Milestone 58). Append-only in spirit: a new scheme carries a later
   // effective date and never restates what past sales already earned.
   const [incentiveSchemes, setIncentiveSchemes] = useState<IncentiveScheme[]>(() => {
@@ -456,6 +464,10 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_incentive_schemes', JSON.stringify(incentiveSchemes));
   }, [incentiveSchemes]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_loyalty_entries', JSON.stringify(loyaltyEntries));
+  }, [loyaltyEntries]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -820,6 +832,8 @@ function AppContent() {
                     customerReceipts={customerReceipts}
                     salespeople={activeUsers(users).map(u => ({ id: u.id, name: u.name }))}
                     incentiveSchemes={incentiveSchemes}
+                    loyaltyEntries={loyaltyEntries}
+                    onLoyaltyEntries={fresh => setLoyaltyEntries(prev => [...prev, ...fresh])}
                     onApprovalRecorded={record => {
                       setApprovals(prev => [record, ...prev]);
                       notify(NOTIFY.supervisorApproval(record.kind === 'LARGE_DISCOUNT'
@@ -864,6 +878,7 @@ function AppContent() {
                 path="/customers" 
                 element={
                   <CustomerManager
+                    loyaltyEntries={loyaltyEntries}
                     customers={customers}
                     setCustomers={setCustomers}
                     schemes={savingsSchemes}

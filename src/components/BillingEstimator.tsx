@@ -39,6 +39,11 @@ import SupervisorPinModal from './SupervisorPinModal';
 import { useHardware } from '../contexts/HardwareContext';
 import { checkCreditLimit, type CustomerReceipt } from '../lib/receivables';
 import { schemeInForce, buildAttribution, type IncentiveScheme } from '../lib/salesAttribution';
+import {
+  DEFAULT_LOYALTY_RULE, deriveBalance, entriesFor, quoteRedemption, validateRedemption,
+  buildEarnEntry, buildRedeemEntry, pointsEarned, valueAddedPaisa as loyaltyValueAdded,
+  redemptionValuePaisa, type LoyaltyEntry,
+} from '../lib/loyalty';
 import { useNotifications } from '../contexts/NotificationContext';
 import { NOTIFY } from '../lib/notifications';
 import { detectOverrides, validateOverrideReasons, buildOverrideRecords, OVERRIDE_FIELD_LABEL, type OverrideField } from '../lib/priceOverrides';
@@ -90,6 +95,9 @@ interface BillingEstimatorProps {
   /** Milestone 58 — who may be credited with the sale, and the scheme that prices it. */
   salespeople: { id: string; name: string }[];
   incentiveSchemes: IncentiveScheme[];
+  /** Milestone 59 — the append-only points ledger; balances are derived from it. */
+  loyaltyEntries: LoyaltyEntry[];
+  onLoyaltyEntries: (entries: LoyaltyEntry[]) => void;
   /** Terminal is offline (Milestone 36): a completed sale is queued rather than registered. */
   isOffline: boolean;
   onQueueSale: (invoice: SaleInvoice) => void;
@@ -232,6 +240,8 @@ export default function BillingEstimator({
   customerReceipts,
   salespeople,
   incentiveSchemes,
+  loyaltyEntries,
+  onLoyaltyEntries,
   isOffline,
   onQueueSale
 }: BillingEstimatorProps) {
@@ -290,6 +300,8 @@ export default function BillingEstimator({
    */
   /** Who made the sale, as distinct from who is operating the till (Milestone 58). */
   const [salespersonId, setSalespersonId] = useState<string>('');
+  /** Points the customer is spending on this bill (Milestone 59). */
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   const [discountApproval, setDiscountApproval] = useState<ApprovalRecord | null>(null);
   const [isPinModalOpen, setPinModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'UPI' | 'Scheme Redemption' | 'Credit'>('UPI');
@@ -466,7 +478,27 @@ export default function BillingEstimator({
   const hallmarkGate = applyHallmarkGate(hallmarkViolations, hallmarkPolicy);
   const oldGoldValue = Math.round(oldGoldWeight * oldGoldRate);
   const netAmountDue = settleOldGold(invoiceTotal, oldGoldValue);
-  const finalGrandTotal = netAmountDue; // actual amount collected from the customer, after old-gold settlement
+
+  /**
+   * Loyalty (Milestone 59). Redemption is a **tender**, not a discount: it settles the amount due
+   * and never touches the taxable value, exactly as D-10 requires for old gold. Treating it as a
+   * discount would understate output GST on every redeemed bill — so it is applied here, after
+   * the invoice total is fixed, and never earlier.
+   */
+  const loyaltyBalance = selectedCustomer
+    ? deriveBalance(entriesFor(loyaltyEntries, selectedCustomer.id))
+    : null;
+  const redemptionQuote = loyaltyBalance
+    ? quoteRedemption(loyaltyBalance, Math.round(invoiceTotal * 100), DEFAULT_LOYALTY_RULE)
+    : null;
+  const redemptionPaisa = redemptionValuePaisa(pointsToRedeem, DEFAULT_LOYALTY_RULE);
+  const redemptionError = pointsToRedeem > 0 && loyaltyBalance
+    ? validateRedemption(pointsToRedeem, loyaltyBalance, Math.round(invoiceTotal * 100), DEFAULT_LOYALTY_RULE)
+    : null;
+  const redemptionRupees = redemptionError ? 0 : Math.round(redemptionPaisa / 100);
+
+  // Actual cash collected: invoice total, less old gold, less points tendered.
+  const finalGrandTotal = Math.max(0, netAmountDue - redemptionRupees);
 
   const splitValidation = validatePaymentSplit(finalGrandTotal, paymentSplit);
 
@@ -621,6 +653,11 @@ export default function BillingEstimator({
       }
     }
 
+    if (redemptionError) {
+      setValidationError(redemptionError);
+      return;
+    }
+
     // A credit sale beyond the customer's limit is refused here, not discovered in the ageing
     // report six weeks later when the money is already gone.
     if (creditCheck && !creditCheck.allowed) {
@@ -703,6 +740,19 @@ export default function BillingEstimator({
       salesAttribution: undefined as SaleInvoice['salesAttribution']
     };
 
+    // Points move only on a real sale, and only for a named customer.
+    if (!isEstimate && selectedCustomer) {
+      const fresh: LoyaltyEntry[] = [];
+      if (pointsToRedeem > 0) {
+        fresh.push(buildRedeemEntry(selectedCustomer.id, pointsToRedeem, invoice.invoiceNumber, invoice.date));
+      }
+      const earned = pointsEarned(loyaltyValueAdded(processedItems), DEFAULT_LOYALTY_RULE);
+      if (earned > 0) {
+        fresh.push(buildEarnEntry(selectedCustomer.id, earned, invoice.invoiceNumber, DEFAULT_LOYALTY_RULE, invoice.date));
+      }
+      if (fresh.length > 0) onLoyaltyEntries(fresh);
+    }
+
     const seller = salespeople.find(p => p.id === salespersonId);
     const scheme = schemeInForce(incentiveSchemes, invoice.date);
     if (seller && scheme && !isEstimate) {
@@ -755,6 +805,7 @@ export default function BillingEstimator({
     setDiscount(0);
     setDiscountApproval(null);
     setSalespersonId('');
+    setPointsToRedeem(0);
     setCompletedInvoice(null);
     setValidationError(null);
     setPanDeclaration(null);
@@ -1745,6 +1796,32 @@ export default function BillingEstimator({
                   <div className="flex justify-between text-slate-500">
                     <span>Less: Discount</span>
                     <span className="font-mono">-₹{Math.min(discount, invoiceSubtotal).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
+                {/* Loyalty redemption (Milestone 59) — a tender, so it never moves taxable value */}
+                {!isEstimate && loyaltyBalance && loyaltyBalance.available > 0 && (
+                  <div className="pt-2 border-t space-y-1">
+                    <label className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-bold">
+                      Loyalty Points ({loyaltyBalance.available} available)
+                    </label>
+                    <input
+                      type="number"
+                      aria-label="Points to redeem"
+                      placeholder={`Up to ${redemptionQuote?.maxPoints ?? 0}`}
+                      value={pointsToRedeem || ''}
+                      onChange={e => setPointsToRedeem(parseInt(e.target.value, 10) || 0)}
+                      className="w-full text-xs font-mono px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-none bg-white"
+                    />
+                    {pointsToRedeem > 0 && !redemptionError && (
+                      <p className="text-[10px] text-emerald-700 font-semibold">
+                        Settles ₹{Math.round(redemptionPaisa / 100).toLocaleString('en-IN')} of the
+                        amount due. Taxable value is unchanged — this is a tender, not a discount.
+                      </p>
+                    )}
+                    {redemptionError && (
+                      <p className="text-[10px] text-rose-600 font-semibold">{redemptionError}</p>
+                    )}
                   </div>
                 )}
 

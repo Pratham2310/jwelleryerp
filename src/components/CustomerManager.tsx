@@ -17,9 +17,13 @@ import {
 import { Customer, SavingsScheme, SchemeEnrollment, SchemeInstalment, Branch, Supplier, SaleInvoice } from '../types';
 import SchemeManager from './SchemeManager';
 import SupplierManager from './SupplierManager';
+import LoyaltyPanel from './LoyaltyPanel';
+import type { LoyaltyEntry } from '../lib/loyalty';
 import Customer360Drawer from './Customer360Drawer';
 
 interface CustomerManagerProps {
+  /** Milestone 59 — the append-only points ledger. */
+  loyaltyEntries: LoyaltyEntry[];
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
   // Gold Savings Schemes (Milestones 26-27). Enrollment balances are derived from the
@@ -39,11 +43,12 @@ interface CustomerManagerProps {
 }
 
 export default function CustomerManager({
+  loyaltyEntries,
   customers, setCustomers, schemes, setSchemes, enrollments, setEnrollments,
   instalments, setInstalments, activeBranch, suppliers, setSuppliers, invoices,
 }: CustomerManagerProps) {
   const [profileCustomerId, setProfileCustomerId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'customers' | 'schemes' | 'suppliers'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'schemes' | 'suppliers' | 'loyalty'>('customers');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   
@@ -136,6 +141,7 @@ export default function CustomerManager({
           { key: 'customers', label: 'Customer Directory' },
           { key: 'schemes', label: 'Gold Savings Schemes' },
           { key: 'suppliers', label: 'Suppliers' },
+          { key: 'loyalty', label: 'Loyalty' },
         ] as const).map(t => (
           <button
             key={t.key}
@@ -150,7 +156,9 @@ export default function CustomerManager({
         ))}
       </div>
 
-      {activeTab === 'suppliers' ? (
+      {activeTab === 'loyalty' ? (
+        <LoyaltyPanel entries={loyaltyEntries} customers={customers} />
+      ) : activeTab === 'suppliers' ? (
         <SupplierManager suppliers={suppliers} setSuppliers={setSuppliers} />
       ) : activeTab === 'schemes' ? (
         <SchemeManager
