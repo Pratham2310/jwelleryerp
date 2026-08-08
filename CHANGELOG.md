@@ -4,6 +4,36 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-08-08 — Phase 16 Complete: Milestones 54–61 (Full-Product Gaps)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** Application code (`src/`) and tracking documentation. No visual redesign.
+
+Eight gaps identified when planning the SaaS product — the things a real shop hits weekly that the app could not do at all. Delivered one at a time, each with its own library, tests, screen and browser verification. The recurring theme is that most of these are **not new arithmetic but new custody**: knowing whose property a thing is, and whose money.
+
+| | Milestone | The rule that drove it |
+|---|---|---|
+| M54 | Repair & Service Jobs | A customer's piece is **custody, not stock** — it creates no Tag, so it can never enter valuation or be sold |
+| M55 | Customer Orders & Advances | An advance is a **liability, not income**; rate basis must be explicit because gold moves between order and delivery |
+| M56 | Memo / Approval | Memo stock is **still the shop's asset** but not sellable — the one case where "in stock" and "sellable" genuinely differ |
+| M57 | Credit & Receivables | Allocation is **explicit, never implied**; ageing runs from the invoice date, not a due date |
+| M58 | Salesperson Attribution | What is earned is **frozen at sale time** — a scheme change must not restate a past payout |
+| M59 | Loyalty Points | Redemption is a **tender, not a discount** — it settles the amount due and never touches taxable value |
+| M60 | e-Invoice / GSP | **Duplicate IRN is success, not failure** — a retry after a timeout must not report a valid e-invoice as missing |
+| M61 | Messaging Channels | **Consent is per channel**, and an unconsented recipient is never queued rather than filtered at send |
+
+**Three of these share one insight**, and it is worth stating because it will recur in the backend: *what the shop adds is what it can afford to give away*. Loyalty points (M59) and staff incentives (M58) both accrue on making charges and stone value, never on metal — a percentage of metal pays out more every time the gold rate rises, for the identical piece sold identically. The shop's margin lives in the making.
+
+**Two milestones remain simulated and say so.** M60 has no GSP credentials and M61 no BSP or DLT registration, because both need a server. What they make correct is the *shape* — payload, error taxonomy, idempotency, retry policy, consent model, template registration — so wiring real providers later is configuration rather than a rewrite. The panels state this rather than implying a connection.
+
+**A bug browser testing caught in M59**, worth recording because unit tests passed straight through it: the redemption line reported "settles ₹392" while Net Amount Due did not move. The figure was displayed but never applied, because the loyalty block was derived *after* `finalGrandTotal` had been computed. Only driving the UI exposed it.
+
+**Verification:** `npx tsc --noEmit` clean; `npm test` — **1531 tests passing across 51 suites** (up from 1477); `npm run build` clean. Every milestone was driven in the browser, including the refusal paths: a repair delivered 200 mg light, an advance beyond the order value, a memo with no due-back date and ₹4,65,796 leaving without an ID, a credit sale past its limit, a 20% incentive scheme failing to restate a 2% payout, a redemption against an empty bill, and an unregistered promotional template refused for a consenting customer. Regression across all screens and sub-tabs × 2 themes: zero contrast failures, zero console errors.
+
+**Phase 16 is complete. 61 of 61 milestones delivered.**
+
+---
+
 ## 2026-08-03 — Phase 15 Complete: Milestones 49–53. **Roadmap finished — all 53 milestones built.**
 
 **Author:** AI agent (Claude Code), pair programming with USER.

@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ShieldCheck, Scale, UserCog, Activity } from 'lucide-react';
+import { ShieldCheck, Scale, UserCog, Activity, Plug } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import RoleManager from './RoleManager';
 import StatutoryPanel from './StatutoryPanel';
 import UserManagerPanel from './UserManagerPanel';
 import SystemHealthPanel from './SystemHealthPanel';
+import IntegrationsPanel from './IntegrationsPanel';
+import type { ChannelConsent, OutboundMessage } from '../lib/messaging';
+import type { SaleInvoice, Customer } from '../types';
 import type { StatutoryParameters, ApprovalRecord, Branch } from '../types';
 import type { SupervisorPin } from '../lib/statutoryParameters';
 import type { OperatorUser } from '../lib/users';
@@ -27,6 +30,14 @@ interface AdminSettingsProps {
   latencyMs: number;
   queuedSales: number;
   queueConflicts: number;
+  /** Milestones 60-61 — external integrations, both still simulated. */
+  invoices: SaleInvoice[];
+  customers: Customer[];
+  activeBranch: Branch | null;
+  consents: ChannelConsent[];
+  setConsents: React.Dispatch<React.SetStateAction<ChannelConsent[]>>;
+  messages: OutboundMessage[];
+  setMessages: React.Dispatch<React.SetStateAction<OutboundMessage[]>>;
 }
 
 const TABS = [
@@ -34,6 +45,7 @@ const TABS = [
   { key: 'users' as const, label: 'Operators', icon: UserCog },
   { key: 'statutory' as const, label: 'Statutory & Approvals', icon: Scale },
   { key: 'health' as const, label: 'System Health', icon: Activity },
+  { key: 'integrations' as const, label: 'Integrations', icon: Plug },
 ];
 
 type Tab = typeof TABS[number]['key'];
@@ -47,6 +59,7 @@ export default function AdminSettings({
   roles, setRoles, assignedRoleNames, currentRole,
   statutoryParameters, setStatutoryParameters, approvals, supervisors,
   users, setUsers, branches, forceOffline, latencyMs, queuedSales, queueConflicts,
+  invoices, customers, activeBranch, consents, setConsents, messages, setMessages,
 }: AdminSettingsProps) {
   const { theme } = useTheme();
   const dark = theme === 'dark';
@@ -98,6 +111,18 @@ export default function AdminSettings({
           approvals={approvals}
           supervisors={supervisors}
           canEdit={can(currentRole, 'masters.manage')}
+        />
+      )}
+
+      {tab === 'integrations' && (
+        <IntegrationsPanel
+          invoices={invoices}
+          customers={customers}
+          activeBranch={activeBranch}
+          consents={consents}
+          setConsents={setConsents}
+          messages={messages}
+          setMessages={setMessages}
         />
       )}
 

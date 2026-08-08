@@ -97,14 +97,14 @@ Phase 15: Masters & Admin Depth             [ADDED 2026-07-26]
   └── M53 Old Gold Buyback Dashboard ✅
 
 Phase 16: Full-Product Gaps                 [ADDED 2026-08-04]
-  ├── M54 Repair & Service Jobs
-  ├── M55 Customer Orders & Advances
-  ├── M56 Approval / Memo-Out Workflow
-  ├── M57 Customer Credit & Receivables Ageing
-  ├── M58 Salesperson Attribution & Incentives
-  ├── M59 Loyalty Points Engine
-  ├── M60 e-Invoice / e-Way Bill Integration-Ready
-  └── M61 Outbound Notification Channels
+  ├── M54 Repair & Service Jobs ✅
+  ├── M55 Customer Orders & Advances ✅
+  ├── M56 Approval / Memo-Out Workflow ✅
+  ├── M57 Customer Credit & Receivables Ageing ✅
+  ├── M58 Salesperson Attribution & Incentives ✅
+  ├── M59 Loyalty Points Engine ✅
+  ├── M60 e-Invoice / e-Way Bill Integration-Ready ✅
+  └── M61 Outbound Notification Channels ✅
 ```
 
 ---
@@ -720,7 +720,7 @@ three statutory financial statements, which were never scheduled._
 
 ---
 
-## 🏁 Phase 16: Full-Product Gaps (Milestones 54 – 61) [ADDED 2026-08-04]
+## 🏁 Phase 16: Full-Product Gaps (Milestones 54 – 61) — ✅ COMPLETE (2026-08-08)
 
 _Eight gaps identified when planning the SaaS product. The first five are things a real shop hits
 weekly and the app currently cannot do at all; the last three are integration and engagement work.
@@ -805,15 +805,20 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **The ledger is append-only and the balance derived**, consuming the **oldest lot first** — redeeming newest-first would let older points lapse while a usable balance existed, which is the behaviour that generates complaints. Expiry is computed rather than written as entries, so re-running can never double-count. Tiers run on **lifetime earned**, so spending points never demotes anyone.
 - **A bug caught by browser testing:** the redemption message claimed it settled ₹392 while Net Amount Due did not move — the figure was displayed but never applied. Redemption is now computed before the amount due rather than after it.
 
-### 📍 Milestone 60: e-Invoice / e-Way Bill — Integration-Ready
+### ✅ Milestone 60: e-Invoice / e-Way Bill — Integration-Ready
 - **Goal:** Take Milestone 22's simulation to the shape a real GSP integration needs.
 - **Dependencies:** Milestone 22, Milestone 21 (Tax Master).
 - **Tasks:**
   1. Model the real IRN request/response, the signed QR payload, the 24-hour cancellation window, and error/retry handling with idempotency.
 - **Testable via:** A cancellation attempted after 24 hours is refused with the statutory reason; a failed submission is retryable without duplicating the IRN.
 - **Still simulated:** no GSP credentials and no server exist yet. This milestone makes the *shape* correct so wiring a real GSP later is configuration, not a rewrite.
+- **Done:** `src/lib/eInvoiceGsp.ts` + an Integrations tab on Admin. M22 built the domain side — when an e-invoice applies, the IRN, the signed QR, the 24-hour window. This builds the shape a real GSP needs: the IRP payload (`Version`/`TranDtls`/`DocDtls`/`ItemList`/`ValDtls`, dates as dd/mm/yyyy, `URP` for an unregistered buyer), the checks the IRP itself enforces, and what to do when it says no.
+- **Duplicate IRN (2150) is treated as SUCCESS, not failure.** The IRP keys on supplier GSTIN + doc type + doc number + financial year, so a resubmission returns the existing IRN rather than creating a second. Treating that as a failure is the classic integration bug: a retry after a network timeout marks the invoice FAILED and tells a shop it has no e-invoice when it demonstrably does.
+- **Retryable is not the same as failed.** A gateway timeout is retried with capped exponential backoff; a missing HSN never will succeed however often it is sent, so it is terminal. Retrying a validation error forever burns quota and hides the real problem.
+- **Pre-flight validation runs the IRP's rules locally**, turning a rejected submission into a message at the counter where it can still be fixed. Verified in the browser against real invoices, with correct financial-year keys (a January invoice keys to the *previous* FY).
+- **Still simulated:** no GSP credentials and no server. The panel states that plainly rather than implying a connection.
 
-### 📍 Milestone 61: Outbound Notification Channels (WhatsApp / SMS)
+### ✅ Milestone 61: Outbound Notification Channels (WhatsApp / SMS)
 - **Goal:** Reach the customer, not just the operator.
 - **Dependencies:** Milestone 50 (the event store already exists).
 - **Tasks:**
@@ -821,3 +826,7 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **Testable via:** A customer with no recorded consent is never queued for a message; a template renders with the right values and the delivery log records the outcome.
 - **Critical rule:** **consent is per channel and must be recorded.** Indian SMS requires DLT-registered templates and WhatsApp requires opt-in; sending without either is a compliance failure, not a delivery failure.
 - **Still simulated:** dispatch is logged, not sent, until the backend holds the provider credentials.
+- **Done:** `src/lib/messaging.ts` + a Customer Messaging section on the Integrations tab. M50's event store reaches the *operator*; this reaches the *customer* — order ready, instalment due, memo overdue, repair ready, payment received.
+- **Consent is per channel and must be recorded.** Agreeing to a WhatsApp order update is not agreement to marketing SMS, and transactional consent is not promotional consent, so both are stored separately with the source that obtained them. A recipient with no consent is **never queued** — refused at build time rather than filtered at send time, because a queue holding messages it must not send will eventually send them after a retry, a replay, or a well-meaning "flush the queue".
+- **A template is not a string.** SMS requires DLT registration and WhatsApp a Meta-approved template; free text cannot be sent at all. Templates are declared with their variables and registration id, and the promotional rate alert deliberately ships **without** one — it may not be sent until registered, and pretending otherwise would be the compliance failure this milestone exists to prevent. Verified: it is refused even for a consenting customer.
+- **Still simulated:** dispatch is logged, never sent, until a server holds the BSP and DLT credentials.

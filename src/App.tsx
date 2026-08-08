@@ -30,6 +30,7 @@ import type { MemoVoucher } from './lib/memoOut';
 import type { CustomerReceipt } from './lib/receivables';
 import { DEFAULT_INCENTIVE_SCHEME, type IncentiveScheme } from './lib/salesAttribution';
 import type { LoyaltyEntry } from './lib/loyalty';
+import type { ChannelConsent, OutboundMessage } from './lib/messaging';
 import type { StockAdjustment } from './lib/stockAdjustment';
 import type { MeltBatch } from './lib/melting';
 import { DEFAULT_HALLMARK_POLICY } from './lib/hallmarkGuard';
@@ -257,6 +258,17 @@ function AppContent() {
     return saved ? JSON.parse(saved) : DEFAULT_SUPERVISOR_PINS;
   });
 
+  // Messaging consent and the outbound log (Milestone 61). Consent is per channel, and a
+  // recipient without it is never queued — see src/lib/messaging.ts.
+  const [messageConsents, setMessageConsents] = useState<ChannelConsent[]>(() => {
+    const saved = localStorage.getItem('stitch_message_consents');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [outboundMessages, setOutboundMessages] = useState<OutboundMessage[]>(() => {
+    const saved = localStorage.getItem('stitch_outbound_messages');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Loyalty points ledger (Milestone 59). Append-only: balances are derived from it, so an
   // expiry sweep run twice cannot double-count.
   const [loyaltyEntries, setLoyaltyEntries] = useState<LoyaltyEntry[]>(() => {
@@ -468,6 +480,14 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('stitch_loyalty_entries', JSON.stringify(loyaltyEntries));
   }, [loyaltyEntries]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_message_consents', JSON.stringify(messageConsents));
+  }, [messageConsents]);
+
+  useEffect(() => {
+    localStorage.setItem('stitch_outbound_messages', JSON.stringify(outboundMessages));
+  }, [outboundMessages]);
 
   useEffect(() => {
     localStorage.setItem('stitch_branches', JSON.stringify(branches));
@@ -1022,6 +1042,13 @@ function AppContent() {
                     latencyMs={latency}
                     queuedSales={queueSummary.pending}
                     queueConflicts={queueSummary.conflicts}
+                    invoices={branchInvoices}
+                    customers={customers}
+                    activeBranch={activeBranch}
+                    consents={messageConsents}
+                    setConsents={setMessageConsents}
+                    messages={outboundMessages}
+                    setMessages={setOutboundMessages}
                   />
                 }
               />
