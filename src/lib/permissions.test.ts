@@ -22,6 +22,8 @@ const owner = DEFAULT_ROLES.find(r => r.id === 'role-owner')!;
 const manager = DEFAULT_ROLES.find(r => r.id === 'role-manager')!;
 const cashier = DEFAULT_ROLES.find(r => r.id === 'role-cashier')!;
 const accountant = DEFAULT_ROLES.find(r => r.id === 'role-accountant')!;
+const salesperson = DEFAULT_ROLES.find(r => r.id === 'role-salesperson')!;
+const auditor = DEFAULT_ROLES.find(r => r.id === 'role-auditor')!;
 
 function role(over: Partial<Role> = {}): Role {
   return {
@@ -112,6 +114,36 @@ describe('default roles are sensibly separated', () => {
     expect(can(accountant, 'billing.create')).toBe(false);
     expect(can(accountant, 'stock.transfer')).toBe(false);
     expect(can(accountant, 'accounting.post')).toBe(true);
+  });
+
+  it('lets the salesperson sell and look across branches, but not price the sale', () => {
+    // The floor role M58 attributes sales to. Closing a sale and deciding its price are
+    // different jobs — a salesperson on commission must not be able to discount their own deal.
+    expect(can(salesperson, 'billing.create')).toBe(true);
+    expect(can(salesperson, 'catalog.view.network')).toBe(true);
+    expect(can(salesperson, 'billing.discount')).toBe(false);
+    expect(can(salesperson, 'billing.override')).toBe(false);
+    expect(can(salesperson, 'rates.edit')).toBe(false);
+  });
+
+  it('gives the auditor sight of everything and the power to change almost nothing', () => {
+    expect(can(auditor, 'accounting.view')).toBe(true);
+    expect(can(auditor, 'catalog.view.network')).toBe(true);
+    // Counting stock is the job; posting to the ledger is emphatically not.
+    expect(can(auditor, 'stock.audit')).toBe(true);
+    for (const p of ['accounting.post', 'billing.create', 'catalog.manage', 'rates.edit', 'admin.roles'] as const) {
+      expect(can(auditor, p)).toBe(false);
+    }
+  });
+
+  it('grants approvals.grant only to roles that may authorise others', () => {
+    // Holding `billing.override` is "may I do it"; `approvals.grant` is "may I authorise it
+    // for someone else". Counter staff can request an override without being able to bless one.
+    expect(can(owner, 'approvals.grant')).toBe(true);
+    expect(can(manager, 'approvals.grant')).toBe(true);
+    for (const r of [cashier, salesperson, auditor, accountant]) {
+      expect(can(r, 'approvals.grant')).toBe(false);
+    }
   });
 
   it('marks every shipped role as a system role', () => {
@@ -242,7 +274,7 @@ describe('route gating', () => {
 describe('summariseRoles', () => {
   it('summarises the shipped set', () => {
     const s = summariseRoles(DEFAULT_ROLES);
-    expect(s.total).toBe(4);
+    expect(s.total).toBe(6);
     expect(s.custom).toBe(0);
     expect(s.administrators).toBe(1); // owner only
     expect(s.rateEditors).toBe(2);    // owner and manager

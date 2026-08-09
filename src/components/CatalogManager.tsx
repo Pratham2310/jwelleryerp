@@ -17,7 +17,8 @@ import {
   Tags as TagsIcon,
   ScanLine,
   Truck,
-  BadgeCheck
+  BadgeCheck,
+  Globe
 } from 'lucide-react';
 import { ItemDesign, Tag, ItemCategory, MetalStandard, StoneVariety } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -27,6 +28,8 @@ import StockAuditPanel from './StockAuditPanel';
 import StockTransferPanel from './StockTransferPanel';
 import type { StockTransfer, Branch, MetalRate, HallmarkBatch, HallmarkPolicy } from '../types';
 import HallmarkingPanel from './HallmarkingPanel';
+import { can, type Role } from '../lib/permissions';
+import { belongsToBranch, primaryBranchId } from '../lib/branch';
 
 interface CatalogManagerProps {
   itemDesigns: ItemDesign[];
@@ -47,6 +50,14 @@ interface CatalogManagerProps {
   setHallmarkBatches: React.Dispatch<React.SetStateAction<HallmarkBatch[]>>;
   hallmarkPolicy: HallmarkPolicy;
   setHallmarkPolicy: React.Dispatch<React.SetStateAction<HallmarkPolicy>>;
+  /** Gates the network stock view — a salesperson may look across branches, not everyone may. */
+  currentRole: Role | null;
+  /**
+   * The *selected* branch, which is not the same as `activeBranch`: with nothing selected the
+   * header is in "All Branches" mode and `getActiveBranch` still falls back to the first branch.
+   * The network view only means anything when a single branch is actually in scope.
+   */
+  activeBranchId: string | null;
 }
 
 const CATEGORIES: ItemCategory[] = ['Rings', 'Necklaces', 'Earrings', 'Bangles', 'Bracelets', 'Chains', 'Coins'];
@@ -80,7 +91,9 @@ export default function CatalogManager({
   hallmarkBatches,
   setHallmarkBatches,
   hallmarkPolicy,
-  setHallmarkPolicy
+  setHallmarkPolicy,
+  currentRole,
+  activeBranchId
 }: CatalogManagerProps) {
   const { theme } = useTheme();
 
@@ -100,6 +113,17 @@ export default function CatalogManager({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedOwnership, setSelectedOwnership] = useState<string>('All');
+
+  // Milestone 62 — look at what the other shops hold, for the customer who wants a piece this
+  // branch does not have. Read-only by construction: decision D-7 still means a tag is sellable
+  // at exactly one branch, so anything found here has to be transferred before it can be sold.
+  // Only offered when one branch is actually in scope — in "All Branches" mode every tag is
+  // already on screen, so a network toggle would claim to widen a view that is not narrowed.
+  const canManageCatalog = can(currentRole, 'catalog.manage');
+  const canSeeNetwork =
+    can(currentRole, 'catalog.view.network') && branches.length > 1 && !!activeBranchId;
+  const [showNetwork, setShowNetwork] = useState(false);
+  const networkView = canSeeNetwork && showNetwork;
 
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
   const [showTagPreview, setShowTagPreview] = useState(false);
@@ -163,7 +187,7 @@ export default function CatalogManager({
 
   const totalWeight = tags.reduce((sum, tag) => sum + tag.netWeight, 0);
 
-  const filteredTags = tags.filter(tag => {
+  const filteredTags = (networkView ? allTags : tags).filter(tag => {
     const matchesSearch =
       tag.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tag.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -404,13 +428,16 @@ export default function CatalogManager({
                 />
               </div>
 
-              {/* Quick Add Button */}
-              <button
-                onClick={() => setAddModalOpen(true)}
-                className="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-5 py-2.5 rounded-xl transition duration-150"
-              >
-                <Plus className="w-4.5 h-4.5" /> Tag New Physical Piece
-              </button>
+              {/* Quick Add Button — gated on catalog.manage, so read-only roles (Auditor) and
+                  selling roles (Counter Staff, Salesperson) cannot create stock from here. */}
+              {canManageCatalog && (
+                <button
+                  onClick={() => setAddModalOpen(true)}
+                  className="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-5 py-2.5 rounded-xl transition duration-150"
+                >
+                  <Plus className="w-4.5 h-4.5" /> Tag New Physical Piece
+                </button>
+              )}
             </div>
 
             {/* Filters and Tags */}
@@ -470,13 +497,47 @@ export default function CatalogManager({
                   {own === 'All' ? 'All' : OWNERSHIP_LABEL[own as Tag['stockOwnershipType']]}
                 </button>
               ))}
+
+              {canSeeNetwork && (
+                <button
+                  onClick={() => setShowNetwork(v => !v)}
+                  className={`ml-auto flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg font-semibold border transition ${
+                    networkView
+                      ? 'bg-amber-500 text-black border-amber-500'
+                      : 'bg-white text-slate-700 hover:bg-amber-50/50 border-slate-200'
+                  }`}
+                  title="Show stock held at every branch, read-only"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  {networkView ? 'All branches' : 'This branch only'}
+                </button>
+              )}
             </div>
+
+            {networkView && (
+              <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+                <Globe className="w-3.5 h-3.5 mt-px shrink-0" />
+                <span>
+                  Showing stock across all {branches.length} branches. Pieces held elsewhere are
+                  marked and <strong>cannot be sold from {activeBranch?.name ?? 'this branch'}</strong> —
+                  raise a stock transfer first.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Grid listing */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {filteredTags.map((tag) => {
               const design = itemDesigns.find(d => d.id === tag.itemDesignId);
+              // Reuses the same predicate that scopes the list, so a legacy tag with no branchId
+              // is attributed to the primary branch here exactly as it is everywhere else —
+              // a bare `!==` would label every pre-Milestone-19 record as being somewhere it isn't.
+              const elsewhere =
+                networkView && !belongsToBranch(tag, activeBranchId, primaryBranchId(branches));
+              const holder = elsewhere
+                ? branches.find(b => b.id === (tag.branchId ?? primaryBranchId(branches)))
+                : null;
               return (
                 <div
                   key={tag.id}
@@ -488,6 +549,12 @@ export default function CatalogManager({
                   }}
                   className="bg-white border border-slate-150 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-amber-400/50 transition duration-250 flex flex-col group cursor-pointer"
                 >
+                  {elsewhere && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-600">
+                      <Globe className="w-3 h-3" />
+                      AT {(holder?.name ?? 'ANOTHER BRANCH').toUpperCase()} — TRANSFER TO SELL
+                    </div>
+                  )}
                   {/* Image section with relative overlays */}
                   <div className="h-44 bg-white relative overflow-hidden shrink-0">
                     <img
@@ -868,7 +935,7 @@ export default function CatalogManager({
           )}
 
           {/* ADD NEW TAG (PHYSICAL PIECE) DIALOG MODAL */}
-          {isAddModalOpen && (
+          {isAddModalOpen && canManageCatalog && (
             <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">

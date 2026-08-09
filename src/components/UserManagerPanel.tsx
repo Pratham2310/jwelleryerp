@@ -152,7 +152,7 @@ export default function UserManagerPanel({
                       {!u.isActive && u.deactivationReason && (
                         <span className={`block text-[9px] mt-0.5 ${mutedCls}`}>{u.deactivationReason}</span>
                       )}
-                      {u.isActive && can(role, 'billing.override') && (
+                      {u.isActive && can(role, 'approvals.grant') && (
                         <span className={`block text-[9px] mt-0.5 ${mutedCls}`}>can approve overrides</span>
                       )}
                     </td>

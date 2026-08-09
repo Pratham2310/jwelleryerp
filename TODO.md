@@ -818,6 +818,19 @@ saying otherwise would repeat the mistake M22/M35/M36 were careful to avoid._
 - **Pre-flight validation runs the IRP's rules locally**, turning a rejected submission into a message at the counter where it can still be fixed. Verified in the browser against real invoices, with correct financial-year keys (a January invoice keys to the *previous* FY).
 - **Still simulated:** no GSP credentials and no server. The panel states that plainly rather than implying a connection.
 
+### ✅ Milestone 62: RBAC Gap Closure (Salesperson & Auditor roles)
+
+**Status:** Complete (2026-08-09). Added the two roles and two permissions specified when the SaaS role model was designed but never built.
+
+- **Salesperson** — `billing.create`, `catalog.view`, `catalog.view.network`, `customers.manage`. No `billing.discount`: a salesperson on commission must not price their own deal. Closes the inconsistency where M58 attributed sales to a salesperson role that did not exist.
+- **Auditor** — read-only across stock and books, plus `stock.audit` because counting is the job.
+- **`approvals.grant`** — split from `billing.override`. "May I do it" and "may I authorise it for someone else" are different questions. `supervisorsFromUsers()` now derives the M33 roster from this.
+- **`catalog.view.network`** — read-only sight of other branches' stock. D-7 is unchanged: off-branch pieces are marked "transfer to sell" and cannot be sold here.
+- **Also fixed:** "Tag New Physical Piece" was never gated on `catalog.manage` and was reachable by Counter Staff and Accountant. Button and modal both gated now.
+- **Not done, deliberately:** branch-scoped permissions. Backend work — see `HANDOFF.md`.
+
+---
+
 ### ✅ Milestone 61: Outbound Notification Channels (WhatsApp / SMS)
 - **Goal:** Reach the customer, not just the operator.
 - **Dependencies:** Milestone 50 (the event store already exists).

@@ -4,6 +4,35 @@ Dated log of changes to the project, covering both documentation and code. Newes
 
 ---
 
+## 2026-08-09 — Milestone 62: Closing the RBAC Gap (Salesperson, Auditor, two permissions)
+
+**Author:** AI agent (Claude Code), pair programming with USER.
+**Scope:** `src/lib/permissions.ts`, `src/lib/users.ts`, `src/components/CatalogManager.tsx`, `src/components/UserManagerPanel.tsx`, `src/App.tsx` and tests. No visual redesign.
+
+This closes a gap between a decision and the code. When the role model was designed for the SaaS product, six roles and twenty permissions were specified; only four roles and eighteen permissions were ever built, because Phase 16 started immediately afterwards. The most visible symptom: **M58 attributes sales to a salesperson, and no Salesperson role existed** — a sale would be credited to someone whose role was "Counter Staff".
+
+**Two roles added:**
+
+| Role | Holds | Deliberately withheld |
+|---|---|---|
+| **Salesperson** | `billing.create`, `catalog.view`, `catalog.view.network`, `customers.manage` | `billing.discount` — closing a sale and pricing it are different jobs, and a salesperson on commission must not be able to discount their own deal |
+| **Auditor** | `catalog.view`, `catalog.view.network`, `stock.audit`, `accounting.view`, `purchase.view` | every write except counting stock, which is the job |
+
+**Two permissions added:**
+
+- **`approvals.grant`** — separated from `billing.override`. They answer different questions: one is "may I do it", the other is "may I authorise it for someone else". Counter staff can legitimately request an override without being able to bless one. `supervisorsFromUsers()` now derives the M33 supervisor roster from `approvals.grant` rather than `billing.override`, which is what it always meant; self-approval remains refused regardless.
+- **`catalog.view.network`** — read-only sight of stock at other branches, so a salesperson can show a customer a piece this building does not have. It grants no ability to sell or move it: **D-7 still means a tag is sellable at exactly one branch**, and off-branch pieces are labelled "transfer to sell".
+
+**A pre-existing hole the Auditor exposed.** "Tag New Physical Piece" was never gated on `catalog.manage` — it was visible to Counter Staff and Accountant too, and nobody noticed because neither role advertises itself as read-only. Shipping a role that *does* made it obvious. Both the button and the modal are now gated, so the Dashboard quick action cannot open it either.
+
+**One correctness note on the network view.** The off-branch marker uses `belongsToBranch()` — the same predicate that scopes the list — rather than a bare `tag.branchId !== activeBranchId`. A legacy tag written before Milestone 19 has no `branchId` and is attributed to the primary branch everywhere else; a bare comparison would have labelled every pre-M19 record as being somewhere it is not. The toggle is also hidden entirely in "All Branches" mode, where `getActiveBranch()` falls back to the first branch and a "widen the view" control would be claiming to widen something already unnarrowed.
+
+**Verified in the browser** across all six roles: Owner and Store Manager see both new controls; Salesperson and Counter Staff see the network toggle but cannot tag stock; Auditor sees the network toggle and can write nothing; Accountant sees neither. Scoped view shows Mumbai's 5 tags, network view shows all 8 with exactly the 3 off-branch pieces marked. New elements measure 8.55:1 or better in both themes.
+
+**What this does not do.** `can(role, permission)` still has no branch dimension — a Pune manager and a Mumbai manager remain indistinguishable. That is deliberate: it changes the user schema and every repository query, and it belongs to the backend rather than to a browser holding one branch switcher. It is recorded in `BACKEND_ARCHITECTURE.md` as blocking work, not as a frontend gap.
+
+---
+
 ## 2026-08-08 — Phase 16 Complete: Milestones 54–61 (Full-Product Gaps)
 
 **Author:** AI agent (Claude Code), pair programming with USER.

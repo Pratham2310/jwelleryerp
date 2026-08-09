@@ -81,13 +81,14 @@ export function roleOf(user: OperatorUser, roles: Role[]): Role | null {
 /**
  * The supervisor roster Milestone 33 consumes, derived rather than kept separately.
  *
- * Only active users whose role can actually override a price appear: an approval from someone
- * without that authority is a signature, not a second pair of eyes — the same rule M33 stated,
- * now enforced from the user master rather than a parallel list.
+ * Gated on `approvals.grant` rather than `billing.override`, because they are different questions:
+ * one is "may I override a price", the other is "may I authorise someone else's". A cashier can
+ * legitimately hold the first without the second. An approval from someone without the authority
+ * to give it is a signature, not a second pair of eyes.
  */
 export function supervisorsFromUsers(users: OperatorUser[], roles: Role[]): SupervisorPin[] {
   return activeUsers(users)
-    .filter(u => can(roleOf(u, roles), 'billing.override'))
+    .filter(u => can(roleOf(u, roles), 'approvals.grant'))
     .map(u => ({ roleName: u.roleName, supervisorName: u.name, pin: u.pin }));
 }
 
@@ -194,6 +195,6 @@ export function summariseUsers(users: OperatorUser[], roles: Role[]): UserSummar
     active: active.length,
     deactivated: users.length - active.length,
     administrators: active.filter(u => can(roleOf(u, roles), 'admin.roles')).length,
-    approvers: active.filter(u => can(roleOf(u, roles), 'billing.override')).length,
+    approvers: active.filter(u => can(roleOf(u, roles), 'approvals.grant')).length,
   };
 }

@@ -25,8 +25,10 @@ export type Permission =
   | 'billing.discount'
   | 'billing.override'
   | 'billing.return'
+  | 'approvals.grant'
   // Inventory
   | 'catalog.view'
+  | 'catalog.view.network'
   | 'catalog.manage'
   | 'stock.transfer'
   | 'stock.audit'
@@ -60,8 +62,16 @@ export const PERMISSIONS: PermissionDef[] = [
     note: 'Separate from applying a discount: an override changes the calculated rate itself, which is why Milestone 10 makes it require a logged reason.',
   },
   { key: 'billing.return', label: 'Process returns & credit notes', group: 'Billing' },
+  {
+    key: 'approvals.grant', label: 'Approve someone else\'s override', group: 'Billing',
+    note: 'Deliberately separate from `billing.override`: holding one is "may I do it", holding the other is "may I authorise it for someone else". A cashier may legitimately request without being able to approve, and self-approval is refused regardless (Milestone 33).',
+  },
 
   { key: 'catalog.view', label: 'View catalogue & stock', group: 'Inventory' },
+  {
+    key: 'catalog.view.network', label: 'See stock at other branches', group: 'Inventory',
+    note: 'Read-only sight of what the other shops hold, so a salesperson can show a customer a piece that is not in this building and arrange a transfer. It grants no ability to sell or move it — decision D-7 still means a tag is sellable at exactly one branch.',
+  },
   { key: 'catalog.manage', label: 'Add & edit tags and designs', group: 'Inventory' },
   { key: 'stock.transfer', label: 'Dispatch & receive branch transfers', group: 'Inventory' },
   { key: 'stock.audit', label: 'Run a physical stock audit', group: 'Inventory' },
@@ -122,7 +132,29 @@ export const DEFAULT_ROLES: Role[] = [
     id: 'role-cashier',
     name: 'Counter Staff',
     description: 'Sells and views stock. Cannot override prices, touch rates or see the books.',
-    permissions: ['billing.create', 'billing.discount', 'catalog.view', 'purchase.view'],
+    permissions: [
+      'billing.create', 'billing.discount', 'catalog.view', 'catalog.view.network',
+      'purchase.view',
+    ],
+    isSystem: true,
+  },
+  {
+    id: 'role-salesperson',
+    name: 'Salesperson',
+    description: 'Sells on the floor. Can show network stock and raise a bill, but not discount it.',
+    // Deliberately no `billing.discount`: floor staff close sales, a manager prices them.
+    permissions: ['catalog.view', 'catalog.view.network', 'billing.create', 'customers.manage'],
+    isSystem: true,
+  },
+  {
+    id: 'role-auditor',
+    name: 'Auditor',
+    description: 'Read-only across stock and the books. For the shop\'s CA or an internal check.',
+    // No write permission of any kind except running a physical count, which is the job.
+    permissions: [
+      'catalog.view', 'catalog.view.network', 'stock.audit',
+      'accounting.view', 'purchase.view',
+    ],
     isSystem: true,
   },
   {

@@ -817,6 +817,8 @@ function AppContent() {
                     setHallmarkBatches={setHallmarkBatches}
                     hallmarkPolicy={hallmarkPolicy}
                     setHallmarkPolicy={setHallmarkPolicy}
+                    currentRole={currentRole}
+                    activeBranchId={activeBranchId}
                   />
                 }
               />
