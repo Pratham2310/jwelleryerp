@@ -180,3 +180,4 @@ export function validatePaymentSplit(amountDue: number, entries: PaymentSplitEnt
   }
   return { totalPaid, shortfall: 0, isValid: true, error: null };
 }
+//now billing is working fine totally

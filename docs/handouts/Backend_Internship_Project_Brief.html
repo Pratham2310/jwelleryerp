@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Backend Engineering Internship — Project Brief</title>
+<style>
+  @page { size: A4; margin: 17mm 16mm 15mm 16mm; }
+  @page :first { margin: 0; }
+
+  :root{
+    --ink:#16130E;
+    --ink-soft:#3A342A;
+    --grey:#6B6459;
+    --grey-light:#8F877A;
+    --gold:#8A6A1F;
+    --gold-pale:#F6F1E4;
+    --green:#1F4D3D;
+    --green-pale:#EDF3F0;
+    --rule:#DCD5C6;
+    --rule-soft:#ECE7DA;
+    --paper:#FFFFFF;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    font-size:10.2pt;
+    line-height:1.55;
+  }
+
+  /* ─────────────── cover ─────────────── */
+  .cover{
+    height:297mm; width:210mm;
+    background:var(--ink);
+    color:#F3EEE2;
+    padding:26mm 20mm;
+    display:flex; flex-direction:column;
+    break-after:page;
+  }
+  .cover .eyebrow{
+    font-size:8.5pt; letter-spacing:.22em; text-transform:uppercase;
+    color:#C9A961; font-weight:600;
+  }
+  .cover-rule{ height:2px; background:#C9A961; width:46mm; margin:7mm 0 9mm; }
+  .cover h1{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:34pt; line-height:1.12; font-weight:400;
+    margin:0 0 6mm; text-wrap:balance; color:#FFFFFF;
+  }
+  .cover h1 em{ font-style:italic; color:#D9BC77; }
+  .cover .lede{
+    font-family:Georgia,serif; font-size:12.5pt; line-height:1.6;
+    color:#CFC7B6; max-width:128mm; margin:0;
+  }
+  .cover .spacer{ flex:1; }
+  .cover-facts{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:7mm 10mm;
+    border-top:1px solid #3E382C; padding-top:8mm; margin-top:8mm;
+  }
+  .cover-facts dt{
+    font-size:8pt; letter-spacing:.16em; text-transform:uppercase;
+    color:#948B78; margin-bottom:1.5mm;
+  }
+  .cover-facts dd{ margin:0; font-size:11pt; color:#F3EEE2; }
+  .cover-foot{ margin-top:9mm; font-size:8.5pt; color:#7C7364; }
+
+  /* ─────────────── structure ─────────────── */
+  section{ break-before:page; }
+  section.run-on{ break-before:auto; }
+
+  .sec-head{ margin:0 0 6mm; }
+  .sec-num{
+    font-size:8pt; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--gold); font-weight:700; display:block; margin-bottom:2mm;
+  }
+  h2{
+    font-family:Georgia,serif; font-weight:400;
+    font-size:20pt; line-height:1.2; margin:0 0 3mm;
+    color:var(--ink); text-wrap:balance;
+    border-bottom:1.5px solid var(--rule); padding-bottom:3mm;
+  }
+  h3{
+    font-size:11.5pt; font-weight:600; margin:8mm 0 2.5mm;
+    color:var(--ink); break-after:avoid; text-wrap:balance;
+  }
+  h4{
+    font-size:9pt; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--gold); margin:6mm 0 2mm; break-after:avoid;
+  }
+  p{ margin:0 0 3.4mm; }
+  .lede-p{ font-family:Georgia,serif; font-size:11.5pt; line-height:1.6; color:var(--ink-soft); margin-bottom:5mm; }
+  strong{ font-weight:600; color:var(--ink); }
+  em{ font-style:italic; }
+  a{ color:var(--green); }
+
+  ul,ol{ margin:0 0 3.8mm; padding-left:5mm; }
+  li{ margin-bottom:1.6mm; }
+  ul.tight li{ margin-bottom:.8mm; }
+
+  /* ─────────────── tables ─────────────── */
+  table{ width:100%; border-collapse:collapse; margin:0 0 4.5mm; font-size:9.2pt; }
+  thead th{
+    text-align:left; font-size:8pt; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--grey); font-weight:700;
+    border-bottom:1.5px solid var(--ink); padding:0 3mm 2mm 0;
+  }
+  tbody td{
+    padding:2.2mm 3mm 2.2mm 0; border-bottom:1px solid var(--rule-soft);
+    vertical-align:top;
+  }
+  tbody tr{ break-inside:avoid; }
+  td.k{ font-weight:600; color:var(--ink); white-space:nowrap; }
+  .num{ font-variant-numeric:tabular-nums; }
+
+  /* ─────────────── callouts ─────────────── */
+  .note{
+    background:var(--gold-pale); border-left:3px solid var(--gold);
+    padding:4mm 5mm; margin:0 0 5mm; break-inside:avoid;
+  }
+  .note p:last-child{ margin-bottom:0; }
+  .note .label{
+    font-size:8pt; letter-spacing:.14em; text-transform:uppercase;
+    font-weight:700; color:var(--gold); display:block; margin-bottom:1.5mm;
+  }
+  .green-note{
+    background:var(--green-pale); border-left:3px solid var(--green);
+    padding:4mm 5mm; margin:0 0 5mm; break-inside:avoid;
+  }
+  .green-note p:last-child{ margin-bottom:0; }
+  .green-note .label{
+    font-size:8pt; letter-spacing:.14em; text-transform:uppercase;
+    font-weight:700; color:var(--green); display:block; margin-bottom:1.5mm;
+  }
+
+  blockquote{
+    margin:0 0 5mm; padding:0 0 0 6mm; border-left:2px solid var(--gold);
+    font-family:Georgia,serif; font-size:11.5pt; line-height:1.55; color:var(--ink-soft);
+    break-inside:avoid;
+  }
+
+  /* ─────────────── code ─────────────── */
+  pre{
+    font-family:Consolas,"Courier New",monospace; font-size:8.6pt; line-height:1.45;
+    background:#FAF8F3; border:1px solid var(--rule); border-radius:2px;
+    padding:3.5mm 4mm; margin:0 0 4.5mm; overflow-x:auto;
+    break-inside:avoid; color:var(--ink-soft);
+  }
+  code{ font-family:Consolas,"Courier New",monospace; font-size:8.8pt; color:var(--green); }
+  pre code{ color:inherit; font-size:inherit; }
+
+  /* ─────────────── layer stack diagram ─────────────── */
+  .stack{ margin:0 0 5mm; break-inside:avoid; }
+  .layer{
+    display:grid; grid-template-columns:34mm 1fr; gap:5mm;
+    border:1px solid var(--rule); border-left:3px solid var(--gold);
+    padding:2.8mm 4mm; margin-bottom:1.5mm; background:#FDFCF9;
+  }
+  .layer.consumed{ border-left-color:var(--green); background:var(--green-pale); }
+  .layer .lname{ font-weight:700; font-size:9.4pt; }
+  .layer .lfile{ display:block; font-family:Consolas,monospace; font-size:8pt; color:var(--grey); font-weight:400; margin-top:.6mm; }
+  .layer .ldesc{ font-size:9pt; color:var(--ink-soft); }
+  .arrow{ text-align:center; color:var(--rule); font-size:9pt; line-height:1; margin:0 0 1.5mm; }
+
+  /* ─────────────── track cards ─────────────── */
+  .track{ break-inside:avoid; margin-bottom:7mm; }
+  .track-head{
+    display:flex; align-items:baseline; gap:4mm;
+    border-bottom:1.5px solid var(--ink); padding-bottom:2mm; margin-bottom:3mm;
+  }
+  .track-tag{
+    font-size:8pt; letter-spacing:.16em; text-transform:uppercase;
+    font-weight:700; color:#FFF; background:var(--gold);
+    padding:1mm 2.5mm; white-space:nowrap;
+  }
+  .track-name{ font-family:Georgia,serif; font-size:14pt; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:0 8mm; }
+
+  .pill{
+    display:inline-block; font-size:8pt; padding:.7mm 2.2mm;
+    border:1px solid var(--rule); border-radius:2px; margin:0 1.5mm 1.5mm 0;
+    color:var(--ink-soft); background:#FBF9F4;
+  }
+
+  .checklist{ list-style:none; padding-left:0; }
+  .checklist li{ padding-left:6mm; position:relative; margin-bottom:2mm; }
+  .checklist li::before{
+    content:"□"; position:absolute; left:0; top:-.3mm;
+    color:var(--gold); font-size:11pt;
+  }
+
+  .footer-note{
+    margin-top:9mm; padding-top:4mm; border-top:1px solid var(--rule);
+    font-size:8.5pt; color:var(--grey);
+  }
+  .kicker{ font-size:9pt; color:var(--grey); margin-top:-2mm; margin-bottom:5mm; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ COVER ══════════════════ -->
+<div class="cover">
+  <div class="eyebrow">Backend Engineering Internship</div>
+  <div class="cover-rule"></div>
+  <h1>Building a production ERP for the <em>Indian jewellery trade</em></h1>
+  <p class="lede">A six-month engineering programme working on a real, live product — multi-branch inventory, a weight-and-money dual ledger, GST compliance, and double-entry accounting, built on PostgreSQL and TypeScript.</p>
+
+  <div class="spacer"></div>
+
+  <dl class="cover-facts">
+    <div><dt>Role</dt><dd>Backend Developer Intern</dd></div>
+    <div><dt>Openings</dt><dd>Four</dd></div>
+    <div><dt>Duration</dt><dd>18 weeks</dd></div>
+    <div><dt>Stack</dt><dd>Node.js · TypeScript · NestJS · PostgreSQL</dd></div>
+    <div><dt>Team</dt><dd>4 interns + 2 senior engineers</dd></div>
+    <div><dt>Mentorship</dt><dd>Daily review · weekly architecture sessions</dd></div>
+  </dl>
+
+  <div class="cover-foot">Project brief for candidates · Issued August 2026 · Please read in full before the orientation session.</div>
+</div>
+
+
+<!-- ══════════════════ 1 ══════════════════ -->
+<section class="run-on" style="break-before:auto">
+  <div class="sec-head">
+    <span class="sec-num">Section 1</span>
+    <h2>About this document</h2>
+  </div>
+
+  <p class="lede-p">This brief explains what you will be building, why it is technically interesting, how the work is divided between the four of you, and what we expect you to know before you start.</p>
+
+  <p>Read it properly. It is longer than a typical internship description because the product is genuinely unusual, and a large part of your first month is spent learning the <em>business</em> rather than the code. Candidates who arrive already understanding what a <em>tunch</em> or a <em>making charge</em> is will be productive weeks earlier than those who don't.</p>
+
+  <p>Section 11 is a preparation checklist. If you do nothing else with this document, do that.</p>
+
+  <h3>What this is not</h3>
+  <p>This is not a training exercise or a mock project. You will be writing code that a real business runs on, handling real money, and subject to Indian tax and hallmarking law. Your work is reviewed, tested and deployed. That is the point of the internship, and it is also why the standards described in Section 8 are non-negotiable.</p>
+
+  <div class="note">
+    <span class="label">A note on difficulty</span>
+    <p>Jewellery retail software is harder than it sounds, and much harder than a typical CRUD application. We know that. The work has been divided so that no intern is handed a problem they cannot finish, every module has a senior engineer attached to it, and the most dangerous business logic has already been written and tested before you arrive. Your job is to build the database, the API and the safeguards around it — which is exactly the right difficulty for someone at your stage.</p>
+  </div>
+</section>
+
+
+<!-- ══════════════════ 2 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 2</span>
+    <h2>The product: what an Indian jewellery ERP actually does</h2>
+  </div>
+
+  <p class="lede-p">Start here, because if you carry your instincts from ordinary e-commerce into this domain, almost everything you build will be subtly wrong.</p>
+
+  <h3>Why a jewellery shop is not a normal shop</h3>
+
+  <p>In ordinary retail, a product has a price. A T-shirt costs ₹499, you hold fifty of them, you sell one and now you hold forty-nine. Two facts make jewellery completely different:</p>
+
+  <p><strong>One — there is no "fifty of them."</strong> Every gold ring is a unique physical object with its own weight, its own stones and its own government certificate number. Two rings made from the same design weigh different amounts and sell for different money. So there is no <em>quantity</em> column anywhere in this system. Every physical piece is one database row, which the trade calls a <strong>tag</strong>, after the paper tag tied to the piece in the shop.</p>
+
+  <p><strong>Two — there is no fixed price.</strong> The price is calculated at the moment of sale from the day's gold rate, which the owner changes daily and sometimes twice daily. The same ring costs different money this afternoon than it did this morning.</p>
+
+  <h3>How a piece of jewellery is priced</h3>
+
+  <p>This formula is the heart of the product. You will see it, in one form or another, on almost every screen:</p>
+
+<pre>Net Weight    = Gross Weight − Stone Weight      stones are not gold, so they are excluded
+Metal Value   = Net Weight × today's rate per gram
+Wastage Value = Net Weight × wastage % × rate    gold physically lost during manufacture
+Making Charge = Net Weight × ₹ per gram   OR   a flat fee
+Stone Value   = the certified value of the diamonds
+                ─────────────────────────────────────
+Taxable Value = the sum of the above
+GST @ 3%      = charged on the taxable value
+Grand Total   = taxable value + GST, rounded to the rupee</pre>
+
+  <p>Then the customer very often hands over an old gold chain as part of the payment. That is <strong>not a discount</strong> — it is the shop <em>buying</em> gold from the customer, a separate purchase transaction, deducted only at the very end after GST has already been calculated. Subtracting it before GST would understate the tax due. Small rule, large consequences.</p>
+
+  <h3>The two parallel ledgers</h3>
+
+  <p>This is the single most important idea in the system, and it is what makes the domain intellectually interesting.</p>
+
+  <blockquote>The business keeps two sets of books simultaneously: one in <strong>rupees</strong>, and one in <strong>grams</strong>. Both must always balance.</blockquote>
+
+  <p>The weight ledger exists because gold is borrowed and repaid <em>as gold</em>. A shop owes its goldsmith four hundred grams, not ₹28 lakh — and if the gold price moves, the rupee figure changes but the debt does not. Banks lend jewellers gold under a facility called a Gold Metal Loan, repayable in metal. So a stock item's value in rupees is always a <em>derived</em> figure, never a stored fact.</p>
+
+  <p>Practically, this means every money column in the database sits beside the weight it was computed from and the exact rate version used. If you store only the rupees, you cannot answer the question every shop owner asks daily — <em>what is my stock worth today?</em> — without replaying months of history.</p>
+
+  <h3>The rest of the business you will encounter</h3>
+
+  <table>
+    <thead><tr><th style="width:34mm">Area</th><th>What it involves</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Tagging</td><td>Each physical piece moves through a twelve-state lifecycle: raw metal → issued to a goldsmith → received → sent for hallmarking → in stock → sold. Illegal jumps between states must be rejected, not silently allowed.</td></tr>
+      <tr><td class="k">Karigar<br>(job work)</td><td>Shops don't manufacture in-house. They issue raw gold to independent goldsmiths and receive finished pieces back, always weighing less. Reconciling that loss across mixed purities requires converting everything to a common basis called Fine Gold Equivalent.</td></tr>
+      <tr><td class="k">Hallmarking</td><td>Indian law requires gold jewellery to carry a unique government ID (a HUID). It must be globally unique, can never be reused, and a non-exempt piece without one cannot legally be sold.</td></tr>
+      <tr><td class="k">Old gold<br>exchange</td><td>Customers trade in old jewellery. It is tested for purity, a melting loss is deducted, and it is bought at a rate below the selling rate. It then enters a vault and is eventually melted back into raw metal.</td></tr>
+      <tr><td class="k">GST<br>compliance</td><td>Tax splits into CGST + SGST for a sale within the state, or IGST across state lines. Invoice numbers must be strictly consecutive with no gaps, per branch, per financial year — a legal requirement, not a preference. Electronic invoices are registered with a government portal.</td></tr>
+      <tr><td class="k">Accounting</td><td>Every transaction automatically posts a balanced double-entry journal. Debits must equal credits, always, with no rounding tolerance and no manual correction.</td></tr>
+      <tr><td class="k">Multi-branch</td><td>A chain has several shops, each with its own tax registration and its own invoice series. Stock transfers between them are tracked in transit, and a piece must never be sellable in two places at once.</td></tr>
+      <tr><td class="k">Savings<br>schemes</td><td>Customers pay monthly instalments toward a future purchase. Legally, these must be redeemable only in jewellery and never refundable in cash — a constraint the software has to enforce structurally.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ══════════════════ 3 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 3</span>
+    <h2>Why this is a good internship, technically</h2>
+  </div>
+
+  <p class="lede-p">Most internships hand you a to-do list application with a login screen. Here is what this project will teach you that one cannot.</p>
+
+  <table>
+    <thead><tr><th style="width:52mm">You will learn</th><th>Because the domain forces it</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Why money is never a float</td><td><code>8.2 × 6650</code> evaluates to <code>54529.99999999999</code>. Add a thousand such figures and the error is real money. All amounts are stored as integer paisa and all weights as integer milligrams.</td></tr>
+      <tr><td class="k">Database-enforced correctness</td><td>An unbalanced journal entry is prevented by a constraint in PostgreSQL, not by hoping the application is right. You will learn to make invalid states impossible rather than merely unlikely.</td></tr>
+      <tr><td class="k">Real concurrency</td><td>Two billing counters must never sell the same piece, and must never receive the same invoice number. This is row locking, transactions and isolation levels applied to a problem where getting it wrong is visible to a customer.</td></tr>
+      <tr><td class="k">Multi-tenant data isolation</td><td>Many businesses share one database. You will use PostgreSQL Row-Level Security so that isolation is enforced by the database itself, rather than depending on every developer remembering a filter.</td></tr>
+      <tr><td class="k">Append-only and audit design</td><td>Rates, ledgers and audit trails are never updated or deleted, only added to. You will learn why regulated systems are built this way and how to design around it.</td></tr>
+      <tr><td class="k">Asynchronous integration</td><td>Government tax APIs are slow and periodically down. The billing counter must never wait for them. You will build a transactional outbox and a background job queue.</td></tr>
+      <tr><td class="k">Testing that matters</td><td>A silent bug in accounting software compounds daily instead of failing loudly once. You will write tests because you want them, not because a checklist asked.</td></tr>
+      <tr><td class="k">Working to a specification</td><td>Tax law, hallmarking rules and GST invoice format are external requirements you cannot negotiate with. This is the closest most engineers get to genuine specification-driven development.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="green-note">
+    <span class="label">What already exists</span>
+    <p>A working front-end application and a substantial, well-tested library of business rules — the pricing engine, the purity mathematics, the tax splitting, the double-entry posting — already exist and are covered by an extensive automated test suite. You will not be asked to invent Indian jewellery accounting from scratch.</p>
+    <p>Your work is to give that logic a database, a secure multi-tenant API and the safeguards a production system needs. This is deliberate: it removes the part of the problem that would be unreasonable to hand to an intern, and leaves the part that will genuinely teach you backend engineering.</p>
+  </div>
+</section>
+
+
+<!-- ══════════════════ 4 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 4</span>
+    <h2>Technology stack</h2>
+  </div>
+
+  <p class="lede-p">Learn the reasons, not just the names. You will be asked why we chose each of these, and "it's popular" is not an answer we accept.</p>
+
+  <table>
+    <thead><tr><th style="width:38mm">Technology</th><th>Role</th><th style="width:72mm">Why this one</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Node.js 22 LTS</td><td>Runtime</td><td>The existing business logic is already TypeScript. Rewriting a large, tested rules engine in another language would discard the most valuable asset in the project to gain nothing.</td></tr>
+      <tr><td class="k">TypeScript 5.8</td><td>Language</td><td>Strict mode throughout. In a domain where a wrong number is a wrong invoice, a compiler that catches mistakes is worth the ceremony.</td></tr>
+      <tr><td class="k">NestJS</td><td>Web framework</td><td>Opinionated by design. It tells you where controllers, services and dependency injection go, which is exactly what a team of four people building in parallel needs. You will use its modules, guards, interceptors and pipes.</td></tr>
+      <tr><td class="k">PostgreSQL 16</td><td>Database</td><td>Chosen over MongoDB for four specific reasons: journals must balance (enforceable with a constraint), money must not drift (exact integer types), invoice numbers must be gap-free (row locking), and every report is relational aggregation.</td></tr>
+      <tr><td class="k">Drizzle ORM</td><td>Query layer</td><td>Its queries read like SQL, so a reviewer can see exactly what hits the database. Migrations are reviewable SQL rather than opaque generated artefacts.</td></tr>
+      <tr><td class="k">Redis</td><td>Cache</td><td>The gold rate is read on every billing line. It is served from cache in single-digit milliseconds and never from the database on the hot path.</td></tr>
+      <tr><td class="k">BullMQ</td><td>Job queue</td><td>Government API calls, messaging and exports run in a background worker so the billing counter never blocks on an external system.</td></tr>
+      <tr><td class="k">Zod</td><td>Validation</td><td>One schema definition validates the API request and types the front-end client, so the two cannot drift apart.</td></tr>
+      <tr><td class="k">Vitest + Testcontainers</td><td>Testing</td><td>Fast unit tests with no database, plus integration tests against a real PostgreSQL instance started automatically for each run.</td></tr>
+      <tr><td class="k">Docker</td><td>Local environment</td><td>One command gives you PostgreSQL and Redis locally. No "works on my machine."</td></tr>
+      <tr><td class="k">GitHub Actions</td><td>CI</td><td>Every pull request runs lint, type-check, unit tests, integration tests, migration validation and security scanning before a human looks at it.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="label">If you come from the MERN stack</span>
+    <p>Most of what you know transfers directly. Express middleware becomes NestJS guards and interceptors. Mongoose models split into a database schema, a validation schema and a set of pure business functions. Populate becomes a join. The concepts are the same; the guarantees are stronger. Section 11 tells you exactly what to read before you start.</p>
+  </div>
+</section>
+
+
+<!-- ══════════════════ 5 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 5</span>
+    <h2>How the code is organised</h2>
+  </div>
+
+  <p class="lede-p">One rule governs the entire codebase. Learn it now and most code review comments you receive will make immediate sense.</p>
+
+  <h3>The layer contract</h3>
+
+  <p>Every feature is built from the same five layers, in the same order, with the same file names. Two further layers are shared across the whole system and provided to you.</p>
+
+  <div class="stack">
+    <div class="layer"><div><span class="lname">1 · Controller</span><span class="lfile">tags.controller.ts</span></div><div class="ldesc">Handles HTTP only. Reads the request, calls exactly one service method, returns the result. It must not contain a decision about business meaning.</div></div>
+    <div class="arrow">▼</div>
+    <div class="layer"><div><span class="lname">2 · DTO</span><span class="lfile">dto/create-tag.dto.ts</span></div><div class="ldesc">Declares the shape of the request and response and validates it at the boundary. No logic.</div></div>
+    <div class="arrow">▼</div>
+    <div class="layer"><div><span class="lname">3 · Service</span><span class="lfile">tags.service.ts</span></div><div class="ldesc">Orchestrates the use case. Opens the database transaction, calls repositories, calls business-rule functions, publishes events. Contains <em>no arithmetic</em>.</div></div>
+    <div class="arrow">▼</div>
+    <div class="layer consumed"><div><span class="lname">Business rules</span><span class="lfile">shared package</span></div><div class="ldesc">Pure functions — data in, data out, no database, no framework. Every price, tax split, purity conversion and posting rule lives here. You import these; you never rewrite them.</div></div>
+    <div class="arrow">▼</div>
+    <div class="layer"><div><span class="lname">4 · Repository</span><span class="lfile">tags.repository.ts</span></div><div class="ldesc">All database access. Every query is scoped to the current business and branch. It never decides what <em>should</em> happen.</div></div>
+    <div class="arrow">▼</div>
+    <div class="layer"><div><span class="lname">5 · Schema</span><span class="lfile">db/schema/tags.ts</span></div><div class="ldesc">Table definitions — columns, types, constraints, indexes. Nothing else. No hooks, no methods.</div></div>
+    <div class="arrow">▼</div>
+    <div class="layer consumed"><div><span class="lname">Platform</span><span class="lfile">shared package</span></div><div class="ldesc">Authentication, tenant context, audit logging, error handling, idempotency. Wraps every request automatically.</div></div>
+  </div>
+
+  <blockquote>Services have no arithmetic. Repositories have no decisions.</blockquote>
+
+  <p>Those two sentences resolve almost every "where does this code go?" question you will have in your first month.</p>
+
+  <h3>Folders follow features, not layers</h3>
+
+  <p>If you have built a Node backend before, you have probably used folders named <code>controllers/</code>, <code>services/</code> and <code>models/</code>, each containing every file of that type. That works well up to roughly a dozen features. This system has around ninety database tables, so we organise the other way round — everything about tags lives in one folder:</p>
+
+<pre>src/
+├── tags/
+│   ├── tags.controller.ts
+│   ├── tags.service.ts
+│   ├── tags.repository.ts
+│   └── dto/
+├── transfers/
+│   └── … same five files …
+├── db/
+│   ├── schema/
+│   └── migrations/
+└── config/</pre>
+
+  <p>One folder to open. One folder that appears in your diff. Four people working simultaneously without stepping on each other.</p>
+
+  <h3>Naming conventions, fixed</h3>
+
+  <table>
+    <thead><tr><th style="width:44mm">Item</th><th>Convention</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Database table</td><td><code>snake_case</code>, plural — <code>tags</code>, <code>sale_invoices</code></td></tr>
+      <tr><td class="k">Database column</td><td><code>snake_case</code> with a unit suffix — <code>net_weight_mg</code>, <code>metal_value_paisa</code></td></tr>
+      <tr><td class="k">API endpoint</td><td><code>/v1/</code> plus a plural kebab-case noun — <code>/v1/item-designs</code></td></tr>
+      <tr><td class="k">Error code</td><td><code>SCREAMING_SNAKE_CASE</code> — <code>TAG_ILLEGAL_TRANSITION</code></td></tr>
+      <tr><td class="k">Branch name</td><td><code>feat/inventory-tag-transitions</code></td></tr>
+      <tr><td class="k">Commit message</td><td>Conventional Commits — <code>feat(tags): reject sale of in-transit piece</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>The unit suffix on columns is not optional. A column called <code>weight</code> or <code>amount</code> will be sent back in review; <code>net_weight_mg</code> tells every future reader the unit without opening a document.</p>
+</section>
+
+
+<!-- ══════════════════ 6 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 6</span>
+    <h2>The four tracks</h2>
+  </div>
+
+  <p class="lede-p">The system is divided into four independent areas. Each of you will own one, end to end — the database tables, the business logic wiring, the API endpoints and the tests. Assignment happens on your first day, after we have talked to you about your interests and strengths.</p>
+
+  <p>You own your track. That means you are the person who understands it best, who explains it in review, and whose name is on it. It also means the other three depend on you delivering an agreed interface on time.</p>
+
+  <!-- Track A -->
+  <div class="track">
+    <div class="track-head">
+      <span class="track-tag">Track A</span>
+      <span class="track-name">Identity, Access &amp; Master Data</span>
+    </div>
+    <p><strong>What it covers.</strong> Who is allowed to do what, and the reference data every other part of the system depends on: the metals and purities the business deals in, the daily gold rate, tax rates and HSN codes, branches, and the customer/supplier register.</p>
+
+    <div class="grid2">
+      <div>
+        <h4>What you will build</h4>
+        <ul class="tight">
+          <li>Operator accounts, roles and a permission system with a branch dimension — a manager in one city must not act in another</li>
+          <li>An approval workflow where a large discount needs a second person's sign-off, and self-approval is refused</li>
+          <li>An append-only gold rate history, so an invoice from six months ago still resolves the rate it was billed at</li>
+          <li>Effective-dated tax rates, because GST rates change by government notification</li>
+          <li>A tamper-evident audit trail of every sensitive action</li>
+          <li>Later: the customer savings-scheme module</li>
+        </ul>
+      </div>
+      <div>
+        <h4>What makes it hard</h4>
+        <ul class="tight">
+          <li>Everyone else is blocked until your data model is right, so this track starts first and carries real responsibility</li>
+          <li>Append-only design: you can add a rate but never edit one, enforced by the database itself</li>
+          <li>Caching the rate correctly — it is read on every billing line and must never be stale</li>
+          <li>No legal threshold may ever be hard-coded; all of them are configurable data</li>
+        </ul>
+        <h4>Skills you will develop</h4>
+        <div>
+          <span class="pill">Authentication &amp; JWT</span><span class="pill">Role-based access control</span><span class="pill">Temporal / effective-dated data</span><span class="pill">Cache invalidation</span><span class="pill">Audit design</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track B -->
+  <div class="track">
+    <div class="track-head">
+      <span class="track-tag">Track B</span>
+      <span class="track-name">Inventory, Tagging &amp; Production</span>
+    </div>
+    <p><strong>What it covers.</strong> The physical goods. Every individual piece of jewellery in the business, its complete lifecycle, movements between branches, stock audits, and the relationship with the goldsmiths who manufacture the pieces.</p>
+
+    <div class="grid2">
+      <div>
+        <h4>What you will build</h4>
+        <ul class="tight">
+          <li>The tag — one row per physical piece, with weights stored in milligrams</li>
+          <li>A twelve-state lifecycle where every illegal transition is rejected with a clear error</li>
+          <li>Barcode and QR label generation</li>
+          <li>Inter-branch transfers with an in-transit state, and per-piece acceptance at the destination</li>
+          <li>Physical stock audit with discrepancy reporting</li>
+          <li>Goldsmith job work: issuing raw gold, receiving finished pieces, reconciling the weight lost in manufacture</li>
+          <li>Hallmarking dispatch and unique government ID assignment</li>
+        </ul>
+      </div>
+      <div>
+        <h4>What makes it hard</h4>
+        <ul class="tight">
+          <li>Concurrency. Two counters must never sell the same piece — this is real row locking, and it is tested with fifty simultaneous requests</li>
+          <li>A piece may be sellable at exactly one branch, enforced by a database index rather than by convention</li>
+          <li>Stock is not uniformly owned — some is financed, some belongs to a supplier until sold, and the difference changes the balance sheet</li>
+          <li>Weight reconciliation across mixed purities requires converting everything to a common basis</li>
+        </ul>
+        <h4>Skills you will develop</h4>
+        <div>
+          <span class="pill">State machines</span><span class="pill">Row locking &amp; transactions</span><span class="pill">Optimistic concurrency</span><span class="pill">Partial indexes</span><span class="pill">Event-driven design</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section>
+  <!-- Track C -->
+  <div class="track">
+    <div class="track-head">
+      <span class="track-tag">Track C</span>
+      <span class="track-name">Billing, Point of Sale &amp; Old Gold</span>
+    </div>
+    <p><strong>What it covers.</strong> Every rupee the business takes. Quotations, tax invoices, discounts and price overrides, split payments, returns and credit notes, and the old-gold exchange that so many sales involve.</p>
+
+    <div class="grid2">
+      <div>
+        <h4>What you will build</h4>
+        <ul class="tight">
+          <li>The invoice endpoint — calculating every line through the shared pricing engine</li>
+          <li>Quotation mode with its own non-tax numbering series, convertible into a real invoice</li>
+          <li>Split payment across cash, card, UPI and scheme redemption, validated to settle exactly</li>
+          <li>Price override with a mandatory logged reason and, above a limit, a supervisor's approval</li>
+          <li>Statutory gates: identity documents required above a cash threshold; an uncertified piece cannot be billed</li>
+          <li>Sales returns and credit notes with proportional discount reversal</li>
+          <li>Old gold: purity testing, melting-loss deduction, valuation, and a vault lifecycle</li>
+          <li>An offline synchronisation endpoint for counters that lose connectivity</li>
+        </ul>
+      </div>
+      <div>
+        <h4>What makes it hard</h4>
+        <ul class="tight">
+          <li>Invoice numbers must be strictly consecutive with no gaps, per branch, per year — under concurrent load, by law</li>
+          <li>Every write must be safely repeatable, because an offline counter retries and a retried sale must not become two invoices</li>
+          <li>The old-gold trade-in must never touch the taxable value, only the final amount collected</li>
+          <li>A finalised invoice can never be edited — corrections are separate documents</li>
+          <li>A calculation must complete in under 200 milliseconds so checkout stays fast</li>
+        </ul>
+        <h4>Skills you will develop</h4>
+        <div>
+          <span class="pill">Idempotency</span><span class="pill">Sequence generation under load</span><span class="pill">Transaction boundaries</span><span class="pill">Performance work</span><span class="pill">Offline sync &amp; conflict resolution</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Track D -->
+  <div class="track">
+    <div class="track-head">
+      <span class="track-tag">Track D</span>
+      <span class="track-name">Procurement, Tax &amp; Accounting</span>
+    </div>
+    <p><strong>What it covers.</strong> Buying, tax compliance and the books. Purchase orders and goods receipts, GST registers and returns, electronic invoicing with the government portal, and the double-entry ledger behind everything.</p>
+
+    <div class="grid2">
+      <div>
+        <h4>What you will build</h4>
+        <ul class="tight">
+          <li>Purchase orders, goods receipts and supplier invoices, with input tax credit tracked separately for credit claimed and credit retained</li>
+          <li>GST registers and the data behind statutory monthly returns</li>
+          <li>Electronic invoice registration with the government portal — asynchronously, so the billing counter never waits on it</li>
+          <li>The chart of accounts and automatic journal posting behind every transaction</li>
+          <li>Trial balance, ledger statements, receivables ageing, profit &amp; loss and balance sheet</li>
+          <li>Export to Tally, which most Indian accountants still use</li>
+          <li>Accounting period locking</li>
+        </ul>
+      </div>
+      <div>
+        <h4>What makes it hard</h4>
+        <ul class="tight">
+          <li>Debits must equal credits, always. This is enforced in three independent places so that a bug simply cannot commit an unbalanced entry</li>
+          <li>Routine transactions may never create a journal entry without a source document behind it</li>
+          <li>A posted entry is never edited or deleted — a correction is a reversal entry</li>
+          <li>Stock financed by a metal loan appears as a liability measured in <em>grams</em>, not rupees</li>
+          <li>Government APIs are slow and sometimes offline; the system must degrade gracefully and reconcile later</li>
+        </ul>
+        <h4>Skills you will develop</h4>
+        <div>
+          <span class="pill">Double-entry accounting</span><span class="pill">Database constraints &amp; triggers</span><span class="pill">Materialised views</span><span class="pill">Transactional outbox</span><span class="pill">Third-party API integration</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="label">Track D and mentorship</span>
+    <p>The accounting track carries the highest correctness risk in the system, so it receives the most senior support: a full week of pair programming at the start of the accounting phase, and individual review of every posting change by a senior engineer. Nobody is left alone with the balance sheet.</p>
+  </div>
+</section>
+
+
+<!-- ══════════════════ 7 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 7</span>
+    <h2>Timeline</h2>
+  </div>
+
+  <p class="lede-p">Eighteen weeks. The first two are deliberately not feature work — you will be learning the domain and the stack while the senior engineers build the shared foundation everything else sits on.</p>
+
+  <table>
+    <thead><tr><th style="width:20mm" class="num">Weeks</th><th style="width:44mm">Phase</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0</td><td class="k">Orientation</td><td>Domain training, environment setup, conventions, tooling. You will compute a full jewellery invoice by hand before writing any code.</td></tr>
+      <tr><td class="num">1 – 2</td><td class="k">Foundation</td><td>Seniors build the shared platform, security layer and a complete reference module. You study that reference module — it is the pattern every track copies. Training in NestJS, Drizzle and PostgreSQL security.</td></tr>
+      <tr><td class="num">3 – 4</td><td class="k">Interface design</td><td>Each of you designs the API contract for your track, with a senior engineer. This is agreed and merged <em>before</em> implementation, so the four tracks can then proceed in parallel without waiting for each other.</td></tr>
+      <tr><td class="num">3 – 9</td><td class="k">Foundations of<br>each track</td><td>Track A builds identity and master data. Track B builds tags and lifecycle. Tracks C and D begin as their dependencies land.</td></tr>
+      <tr><td class="num">6 – 14</td><td class="k">Core delivery</td><td>All four tracks running in parallel. Billing, procurement, production and tax. Regular integration and the first end-to-end business flows.</td></tr>
+      <tr><td class="num">13 – 18</td><td class="k">Financial close</td><td>Accounting, old gold, schemes and reporting. The system starts behaving as one product rather than four.</td></tr>
+      <tr><td class="num">16 – 18</td><td class="k">Hardening</td><td>Load testing at ten times normal volume, security review, disaster-recovery rehearsal, documentation, release.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The daily and weekly rhythm</h3>
+
+  <table>
+    <thead><tr><th style="width:36mm">When</th><th>What</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Daily, 09:45</td><td>Fifteen-minute stand-up, standing. Three questions only: what moved, what is blocked, whose pull request needs review. Blockers are assigned an owner in the meeting, not debated in it.</td></tr>
+      <tr><td class="k">Daily, 10:00–12:00</td><td>Senior engineers review code. You get a first response on any pull request within four working hours — being blocked on review is not something you should ever have to chase.</td></tr>
+      <tr><td class="k">Friday afternoon</td><td>Ninety minutes together: architecture decisions, a review retrospective, and a walkthrough of every database change made that week. The database session is taught in front of everyone, so you learn from the other three tracks as well as your own.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ══════════════════ 8 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 8</span>
+    <h2>How we work</h2>
+  </div>
+
+  <h3>Git and pull requests</h3>
+  <ul>
+    <li>You work on short-lived branches off <code>main</code>. A branch older than three days is raised at stand-up — that is a review problem, not a coding problem.</li>
+    <li>Nobody pushes directly to <code>main</code>. Every change goes through a pull request with automated checks and at least one senior approval.</li>
+    <li>Changes touching money, security or the database schema require two approvals.</li>
+    <li>Commit messages follow Conventional Commits and explain <em>why</em>, not just what.</li>
+  </ul>
+
+  <h3>What runs automatically on every pull request</h3>
+  <p>Lint · formatting · type-check · unit tests · integration tests against a real database · data-isolation test · API contract validation · database migration validation · dependency vulnerability scan · static security analysis · secret scanning. The whole pipeline finishes in under ten minutes. If it fails, a human does not look at your change until it passes.</p>
+
+  <h3>Definition of done</h3>
+  <p>A feature is not finished because the endpoint returns a 200. It is finished when all of the following are true:</p>
+
+  <ul class="checklist">
+    <li>Unit tests for every service method, including the failure paths</li>
+    <li>Integration tests against a real database for every endpoint</li>
+    <li>Every database query correctly scoped to the right business and branch</li>
+    <li>All input validated at the boundary</li>
+    <li>Error responses use defined codes with messages a shopkeeper could act on</li>
+    <li>Loading, empty, forbidden, conflict and not-found paths all handled — no silent failures</li>
+    <li>Every state change written to the audit trail with an actor and a reason</li>
+    <li>Permission checked on the server, never only in the interface</li>
+    <li>Database migration reviewed as SQL, with justified indexes</li>
+    <li>No floating-point arithmetic anywhere near money or weight</li>
+    <li>No business rule duplicated that already exists in the shared engine</li>
+    <li>API documentation regenerated and the module's README updated</li>
+    <li>You can explain the module out loud to a senior engineer, including the business rule behind it</li>
+  </ul>
+
+  <p>That last one matters more than it looks. If you cannot explain a rule in plain English, you have not understood it — and finding that out in a handover conversation is far cheaper than finding it out in production.</p>
+
+  <div class="note">
+    <span class="label">On having your work sent back</span>
+    <p>Your pull requests will be rejected. Regularly, in your first month, all four of you. A change bounced for a missing data scope or a stray calculation is the process working exactly as intended — it is not a judgement of you, and it is not something to be embarrassed about. Reviews here explain the reasoning and point you at the right pattern, because with four interns on a domain this unforgiving, code review <em>is</em> the training programme.</p>
+  </div>
+
+  <h3>The mistakes that come back most often</h3>
+  <table>
+    <thead><tr><th style="width:64mm">Instead of</th><th>Do</th></tr></thead>
+    <tbody>
+      <tr><td>Writing your own price calculation</td><td>Call the shared pricing engine — it already exists and is tested</td></tr>
+      <tr><td>Hard-coding a legal threshold or tax rate</td><td>Read it from configuration; those numbers change by government notification</td></tr>
+      <tr><td>Storing money as a decimal or float</td><td>Integer paisa. Weights in integer milligrams.</td></tr>
+      <tr><td>Comparing two computed amounts with <code>===</code></td><td>Use the provided comparison helper — floating point makes equality unreliable</td></tr>
+      <tr><td>Updating a rate row</td><td>Insert a new version. History is never rewritten.</td></tr>
+      <tr><td>Deleting a record</td><td>Mark it inactive with a reason. Deleting a written-off piece deletes the record of the loss.</td></tr>
+      <tr><td>Awaiting a government API inside a request</td><td>Queue it. The counter never waits for an external system.</td></tr>
+      <tr><td>Business logic in a controller</td><td>Push it down to the service, or further down to the shared rules engine</td></tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ══════════════════ 9 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 9</span>
+    <h2>What we expect from you</h2>
+  </div>
+
+  <h3>Required before you start</h3>
+  <table>
+    <thead><tr><th style="width:44mm">Area</th><th>Level expected</th></tr></thead>
+    <tbody>
+      <tr><td class="k">JavaScript</td><td>Comfortable. Promises, <code>async</code>/<code>await</code>, modules, array methods, destructuring. You should be able to explain what <code>await</code> actually does.</td></tr>
+      <tr><td class="k">Node.js &amp; a web framework</td><td>You have built at least one REST API — Express, NestJS or similar. You know what middleware is and what a route handler does.</td></tr>
+      <tr><td class="k">Databases</td><td>Basic SQL: <code>SELECT</code>, <code>JOIN</code>, <code>WHERE</code>, <code>GROUP BY</code>. If your experience is MongoDB only, that is acceptable, but see the preparation checklist.</td></tr>
+      <tr><td class="k">Git</td><td>Branch, commit, push, pull request, resolve a merge conflict without panic.</td></tr>
+      <tr><td class="k">Reading code</td><td>Willing to open an unfamiliar file and work out what it does, rather than waiting to be told.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Helpful but not required</h3>
+  <p>TypeScript · PostgreSQL specifically · NestJS · Docker · writing automated tests · any accounting knowledge. We will teach all of these. Arriving with any of them means you get productive faster.</p>
+
+  <h3>What matters more than any of the above</h3>
+  <ul>
+    <li><strong>Care about correctness.</strong> This software handles other people's money. Someone who checks their work twice is worth more here than someone who writes twice as fast.</li>
+    <li><strong>Ask early.</strong> Two hours stuck is normal engineering. Two days stuck in silence is not, and it is never held against you to ask.</li>
+    <li><strong>Read the business rule before writing the code.</strong> Almost every serious defect in this domain comes from implementing a misunderstood requirement perfectly.</li>
+    <li><strong>Take review well.</strong> You will get a lot of it. That is the value of the internship.</li>
+    <li><strong>Write things down.</strong> If you worked something out the hard way, put it in the README so the next person does not.</li>
+  </ul>
+</section>
+
+
+<!-- ══════════════════ 10 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 10</span>
+    <h2>How you will be assessed</h2>
+  </div>
+
+  <p class="lede-p">Assessment is continuous, through the work itself. There is no separate examination.</p>
+
+  <table>
+    <thead><tr><th style="width:44mm">Dimension</th><th>What we look at</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Correctness</td><td>Does the code implement the business rule as specified? Are the edge cases handled? Do the tests assert the <em>rule</em>, or only that the code runs?</td></tr>
+      <tr><td class="k">Independence over time</td><td>We expect heavy support in weeks 1–4 and much less by week 12. The trajectory matters far more than the starting point.</td></tr>
+      <tr><td class="k">Response to review</td><td>Does the same comment need making three times, or once? Do you understand the reasoning or just apply the fix?</td></tr>
+      <tr><td class="k">Communication</td><td>Can you explain your module out loud? Do you flag a slip early or hope it resolves itself?</td></tr>
+      <tr><td class="k">Reliability</td><td>Does agreed work land when you said it would? The other three tracks depend on your interfaces.</td></tr>
+      <tr><td class="k">Ownership</td><td>Do you fix the underlying cause, or only the reported symptom? Do you leave your module better documented than you found it?</td></tr>
+    </tbody>
+  </table>
+
+  <h3>What you take away</h3>
+  <ul>
+    <li>Eighteen weeks of commit history on a real production system, which you can talk about in any interview for the rest of your career</li>
+    <li>Genuine PostgreSQL depth — transactions, locking, constraints, row-level security, indexing — which is rare in graduates and valued everywhere</li>
+    <li>Experience of a regulated financial domain: audit trails, append-only data, compliance as a design constraint</li>
+    <li>Habits that transfer: contract-first design, meaningful tests, reviewable migrations, honest estimates</li>
+    <li>A written reference and a completion report describing specifically what you built</li>
+  </ul>
+</section>
+
+
+<!-- ══════════════════ 11 ══════════════════ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Section 11</span>
+    <h2>Before you start — preparation checklist</h2>
+  </div>
+
+  <p class="lede-p">If you do one thing with this document, do this. Everything below is free, and none of it takes more than a few evenings. Arriving with this done will put you weeks ahead.</p>
+
+  <h4>Technical — in priority order</h4>
+  <ul class="checklist">
+    <li><strong>TypeScript basics.</strong> Types, interfaces, generics, <code>strict</code> mode. The official handbook's first five chapters are enough.</li>
+    <li><strong>SQL fundamentals.</strong> If you have only used MongoDB, this is your single highest-value preparation. <code>JOIN</code>, <code>GROUP BY</code>, foreign keys, indexes, and what a transaction is.</li>
+    <li><strong>Install PostgreSQL locally and use it.</strong> Create tables, insert rows, write joins. Break things. An afternoon is enough.</li>
+    <li><strong>The NestJS "first steps" tutorial.</strong> Just enough to recognise controllers, providers, modules and dependency injection.</li>
+    <li><strong>Install Docker Desktop</strong> and run a PostgreSQL container. You will do this on day one; do it now so a day-one problem is not a day-one blocker.</li>
+    <li><strong>Write a test.</strong> If you have never written an automated test, write five for any function you have already built. Any framework.</li>
+    <li><strong>Read about floating-point arithmetic.</strong> Understand why <code>0.1 + 0.2 !== 0.3</code>. It comes up in your first week.</li>
+  </ul>
+
+  <h4>Domain — do not skip this</h4>
+  <ul class="checklist">
+    <li><strong>Learn the vocabulary.</strong> Gross weight, net weight, stone weight, purity, 916 and 22-karat, making charge, wastage, tunch, HUID, karigar. An hour of reading.</li>
+    <li><strong>Understand GST at a basic level.</strong> What CGST, SGST and IGST are and when each applies. One article is enough.</li>
+    <li><strong>Learn what double-entry bookkeeping is.</strong> Debit, credit, why they must balance, what a ledger and a trial balance are. This is the concept most computer-science graduates have never met, and it underpins a quarter of the system.</li>
+    <li><strong>Visit a jewellery shop</strong> and look at an actual bill. Notice the weight columns, the making charge line and the hallmark. Fifteen minutes, and it will make Section 2 real in a way no document can.</li>
+  </ul>
+
+  <h4>Practical</h4>
+  <ul class="checklist">
+    <li>A GitHub account you will keep using</li>
+    <li>A working development machine with at least 8&nbsp;GB of RAM — Docker, PostgreSQL and your editor run simultaneously</li>
+    <li>Node.js 22 LTS installed</li>
+    <li>Visual Studio Code, or an editor you are genuinely fast in</li>
+  </ul>
+
+  <div class="green-note">
+    <span class="label">One exercise worth doing</span>
+    <p>Take the pricing formula from Section 2 and implement it as a small TypeScript function, with tests. Use a 24-gram net weight, a rate of ₹6,200 per gram, 5% wastage, ₹550 per gram making charge and ₹1,20,000 of diamonds, at 3% GST. Work out what the correct total should be by hand first, then make your code agree with it.</p>
+    <p>It is thirty lines of code. Doing it before you arrive means the first real thing you read in the codebase will already be familiar — and it is the exact calculation we will walk through together on day one.</p>
+  </div>
+
+  <div class="footer-note">
+    <p><strong>Questions before you start?</strong> Send them through your college placement office and they will reach the engineering team. Nothing in this document is a trick question, and there is no such thing as an obvious one at this stage.</p>
+    <p style="margin-top:3mm">We are looking forward to working with you.</p>
+  </div>
+</section>
+
+</body>
+</html>
