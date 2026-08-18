@@ -1190,7 +1190,7 @@ export default function BillingEstimator({
           <div className="space-y-6 pt-6 print:pt-0" id="print-area">
             {/* Header */}
             <div className="text-center border-b pb-4 space-y-1">
-              <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">STITCH JEWELLERY HOUSE</h1>
+              <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">AURUM JEWELLERY HOUSE</h1>
               {/* Rule 46: the issuing branch's own address and GSTIN, not a hardcoded HQ one */}
               <p className="text-xs text-slate-500">{activeBranch?.address || '102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002'}</p>
               <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: {activeBranch?.gstin || '27AACCS9948H1Z1'}</p>
@@ -2739,7 +2739,7 @@ export default function BillingEstimator({
             <div className="space-y-6 pt-6 print:pt-0" id="print-area">
               {/* Header */}
               <div className="text-center border-b pb-4 space-y-1">
-                <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">STITCH JEWELLERY HOUSE</h1>
+                <h1 className="font-sans font-black text-2xl tracking-wider text-slate-900">AURUM JEWELLERY HOUSE</h1>
                 {/* Rule 46: the issuing branch's own address and GSTIN, not a hardcoded HQ one */}
                 <p className="text-xs text-slate-500">{activeBranch?.address || '102, Gold Palace Plaza, Zaveri Bazaar, Mumbai, MH - 400002'}</p>
                 <p className="text-[10px] font-mono text-slate-400">Tel: +91 22 2240 8710 | GSTIN: {activeBranch?.gstin || '27AACCS9948H1Z1'}</p>

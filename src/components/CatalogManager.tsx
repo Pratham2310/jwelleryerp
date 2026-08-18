@@ -675,7 +675,7 @@ export default function CatalogManager({
                       }`}>
                         {/* Tag Header */}
                         <div className={`border-b border-dashed pb-2 text-center ${theme === 'light' ? 'border-slate-200' : 'border-zinc-800'}`}>
-                          <p className={`font-sans font-bold text-xs uppercase tracking-tight ${theme === 'light' ? 'text-amber-800' : 'text-amber-500'}`}>STITCH SHOWROOM</p>
+                          <p className={`font-sans font-bold text-xs uppercase tracking-tight ${theme === 'light' ? 'text-amber-800' : 'text-amber-500'}`}>AURUM SHOWROOM</p>
                           <p className={`text-[9px] ${theme === 'light' ? 'text-slate-400' : 'text-zinc-500'}`}>MUM-01-TERMINAL</p>
                         </div>
 

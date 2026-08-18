@@ -346,7 +346,7 @@ export default function Header({ user, onLogout, activeWorkOrdersCount, sidebarO
 
                   <button 
                     onClick={() => {
-                      alert("Database backup STITCH_BACKUP_" + new Date().toISOString().split('T')[0] + ".json successfully exported to desktop downloads.");
+                      alert("Database backup AURUMERP_BACKUP_" + new Date().toISOString().split('T')[0] + ".json successfully exported to desktop downloads.");
                       setProfileOpen(false);
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-[#A1A1AA] hover:text-white hover:bg-[#1A1A1D] rounded-xl text-left transition"

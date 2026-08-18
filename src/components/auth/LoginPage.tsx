@@ -12,7 +12,7 @@ interface LoginPageProps {
 
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('operator@stitcherp.com');
+  const [email, setEmail] = useState('operator@aurumerp.com');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -70,7 +70,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-1.5">
-                STITCH<span className="font-light text-[#C5A059]">ERP</span>
+                Aurum<span className="font-light text-[#C5A059]">ERP</span>
               </h1>
               <p className="font-mono text-[9px] text-[#C5A059] uppercase tracking-widest font-bold">
                 Luxury Jewellery ERP Suite
@@ -117,7 +117,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 label="Registered Operator Email"
                 type="email"
                 required
-                placeholder="operator@stitcherp.com"
+                placeholder="operator@aurumerp.com"
                 icon={<Mail className="w-4 h-4" />}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

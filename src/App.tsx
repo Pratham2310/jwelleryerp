@@ -689,7 +689,7 @@ function AppContent() {
               <div className={`p-4 rounded-xl text-left space-y-1 text-[10px] font-mono border ${
                 theme === 'light' ? 'bg-zinc-50 border-zinc-200 text-zinc-500' : 'bg-[#141416] border-[#262626] text-zinc-500'
               }`}>
-                <p>RESOURCE: STITCH-METADATA-LEDGER</p>
+                <p>RESOURCE: AURUM-METADATA-LEDGER</p>
                 <p>SOCKET: ATTEMPT_REJECTED</p>
                 <p>NODE: BOM-HQ-DB-01</p>
               </div>

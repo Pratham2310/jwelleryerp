@@ -122,7 +122,7 @@ describe('partyLedgerName', () => {
 });
 
 describe('buildTallyXml', () => {
-  const opts = { companyName: 'Stitch Jewellery House', fromDate: '2026-07-01', toDate: '2026-07-31' };
+  const opts = { companyName: 'Aurum Jewellery House', fromDate: '2026-07-01', toDate: '2026-07-31' };
 
   it('produces the ENVELOPE / IMPORTDATA structure Tally expects', () => {
     const xml = buildTallyXml([voucher()], opts);
@@ -135,7 +135,7 @@ describe('buildTallyXml', () => {
 
   it('carries the company and period in the static variables', () => {
     const xml = buildTallyXml([voucher()], opts);
-    expect(xml).toContain('<SVCURRENTCOMPANY>Stitch Jewellery House</SVCURRENTCOMPANY>');
+    expect(xml).toContain('<SVCURRENTCOMPANY>Aurum Jewellery House</SVCURRENTCOMPANY>');
     expect(xml).toContain('<SVFROMDATE>20260701</SVFROMDATE>');
     expect(xml).toContain('<SVTODATE>20260731</SVTODATE>');
   });
@@ -281,6 +281,6 @@ describe('validateExportRange & file name', () => {
   });
 
   it('names the file with its period so exports do not overwrite each other', () => {
-    expect(exportFileName('2026-07-01', '2026-07-31')).toBe('Stitch_Tally_20260701_20260731.xml');
+    expect(exportFileName('2026-07-01', '2026-07-31')).toBe('Aurum_Tally_20260701_20260731.xml');
   });
 });

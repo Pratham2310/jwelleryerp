@@ -200,7 +200,7 @@ export default function JobBagManager({ karigars, jobWorks: bags, setJobWorks: s
             }`}>
               Manufacturing Pipelines
             </span>
-            <span className={`text-[10px] font-mono font-bold ${theme === 'light' ? 'text-[#C5A059]' : 'text-zinc-500'}`}>STITCH-PROD-FLOW</span>
+            <span className={`text-[10px] font-mono font-bold ${theme === 'light' ? 'text-[#C5A059]' : 'text-zinc-500'}`}>AURUM-PROD-FLOW</span>
           </div>
           <h2 className="text-2xl font-bold text-white tracking-tight">Job Bags Workflow</h2>
           <p className={`text-xs ${theme === 'light' ? 'text-stone-300' : 'text-zinc-400'}`}>
@@ -844,7 +844,7 @@ export default function JobBagManager({ karigars, jobWorks: bags, setJobWorks: s
               {/* Badge & Label Header */}
               <div className="flex justify-between items-center border-b border-dashed border-stone-300 pb-3">
                 <div>
-                  <h3 className="font-extrabold text-sm uppercase tracking-tight text-[#C5A059]">STITCH ERP</h3>
+                  <h3 className="font-extrabold text-sm uppercase tracking-tight text-[#C5A059]">AurumERP</h3>
                   <p className="text-[9px] text-stone-500 font-mono">LOCKED MANUFACTURING JOB</p>
                 </div>
                 <div className="bg-stone-100 border border-stone-200 px-2.5 py-1 rounded font-mono font-black text-xs text-stone-800">

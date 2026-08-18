@@ -80,10 +80,10 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
           </div>
           <div>
             <h1 className="font-sans font-black tracking-tight text-base text-white">
-              STITCH<span className="font-light text-[#C5A059]">ERP</span>
+              Aurum<span className="font-light text-[#C5A059]">ERP</span>
             </h1>
             <p className="font-mono text-[9px] text-[#C5A059] uppercase tracking-widest font-bold">
-              Luxury Jewellery Suite
+              Jewellery Management System
             </p>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function Sidebar({ metalRates, activeBranch, operatorName, sideba
           <button 
             title="Export System Data" 
             onClick={() => {
-              alert("System Backup File exported successfully! (STITCH_BACKUP_" + new Date().toISOString().split('T')[0] + ".json)");
+              alert("System Backup File exported successfully! (AURUMERP_BACKUP_" + new Date().toISOString().split('T')[0] + ".json)");
             }}
             className={`p-1.5 rounded transition ${
               theme === 'light' 

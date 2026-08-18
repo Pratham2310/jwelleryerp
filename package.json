@@ -1,5 +1,6 @@
 {
-  "name": "react-example",
+  "name": "aurumerp",
+  "description": "AurumERP — Jewellery Management System",
   "private": true,
   "version": "1.0.0",
   "type": "module",

@@ -211,7 +211,7 @@ export function validateExportRange(fromDate: string, toDate: string): string | 
   return null;
 }
 
-/** `Stitch_Tally_20260701_20260731.xml` — period in the name, so files do not overwrite. */
+/** `Aurum_Tally_20260701_20260731.xml` — period in the name, so files do not overwrite. */
 export function exportFileName(fromDate: string, toDate: string): string {
-  return `Stitch_Tally_${tallyDate(fromDate)}_${tallyDate(toDate)}.xml`;
+  return `Aurum_Tally_${tallyDate(fromDate)}_${tallyDate(toDate)}.xml`;
 }

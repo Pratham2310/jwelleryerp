@@ -402,7 +402,7 @@ export default function AccountingManager({
           const err = validateExportRange(exportFrom, exportTo);
           if (err) { setExportError(err); return; }
           const xml = buildTallyXml(selected, {
-            companyName: 'Stitch Jewellery House',
+            companyName: 'Aurum Jewellery House',
             fromDate: exportFrom,
             toDate: exportTo,
           });

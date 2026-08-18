@@ -52,7 +52,7 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
             </div>
             <div>
               <h2 className="text-xl font-black tracking-tight text-white">
-                STITCH<span className="font-light text-[#C5A059]">ERP</span>
+                Aurum<span className="font-light text-[#C5A059]">ERP</span>
               </h2>
               <p className="font-mono text-[9px] text-[#C5A059] uppercase tracking-widest font-bold">
                 Enterprise Registration
@@ -122,7 +122,7 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
                 <Input
                   label="Enterprise / Brand Name"
                   required
-                  placeholder="e.g. Stitch Jewellers"
+                  placeholder="e.g. Aurum Jewellers"
                   icon={<Building className="w-4 h-4" />}
                   value={enterpriseName}
                   onChange={(e) => setEnterpriseName(e.target.value)}
@@ -147,7 +147,7 @@ export default function RegisterPage({ onRegisterSuccess }: RegisterPageProps) {
               />
 
               <div className="text-[11px] text-[#71717A] leading-relaxed pt-1">
-                By clicking authenticate, you agree to instantiate local secure caching variables and accept the STITCH ERP operator license guidelines.
+                By clicking authenticate, you agree to instantiate local secure caching variables and accept the AurumERP operator license guidelines.
               </div>
 
               <div className="pt-2">

@@ -84,7 +84,7 @@ export default function SystemHealthPanel({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `stitch-backup-${backup.exportedAt.slice(0, 10)}.json`;
+    a.download = `aurumerp-backup-${backup.exportedAt.slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
 
